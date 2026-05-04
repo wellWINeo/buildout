@@ -1,0 +1,25 @@
+<Project>
+  <ItemGroup>
+    <Compile Update="@(Compile)">
+      <NoWarn
+        Condition="$([System.String]::new('%(FullPath)').Contains('src/Buildout.Core/Buildin/Generated/'))"
+      >CS1591;CS1573;CS0436;CS0105;CS0168;CS0219;CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;CS8714;CS0472;CS0108;CS0114;CS0067;CA1034;CA1002;CA1062;CA1054;CA1056;CA1707;CA1716;CA1720;CA1812;CA2208</NoWarn>
+      <EnforceCodeStyleInBuild
+        Condition="$([System.String]::new('%(FullPath)').Contains('src/Buildout.Core/Buildin/Generated/'))"
+      >false</EnforceCodeStyleInBuild>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Analyzer
+      Condition="$([System.String]::new('%(FullPath)').Contains('src/Buildout.Core/Buildin/Generated/'))"
+      Remove="@(Analyzer)" />
+  </ItemGroup>
+  <Target Name="DisableAnalyzersForGenerated" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Compile
+        Condition="$([System.String]::new('%(FullPath)').Contains('src/Buildout.Core/Buildin/Generated/'))">
+        <AnalysisLevel>none</AnalysisLevel>
+      </Compile>
+    </ItemGroup>
+  </Target>
+</Project>

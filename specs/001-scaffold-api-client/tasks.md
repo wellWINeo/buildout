@@ -31,17 +31,17 @@ description: "Task list for Scaffold + Buildin API Client"
 
 **Purpose**: Project initialization, tooling, and Kiota generation
 
-- [ ] T001 Create `Directory.Build.props` at repo root with `<Nullable>enable</Nullable>`, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`, `<LangVersion>latest</LangVersion>`, `<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>`, `<AnalysisLevel>latest-recommended</AnalysisLevel>`, `<TargetFramework>net10.0</TargetFramework>` in `Directory.Build.props`
-- [ ] T002 [P] Create `Directory.Build.targets` at repo root excluding `src/Buildout.Core/Buildin/Generated/` from analyzers and code-style checks in `Directory.Build.targets`
-- [ ] T003 [P] Create `.config/dotnet-tools.json` pinning `Microsoft.OpenApi.Kiota` as a local tool in `.config/dotnet-tools.json`
-- [ ] T004 [P] Create `src/Buildout.Core/Buildout.Core.csproj` with `Microsoft.Kiota.Bundle`, `Microsoft.Extensions.Configuration.Abstractions`, `Microsoft.Extensions.Configuration.Binder`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`, and `Microsoft.Extensions.Options` in `src/Buildout.Core/Buildout.Core.csproj`
-- [ ] T005 [P] Create `src/Buildout.Mcp/Buildout.Mcp.csproj` referencing `ModelContextProtocol` and `Buildout.Core`, plus `src/Buildout.Mcp/Program.cs` as a minimal console shell in `src/Buildout.Mcp/`
-- [ ] T006 [P] Create `src/Buildout.Cli/Buildout.Cli.csproj` referencing `Spectre.Console.Cli` and `Buildout.Core`, plus `src/Buildout.Cli/Program.cs` as a Spectre app shell in `src/Buildout.Cli/`
-- [ ] T007 [P] Create `tests/Buildout.UnitTests/Buildout.UnitTests.csproj` with `xunit.v3`, `xunit.runner.visualstudio`, `NSubstitute`, `Microsoft.NET.Test.Sdk`, and project reference to `Buildout.Core` in `tests/Buildout.UnitTests/Buildout.UnitTests.csproj`
-- [ ] T008 [P] Create `tests/Buildout.IntegrationTests/Buildout.IntegrationTests.csproj` with `xunit.v3`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`, and project reference to `Buildout.Core` in `tests/Buildout.IntegrationTests/Buildout.IntegrationTests.csproj`
-- [ ] T009 Add all five projects to `buildout.slnx` via `dotnet sln buildout.slnx add` in `buildout.slnx`
-- [ ] T010 Run `dotnet tool restore` then Kiota generate against `openapi.json` with flags `--language CSharp --class-name BuildinApiClient --namespace-name Buildout.Core.Buildin.Generated --output ./src/Buildout.Core/Buildin/Generated --clean-output --exclude-backward-compatible --log-level Warning` to populate `src/Buildout.Core/Buildin/Generated/`
-- [ ] T011 [P] Create `src/Buildout.Core/Buildin/Generated/_README.md` marker explaining the directory is machine-generated and linking to `scripts/regenerate-buildin-client.sh` in `src/Buildout.Core/Buildin/Generated/_README.md`
+- [x] T001 Create `Directory.Build.props` at repo root with `<Nullable>enable</Nullable>`, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`, `<LangVersion>latest</LangVersion>`, `<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>`, `<AnalysisLevel>latest-recommended</AnalysisLevel>`, `<TargetFramework>net10.0</TargetFramework>` in `Directory.Build.props`
+- [x] T002 [P] Create `Directory.Build.targets` at repo root excluding `src/Buildout.Core/Buildin/Generated/` from analyzers and code-style checks in `Directory.Build.targets`
+- [x] T003 [P] Create `.config/dotnet-tools.json` pinning `Microsoft.OpenApi.Kiota` as a local tool in `.config/dotnet-tools.json`
+- [x] T004 [P] Create `src/Buildout.Core/Buildout.Core.csproj` with `Microsoft.Kiota.Bundle`, `Microsoft.Extensions.Configuration.Abstractions`, `Microsoft.Extensions.Configuration.Binder`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`, and `Microsoft.Extensions.Options` in `src/Buildout.Core/Buildout.Core.csproj`
+- [x] T005 [P] Create `src/Buildout.Mcp/Buildout.Mcp.csproj` referencing `ModelContextProtocol` and `Buildout.Core`, plus `src/Buildout.Mcp/Program.cs` as a minimal console shell in `src/Buildout.Mcp/`
+- [x] T006 [P] Create `src/Buildout.Cli/Buildout.Cli.csproj` referencing `Spectre.Console.Cli` and `Buildout.Core`, plus `src/Buildout.Cli/Program.cs` as a Spectre app shell in `src/Buildout.Cli/`
+- [x] T007 [P] Create `tests/Buildout.UnitTests/Buildout.UnitTests.csproj` with `xunit.v3`, `xunit.runner.visualstudio`, `NSubstitute`, `Microsoft.NET.Test.Sdk`, and project reference to `Buildout.Core` in `tests/Buildout.UnitTests/Buildout.UnitTests.csproj`
+- [x] T008 [P] Create `tests/Buildout.IntegrationTests/Buildout.IntegrationTests.csproj` with `xunit.v3`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`, and project reference to `Buildout.Core` in `tests/Buildout.IntegrationTests/Buildout.IntegrationTests.csproj`
+- [x] T009 Add all five projects to `buildout.slnx` via `dotnet sln buildout.slnx add` in `buildout.slnx`
+- [x] T010 Run `dotnet tool restore` then Kiota generate against `openapi.json` with flags `--language CSharp --class-name BuildinApiClient --namespace-name Buildout.Core.Buildin.Generated --output ./src/Buildout.Core/Buildin/Generated --clean-output --exclude-backward-compatible --log-level Warning` to populate `src/Buildout.Core/Buildin/Generated/`
+- [x] T011 [P] Create `src/Buildout.Core/Buildin/Generated/_README.md` marker explaining the directory is machine-generated and linking to `scripts/regenerate-buildin-client.sh` in `src/Buildout.Core/Buildin/Generated/_README.md`
 
 **Checkpoint**: All five projects compile via `dotnet build buildout.slnx`
 
@@ -53,16 +53,16 @@ description: "Task list for Scaffold + Buildin API Client"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T012 Create `BuildinClientOptions` POCO with `BaseUrl`, `BotToken`, `HttpTimeout`, `UnsafeAllowInsecure` properties plus `BuildinClientOptionsValidator` implementing `IValidateOptions<BuildinClientOptions>` in `src/Buildout.Core/Buildin/BuildinClientOptions.cs` and `src/Buildout.Core/Buildin/BuildinClientOptionsValidator.cs`
-- [ ] T013 [P] Create `BuildinError` discriminated union (`TransportError`, `ApiError`, `UnknownError`) in `src/Buildout.Core/Buildin/Errors/BuildinError.cs`
-- [ ] T014 [P] Create `BuildinApiException` with `.Error` property typed as `BuildinError` in `src/Buildout.Core/Buildin/Errors/BuildinApiException.cs`
-- [ ] T015 [P] Create `BotTokenAuthenticationProvider` extending `BaseBearerTokenAuthenticationProvider` reading token from `BuildinClientOptions.BotToken` in `src/Buildout.Core/Buildin/Authentication/BotTokenAuthenticationProvider.cs`
-- [ ] T016 [P] Create flat domain models (`User`, `UserMe`, `Page`, `Database`, `RichText`, `PaginatedList<T>`) in `src/Buildout.Core/Buildin/Models/`
-- [ ] T017 [P] Create polymorphic domain models — `Block` abstract record + sealed subclasses keyed off `type` field, `Parent` abstract record (`ParentDatabase`, `ParentPage`, `ParentBlock`, `ParentSpace`), `Icon` abstract record (`IconEmoji`, `IconExternal`, `IconFile`), `PropertyValue` + 13 sealed subclasses, `PropertySchema` + 14 sealed subclasses — in `src/Buildout.Core/Buildin/Models/`
-- [ ] T018 [P] Create request/response DTOs for all 15 operations (`CreatePageRequest`, `UpdatePageRequest`, `UpdateBlockRequest`, `AppendBlockChildrenRequest`, `AppendBlockChildrenResult`, `CreateDatabaseRequest`, `UpdateDatabaseRequest`, `QueryDatabaseRequest`, `QueryDatabaseResult`, `SearchRequest`, `SearchResults`, `PageSearchRequest`, `PageSearchResults`, `BlockChildrenQuery`) in `src/Buildout.Core/Buildin/Models/`
-- [ ] T019 Create `IBuildinClient` interface with all 15 async method signatures (`GetMeAsync`, `GetPageAsync`, `CreatePageAsync`, `UpdatePageAsync`, `GetBlockAsync`, `UpdateBlockAsync`, `DeleteBlockAsync`, `GetBlockChildrenAsync`, `AppendBlockChildrenAsync`, `CreateDatabaseAsync`, `GetDatabaseAsync`, `UpdateDatabaseAsync`, `QueryDatabaseAsync`, `SearchAsync`, `SearchPagesAsync`) per `data-model.md` operation table in `src/Buildout.Core/Buildin/IBuildinClient.cs`
-- [ ] T020 Create `ServiceCollectionExtensions.AddBuildinClient(IConfiguration)` registering `BuildinClientOptions`, `IAuthenticationProvider`, `IBuildinClient`, and `HttpClient` in `src/Buildout.Core/DependencyInjection/ServiceCollectionExtensions.cs`
-- [ ] T021 [P] Add `InternalsVisibleTo` declarations for `Buildout.UnitTests` and `Buildout.IntegrationTests` in `src/Buildout.Core/Properties/AssemblyInfo.cs`
+- [x] T012 Create `BuildinClientOptions` POCO with `BaseUrl`, `BotToken`, `HttpTimeout`, `UnsafeAllowInsecure` properties plus `BuildinClientOptionsValidator` implementing `IValidateOptions<BuildinClientOptions>` in `src/Buildout.Core/Buildin/BuildinClientOptions.cs` and `src/Buildout.Core/Buildin/BuildinClientOptionsValidator.cs`
+- [x] T013 [P] Create `BuildinError` discriminated union (`TransportError`, `ApiError`, `UnknownError`) in `src/Buildout.Core/Buildin/Errors/BuildinError.cs`
+- [x] T014 [P] Create `BuildinApiException` with `.Error` property typed as `BuildinError` in `src/Buildout.Core/Buildin/Errors/BuildinApiException.cs`
+- [x] T015 [P] Create `BotTokenAuthenticationProvider` extending `BaseBearerTokenAuthenticationProvider` reading token from `BuildinClientOptions.BotToken` in `src/Buildout.Core/Buildin/Authentication/BotTokenAuthenticationProvider.cs`
+- [x] T016 [P] Create flat domain models (`User`, `UserMe`, `Page`, `Database`, `RichText`, `PaginatedList<T>`) in `src/Buildout.Core/Buildin/Models/`
+- [x] T017 [P] Create polymorphic domain models — `Block` abstract record + sealed subclasses keyed off `type` field, `Parent` abstract record (`ParentDatabase`, `ParentPage`, `ParentBlock`, `ParentSpace`), `Icon` abstract record (`IconEmoji`, `IconExternal`, `IconFile`), `PropertyValue` + 13 sealed subclasses, `PropertySchema` + 14 sealed subclasses — in `src/Buildout.Core/Buildin/Models/`
+- [x] T018 [P] Create request/response DTOs for all 15 operations (`CreatePageRequest`, `UpdatePageRequest`, `UpdateBlockRequest`, `AppendBlockChildrenRequest`, `AppendBlockChildrenResult`, `CreateDatabaseRequest`, `UpdateDatabaseRequest`, `QueryDatabaseRequest`, `QueryDatabaseResult`, `SearchRequest`, `SearchResults`, `PageSearchRequest`, `PageSearchResults`, `BlockChildrenQuery`) in `src/Buildout.Core/Buildin/Models/`
+- [x] T019 Create `IBuildinClient` interface with all 15 async method signatures (`GetMeAsync`, `GetPageAsync`, `CreatePageAsync`, `UpdatePageAsync`, `GetBlockAsync`, `UpdateBlockAsync`, `DeleteBlockAsync`, `GetBlockChildrenAsync`, `AppendBlockChildrenAsync`, `CreateDatabaseAsync`, `GetDatabaseAsync`, `UpdateDatabaseAsync`, `QueryDatabaseAsync`, `SearchAsync`, `SearchPagesAsync`) per `data-model.md` operation table in `src/Buildout.Core/Buildin/IBuildinClient.cs`
+- [x] T020 Create `ServiceCollectionExtensions.AddBuildinClient(IConfiguration)` registering `BuildinClientOptions`, `IAuthenticationProvider`, `IBuildinClient`, and `HttpClient` in `src/Buildout.Core/DependencyInjection/ServiceCollectionExtensions.cs`
+- [x] T021 [P] Add `InternalsVisibleTo` declarations for `Buildout.UnitTests` and `Buildout.IntegrationTests` in `src/Buildout.Core/Properties/AssemblyInfo.cs`
 
 **Checkpoint**: Foundation ready — `IBuildinClient`, all domain models, error types, options, and DI wiring exist. User story implementation can now begin in parallel.
 
@@ -76,13 +76,13 @@ description: "Task list for Scaffold + Buildin API Client"
 
 ### Tests for User Story 1
 
-- [ ] T022 [P] [US1] Write smoke test that asserts `true` (proves test runner discovers and executes `Buildout.UnitTests`) in `tests/Buildout.UnitTests/SmokeTests.cs`
-- [ ] T023 [P] [US1] Write smoke test that asserts `true` (proves test runner discovers and executes `Buildout.IntegrationTests`) in `tests/Buildout.IntegrationTests/SmokeTests.cs`
+- [x] T022 [P] [US1] Write smoke test that asserts `true` (proves test runner discovers and executes `Buildout.UnitTests`) in `tests/Buildout.UnitTests/SmokeTests.cs`
+- [x] T023 [P] [US1] Write smoke test that asserts `true` (proves test runner discovers and executes `Buildout.IntegrationTests`) in `tests/Buildout.IntegrationTests/SmokeTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T024 [US1] Verify `dotnet build buildout.slnx` succeeds and produces output for all five projects — fix any compilation errors
-- [ ] T025 [US1] Verify `dotnet test buildout.slnx` reports zero failures across both test projects, confirming test infrastructure is wired
+- [x] T024 [US1] Verify `dotnet build buildout.slnx` succeeds and produces output for all five projects — fix any compilation errors
+- [x] T025 [US1] Verify `dotnet test buildout.slnx` reports zero failures across both test projects, confirming test infrastructure is wired
 
 **Checkpoint**: At this point, the solution skeleton compiles and all smoke tests pass. US1 is fully delivered.
 
@@ -98,15 +98,15 @@ description: "Task list for Scaffold + Buildin API Client"
 
 > **NOTE: Write these tests FIRST; they MUST compile (against `IBuildinClient` and domain models) and FAIL before `BotBuildinClient` implementation exists.**
 
-- [ ] T026 [P] [US2] Write unit tests for `BotBuildinClient` — mock `IRequestAdapter` via `NSubstitute`, verify typed request → typed response mapping for representative operations across all 15 methods in `tests/Buildout.UnitTests/Buildin/BotBuildinClientTests.cs`
-- [ ] T027 [P] [US2] Write error mapping tests verifying `TransportError`, `ApiError`, and `UnknownError` surface correctly through `BuildinApiException` in `tests/Buildout.UnitTests/Buildin/ErrorMappingTests.cs`
-- [ ] T028 [P] [US2] Write configuration binding tests verifying `BuildinClientOptions` validation rules (`BaseUrl` must be absolute, `BotToken` non-empty, `HttpTimeout > 0`, insecure flag) in `tests/Buildout.UnitTests/Buildin/ConfigurationBindingTests.cs`
-- [ ] T029 [P] [US2] Write integration tests with custom `HttpMessageHandler` returning canned JSON responses, exercising full request/serialise/HTTP/deserialise path for representative operations in `tests/Buildout.IntegrationTests/Buildin/MockedHttpHarnessTests.cs`
+- [x] T026 [P] [US2] Write unit tests for `BotBuildinClient` — mock `IRequestAdapter` via `NSubstitute`, verify typed request → typed response mapping for representative operations across all 15 methods in `tests/Buildout.UnitTests/Buildin/BotBuildinClientTests.cs`
+- [x] T027 [P] [US2] Write error mapping tests verifying `TransportError`, `ApiError`, and `UnknownError` surface correctly through `BuildinApiException` in `tests/Buildout.UnitTests/Buildin/ErrorMappingTests.cs`
+- [x] T028 [P] [US2] Write configuration binding tests verifying `BuildinClientOptions` validation rules (`BaseUrl` must be absolute, `BotToken` non-empty, `HttpTimeout > 0`, insecure flag) in `tests/Buildout.UnitTests/Buildin/ConfigurationBindingTests.cs`
+- [x] T029 [P] [US2] Write integration tests with custom `HttpMessageHandler` returning canned JSON responses, exercising full request/serialise/HTTP/deserialise path for representative operations in `tests/Buildout.IntegrationTests/Buildin/MockedHttpHarnessTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T030 [US2] Implement `BotBuildinClient` — wraps generated Kiota client, implements `IBuildinClient`, translates between generated wrapper types and hand-written domain models via private mapping methods, maps exceptions to `BuildinApiException` with the three `BuildinError` variants in `src/Buildout.Core/Buildin/BotBuildinClient.cs`
-- [ ] T031 [US2] Verify all US2 unit tests pass (`dotnet test tests/Buildout.UnitTests`) and all US2 integration tests pass (`dotnet test tests/Buildout.IntegrationTests`)
+- [x] T030 [US2] Implement `BotBuildinClient` — wraps generated Kiota client, implements `IBuildinClient`, translates between generated wrapper types and hand-written domain models via private mapping methods, maps exceptions to `BuildinApiException` with the three `BuildinError` variants in `src/Buildout.Core/Buildin/BotBuildinClient.cs`
+- [x] T031 [US2] Verify all US2 unit tests pass (`dotnet test tests/Buildout.UnitTests`) and all US2 integration tests pass (`dotnet test tests/Buildout.IntegrationTests`)
 
 **Checkpoint**: At this point, `IBuildinClient` is fully implemented behind `BotBuildinClient` with comprehensive unit and integration test coverage. US2 is fully delivered.
 
@@ -120,13 +120,13 @@ description: "Task list for Scaffold + Buildin API Client"
 
 ### Tests for User Story 3
 
-- [ ] T032 [P] [US3] Write determinism integration test that runs the regeneration script and asserts `git status` is clean (working tree unchanged against committed `Generated/` snapshot), and that `Generated/` is non-empty in `tests/Buildout.IntegrationTests/Buildin/RegenerationDeterminismTests.cs`
+- [x] T032 [P] [US3] Write determinism integration test that runs the regeneration script and asserts `git status` is clean (working tree unchanged against committed `Generated/` snapshot), and that `Generated/` is non-empty in `tests/Buildout.IntegrationTests/Buildin/RegenerationDeterminismTests.cs`
 
 ### Implementation for User Story 3
 
-- [ ] T033 [US3] Create `scripts/regenerate-buildin-client.sh` — verifies `openapi.json` exists, restores Kiota local tool, invokes canonical `dotnet kiota generate` command with fixed flags, prints summary of changed files under `Generated/`, does NOT auto-commit in `scripts/regenerate-buildin-client.sh`
-- [ ] T034 [P] [US3] Create PowerShell companion `scripts/regenerate-buildin-client.ps1` mirroring the bash script's behaviour in `scripts/regenerate-buildin-client.ps1`
-- [ ] T035 [US3] Verify US3: run `./scripts/regenerate-buildin-client.sh` with unchanged `openapi.json`, confirm `git status` reports clean working tree; verify `dotnet test buildout.slnx` still passes
+- [x] T033 [US3] Create `scripts/regenerate-buildin-client.sh` — verifies `openapi.json` exists, restores Kiota local tool, invokes canonical `dotnet kiota generate` command with fixed flags, prints summary of changed files under `Generated/`, does NOT auto-commit in `scripts/regenerate-buildin-client.sh`
+- [x] T034 [P] [US3] Create PowerShell companion `scripts/regenerate-buildin-client.ps1` mirroring the bash script's behaviour in `scripts/regenerate-buildin-client.ps1`
+- [x] T035 [US3] Verify US3: run `./scripts/regenerate-buildin-client.sh` with unchanged `openapi.json`, confirm `git status` reports clean working tree; verify `dotnet test buildout.slnx` still passes
 
 **Checkpoint**: Regeneration is deterministic and contained. All three user stories are independently functional.
 
@@ -136,9 +136,9 @@ description: "Task list for Scaffold + Buildin API Client"
 
 **Purpose**: Final validation and cleanup across all user stories
 
-- [ ] T036 Run full `quickstart.md` validation — `dotnet tool restore`, `dotnet build buildout.slnx`, `dotnet test buildout.slnx` — confirming SC-001 (green build + tests in ≤ 5 min), SC-003 (suite < 60 s), and SC-006 (no outbound to `api.buildin.ai`)
-- [ ] T037 [P] Verify `dotnet sln buildout.slnx list` shows exactly the five constitution-mandated projects (SC-002 layout)
-- [ ] T038 [P] Verify no test depends on `BUILDOUT__BUILDIN__BOTTOKEN` being set — all tests run with the env var unset (FR-008, FR-010)
+- [x] T036 Run full `quickstart.md` validation — `dotnet tool restore`, `dotnet build buildout.slnx`, `dotnet test buildout.slnx` — confirming SC-001 (green build + tests in ≤ 5 min), SC-003 (suite < 60 s), and SC-006 (no outbound to `api.buildin.ai`)
+- [x] T037 [P] Verify `dotnet sln buildout.slnx list` shows exactly the five constitution-mandated projects (SC-002 layout)
+- [x] T038 [P] Verify no test depends on `BUILDOUT__BUILDIN__BOTTOKEN` being set — all tests run with the env var unset (FR-008, FR-010)
 
 ---
 

@@ -1,2 +1,11 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Buildout.Cli/Buildout.Cli.csproj" />
+    <Project Path="src/Buildout.Core/Buildout.Core.csproj" />
+    <Project Path="src/Buildout.Mcp/Buildout.Mcp.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Buildout.IntegrationTests/Buildout.IntegrationTests.csproj" />
+    <Project Path="tests/Buildout.UnitTests/Buildout.UnitTests.csproj" />
+  </Folder>
 </Solution>
