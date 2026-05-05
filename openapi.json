@@ -1,0 +1,2216 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Buildin API",
+    "version": "1.0.0",
+    "description": "Buildin Developer API",
+    "contact": {
+      "name": "Buildin API Support",
+      "url": "https://buildin.ai"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.buildin.ai",
+      "description": "生产环境"
+    },
+    {
+      "url": "https://api.buildin.ai",
+      "description": "测试环境"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "机器人 Token 认证"
+      }
+    },
+    "schemas": {
+      "Database": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "database"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "d9824bdc-8445-4327-be8b-5b47500af6ce"
+          },
+          "created_time": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-12-01T10:00:00.000Z"
+          },
+          "created_by": {
+            "$ref": "#/components/schemas/User"
+          },
+          "last_edited_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_edited_by": {
+            "$ref": "#/components/schemas/User"
+          },
+          "title": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RichTextItem"
+            }
+          },
+          "icon": {
+            "$ref": "#/components/schemas/Icon"
+          },
+          "cover": {
+            "$ref": "#/components/schemas/Cover"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PropertySchema"
+            }
+          },
+          "parent": {
+            "$ref": "#/components/schemas/Parent"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://buildin.ai/docs/d9824bdc-8445-4327-be8b-5b47500af6ce"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "is_inline": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Page": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "page"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "$ref": "#/components/schemas/User"
+          },
+          "last_edited_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_edited_by": {
+            "$ref": "#/components/schemas/User"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PropertyValue"
+            }
+          },
+          "parent": {
+            "$ref": "#/components/schemas/Parent"
+          },
+          "url": {
+            "type": "string"
+          },
+          "icon": {
+            "$ref": "#/components/schemas/Icon"
+          },
+          "cover": {
+            "$ref": "#/components/schemas/Cover"
+          }
+        }
+      },
+      "Block": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "block"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parent": {
+            "$ref": "#/components/schemas/Parent"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "paragraph", "heading_1", "heading_2", "heading_3",
+              "bulleted_list_item", "numbered_list_item", "to_do", "quote", "toggle",
+              "code", "image", "file", "bookmark", "embed",
+              "callout", "equation", "link_to_page", "template", "synced_block",
+              "divider", "column_list", "column", "table", "table_row",
+              "child_page", "child_database"
+            ]
+          },
+          "created_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "$ref": "#/components/schemas/User"
+          },
+          "last_edited_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_edited_by": {
+            "$ref": "#/components/schemas/User"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "has_children": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/BlockData"
+          }
+        }
+      },
+      "BlockData": {
+        "type": "object",
+        "description": "块类型特定的数据内容",
+        "properties": {
+          "rich_text": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RichTextItem"
+            },
+            "description": "富文本内容"
+          },
+          "text_color": {
+            "type": "string",
+            "enum": ["default", "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"],
+            "description": "文本颜色"
+          },
+          "background_color": {
+            "type": "string",
+            "enum": ["default", "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"],
+            "description": "背景颜色"
+          },
+          "checked": {
+            "type": "boolean",
+            "description": "待办事项是否完成"
+          },
+          "language": {
+            "type": "string",
+            "description": "代码块语言"
+          },
+          "url": {
+            "type": "string",
+            "description": "链接地址"
+          },
+          "caption": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RichTextItem"
+            },
+            "description": "说明文字"
+          },
+          "icon": {
+            "$ref": "#/components/schemas/Icon",
+            "description": "图标"
+          },
+          "expression": {
+            "type": "string",
+            "description": "数学公式表达式"
+          },
+          "page_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "页面引用ID"
+          },
+          "table_width": {
+            "type": "integer",
+            "description": "表格列数"
+          },
+          "has_column_header": {
+            "type": "boolean",
+            "description": "是否有列标题"
+          },
+          "has_row_header": {
+            "type": "boolean",
+            "description": "是否有行标题"
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/RichTextItem"
+              }
+            },
+            "description": "表格单元格内容"
+          },
+          "title": {
+            "type": "string",
+            "description": "子页面或子数据库标题"
+          },
+          "synced_from": {
+            "type": "object",
+            "properties": {
+              "block_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "description": "同步块来源"
+          },
+          "file": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "expiry_time": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "description": "内部文件信息"
+          },
+          "external": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              }
+            },
+            "description": "外部链接信息"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RichTextItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["text", "mention", "equation"]
+          },
+          "text": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "string"
+              },
+              "link": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "mention": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["user", "page", "date"]
+              },
+              "user": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              },
+              "page": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              },
+              "date": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "string"
+                  },
+                  "end": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "time_zone": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          },
+          "equation": {
+            "type": "object",
+            "properties": {
+              "expression": {
+                "type": "string"
+              }
+            }
+          },
+          "annotations": {
+            "type": "object",
+            "properties": {
+              "bold": {
+                "type": "boolean"
+              },
+              "italic": {
+                "type": "boolean"
+              },
+              "strikethrough": {
+                "type": "boolean"
+              },
+              "underline": {
+                "type": "boolean"
+              },
+              "code": {
+                "type": "boolean"
+              },
+              "color": {
+                "type": "string",
+                "enum": ["default", "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"]
+              }
+            }
+          },
+          "plain_text": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "RichText": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/RichTextItem"
+        },
+        "description": "富文本内容数组"
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "user"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UserMe": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "user"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "用户唯一标识符"
+          },
+          "type": {
+            "type": "string",
+            "const": "person"
+          },
+          "person": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email",
+                "nullable": true,
+                "description": "用户邮箱地址"
+              }
+            }
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "用户显示名称"
+          },
+          "avatar_url": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "description": "用户头像URL"
+          }
+        }
+      },
+      "IconEmoji": {
+        "type": "object",
+        "required": ["type", "emoji"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "emoji"
+          },
+          "emoji": {
+            "type": "string",
+            "example": "📝"
+          }
+        }
+      },
+      "IconExternalDetail": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "IconExternal": {
+        "type": "object",
+        "required": ["type", "external"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "external"
+          },
+          "external": {
+            "$ref": "#/components/schemas/IconExternalDetail"
+          }
+        }
+      },
+      "IconFileDetail": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expiry_time": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "IconFile": {
+        "type": "object",
+        "required": ["type", "file"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "file"
+          },
+          "file": {
+            "$ref": "#/components/schemas/IconFileDetail"
+          }
+        }
+      },
+      "Icon": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/IconEmoji" },
+          { "$ref": "#/components/schemas/IconExternal" },
+          { "$ref": "#/components/schemas/IconFile" }
+        ]
+      },
+      "Cover": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "external"
+          },
+          "external": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "ParentDatabaseId": {
+        "type": "object",
+        "required": ["type", "database_id"],
+        "properties": {
+          "type": { "type": "string", "const": "database_id" },
+          "database_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ParentPageId": {
+        "type": "object",
+        "required": ["type", "page_id"],
+        "properties": {
+          "type": { "type": "string", "const": "page_id" },
+          "page_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ParentBlockId": {
+        "type": "object",
+        "required": ["type", "block_id"],
+        "properties": {
+          "type": { "type": "string", "const": "block_id" },
+          "block_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ParentSpaceId": {
+        "type": "object",
+        "required": ["type", "space_id"],
+        "properties": {
+          "type": { "type": "string", "const": "space_id" },
+          "space_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "Parent": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/ParentDatabaseId" },
+          { "$ref": "#/components/schemas/ParentPageId" },
+          { "$ref": "#/components/schemas/ParentBlockId" },
+          { "$ref": "#/components/schemas/ParentSpaceId" }
+        ]
+      },
+      "PropertySchema": {
+        "anyOf": [
+          { "$ref": "#/components/schemas/PropertySchemaTitle" },
+          { "$ref": "#/components/schemas/PropertySchemaRichText" },
+          { "$ref": "#/components/schemas/PropertySchemaNumber" },
+          { "$ref": "#/components/schemas/PropertySchemaSelect" },
+          { "$ref": "#/components/schemas/PropertySchemaMultiSelect" },
+          { "$ref": "#/components/schemas/PropertySchemaDate" },
+          { "$ref": "#/components/schemas/PropertySchemaPeople" },
+          { "$ref": "#/components/schemas/PropertySchemaFiles" },
+          { "$ref": "#/components/schemas/PropertySchemaCheckbox" },
+          { "$ref": "#/components/schemas/PropertySchemaUrl" },
+          { "$ref": "#/components/schemas/PropertySchemaEmail" },
+          { "$ref": "#/components/schemas/PropertySchemaPhoneNumber" },
+          { "$ref": "#/components/schemas/PropertySchemaFormula" },
+          { "$ref": "#/components/schemas/PropertySchemaRelation" }
+        ]
+      },
+      "CreatePagePropertyValue": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/CreatePagePropertyValueTitle" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueRichText" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueSelect" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueMultiSelect" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueNumber" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueCheckbox" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueDate" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValuePeople" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueFiles" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueUrl" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueEmail" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValuePhoneNumber" },
+          { "$ref": "#/components/schemas/CreatePagePropertyValueRelation" }
+        ]
+      },
+      "PropertyValue": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/PropertyValueTitle" },
+          { "$ref": "#/components/schemas/PropertyValueRichText" },
+          { "$ref": "#/components/schemas/PropertyValueNumber" },
+          { "$ref": "#/components/schemas/PropertyValueSelect" },
+          { "$ref": "#/components/schemas/PropertyValueMultiSelect" },
+          { "$ref": "#/components/schemas/PropertyValueDate" },
+          { "$ref": "#/components/schemas/PropertyValuePeople" },
+          { "$ref": "#/components/schemas/PropertyValueFiles" },
+          { "$ref": "#/components/schemas/PropertyValueCheckbox" },
+          { "$ref": "#/components/schemas/PropertyValueUrl" },
+          { "$ref": "#/components/schemas/PropertyValueEmail" },
+          { "$ref": "#/components/schemas/PropertyValuePhoneNumber" },
+          { "$ref": "#/components/schemas/PropertyValueRelation" }
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "error"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string",
+            "enum": ["validation_error", "unauthorized", "forbidden", "not_found", "rate_limit", "internal_error"]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "PaginatedList": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "results": {
+            "type": "array",
+            "items": {}
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true,
+            "description": "下一页游标，使用最后一个项目的ID作为游标值"
+          },
+          "has_more": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PropertySchemaTitle": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "title" },
+          "title": { "type": "object", "additionalProperties": false }
+        }
+      },
+      "PropertySchemaRichText": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "rich_text" },
+          "rich_text": { "type": "object", "additionalProperties": false }
+        }
+      },
+      "PropertySchemaNumber": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "number" },
+          "number": {
+            "type": "object",
+            "properties": { "format": { "type": "string", "enum": ["number", "number_with_commas", "percent", "dollar", "euro", "pound", "yen", "yuan"] } },
+            "additionalProperties": false
+          }
+        }
+      },
+      "PropertySchemaSelectOption": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "color": { "type": "string", "enum": ["default", "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"] }
+        }
+      },
+      "PropertySchemaSelect": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "select" },
+          "select": {
+            "type": "object",
+            "properties": { "options": { "type": "array", "items": { "$ref": "#/components/schemas/PropertySchemaSelectOption" } } },
+            "additionalProperties": false
+          }
+        }
+      },
+      "PropertySchemaMultiSelect": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "multi_select" },
+          "multi_select": {
+            "type": "object",
+            "properties": { "options": { "type": "array", "items": { "$ref": "#/components/schemas/PropertySchemaSelectOption" } } },
+            "additionalProperties": false
+          }
+        }
+      },
+      "PropertySchemaDate": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "date" },
+          "date": { "type": "object", "additionalProperties": false }
+        }
+      },
+      "PropertySchemaPeople": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "people" },
+          "people": { "type": "object", "additionalProperties": false }
+        }
+      },
+      "PropertySchemaFiles": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "files" },
+          "files": { "type": "object", "additionalProperties": false }
+        }
+      },
+      "PropertySchemaCheckbox": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "checkbox" },
+          "checkbox": { "type": "object", "additionalProperties": false }
+        }
+      },
+      "PropertySchemaUrl": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "url" },
+          "url": { "type": "object", "additionalProperties": false }
+        }
+      },
+      "PropertySchemaEmail": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "email" },
+          "email": { "type": "object", "additionalProperties": false }
+        }
+      },
+      "PropertySchemaPhoneNumber": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "phone_number" },
+          "phone_number": { "type": "object", "additionalProperties": false }
+        }
+      },
+      "PropertySchemaFormula": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "formula" },
+          "formula": {
+            "type": "object",
+            "properties": { "expression": { "type": "string", "description": "公式表达式" } },
+            "required": ["expression"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "PropertySchemaRelation": {
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "const": "relation" },
+          "relation": {
+            "type": "object",
+            "properties": {
+              "database_id": { "type": "string", "format": "uuid", "description": "关联的数据库ID" },
+              "synced_property_id": { "type": "string", "description": "同步属性ID" }
+            },
+            "required": ["database_id"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "CreatePagePropertyValueTitle": {
+        "type": "object", "required": ["type", "title"],
+        "properties": { "type": { "const": "title" }, "title": { "type": "array", "items": { "$ref": "#/components/schemas/RichTextItem" } } }
+      },
+      "CreatePagePropertyValueRichText": {
+        "type": "object", "required": ["type", "rich_text"],
+        "properties": { "type": { "const": "rich_text" }, "rich_text": { "type": "array", "items": { "$ref": "#/components/schemas/RichTextItem" } } }
+      },
+      "CreatePagePropertyValueSelect": {
+        "type": "object", "required": ["type", "select"],
+        "properties": { "type": { "const": "select" }, "select": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "color": { "type": "string" } }, "required": ["name"] } }
+      },
+      "CreatePagePropertyValueMultiSelect": {
+        "type": "object", "required": ["type", "multi_select"],
+        "properties": {
+          "type": { "const": "multi_select" },
+          "multi_select": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "color": { "type": "string" } }, "required": ["name"] } }
+        }
+      },
+      "CreatePagePropertyValueNumber": {
+        "type": "object", "required": ["type", "number"],
+        "properties": { "type": { "const": "number" }, "number": { "type": "number" } }
+      },
+      "CreatePagePropertyValueCheckbox": {
+        "type": "object", "required": ["type", "checkbox"],
+        "properties": { "type": { "const": "checkbox" }, "checkbox": { "type": "boolean" } }
+      },
+      "CreatePagePropertyValueDate": {
+        "type": "object", "required": ["type", "date"],
+        "properties": {
+          "id": { "type": "string", "description": "属性ID（可选）" },
+          "type": { "const": "date" },
+          "date": {
+            "type": "object",
+            "properties": {
+              "start": { "type": "string", "description": "开始日期（YYYY-MM-DD 或 YYYY-MM-DDTHH:MM格式）" },
+              "end": { "type": "string", "description": "结束日期（可选）" },
+              "time_zone": { "type": "string", "description": "时区" }
+            },
+            "required": ["start"]
+          }
+        }
+      },
+      "CreatePagePropertyValuePeople": {
+        "type": "object", "required": ["type", "people"],
+        "properties": {
+          "type": { "const": "people" },
+          "people": { "type": "array", "items": { "type": "object", "properties": { "object": { "type": "string", "const": "user" }, "id": { "type": "string", "format": "uuid" } }, "required": ["id"] } }
+        }
+      },
+      "CreatePagePropertyValueFiles": {
+        "type": "object", "required": ["type", "files"],
+        "properties": {
+          "type": { "const": "files" },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string", "const": "external" },
+                "external": { "type": "object", "properties": { "url": { "type": "string", "format": "uri" } }, "required": ["url"] }
+              },
+              "required": ["name"]
+            }
+          }
+        }
+      },
+      "CreatePagePropertyValueUrl": {
+        "type": "object", "required": ["type", "url"],
+        "properties": { "type": { "const": "url" }, "url": { "type": "string", "format": "uri" } }
+      },
+      "CreatePagePropertyValueEmail": {
+        "type": "object", "required": ["type", "email"],
+        "properties": { "type": { "const": "email" }, "email": { "type": "string", "format": "email" } }
+      },
+      "CreatePagePropertyValuePhoneNumber": {
+        "type": "object", "required": ["type", "phone_number"],
+        "properties": { "type": { "const": "phone_number" }, "phone_number": { "type": "string" } }
+      },
+      "CreatePagePropertyValueRelation": {
+        "type": "object", "required": ["type", "relation"],
+        "properties": {
+          "type": { "const": "relation" },
+          "relation": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" } }, "required": ["id"] } }
+        }
+      },
+      "PropertyValueTitle": { "type": "object", "required": ["type", "title"], "properties": { "id": { "type": "string" }, "type": { "const": "title" }, "title": { "type": "array", "items": { "$ref": "#/components/schemas/RichTextItem" } } } },
+      "PropertyValueRichText": { "type": "object", "required": ["type", "rich_text"], "properties": { "id": { "type": "string" }, "type": { "const": "rich_text" }, "rich_text": { "type": "array", "items": { "$ref": "#/components/schemas/RichTextItem" } } } },
+      "PropertyValueNumber": { "type": "object", "required": ["type", "number"], "properties": { "id": { "type": "string" }, "type": { "const": "number" }, "number": { "type": "number", "nullable": true } } },
+      "PropertyValueSelect": { "type": "object", "required": ["type", "select"], "properties": { "id": { "type": "string" }, "type": { "const": "select" }, "select": { "type": "object", "nullable": true, "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "color": { "type": "string" } } } } },
+      "PropertyValueMultiSelect": { "type": "object", "required": ["type", "multi_select"], "properties": { "id": { "type": "string" }, "type": { "const": "multi_select" }, "multi_select": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "color": { "type": "string" } } } } } },
+
+      "PropertyValueDate": { "type": "object", "required": ["type", "date"], "properties": { "id": { "type": "string" }, "type": { "const": "date" }, "date": { "type": "object", "nullable": true, "properties": { "start": { "type": "string", "description": "开始日期" }, "end": { "type": "string", "description": "结束日期（可选）" }, "time_zone": { "type": "string", "description": "时区" } } } } },
+      "PropertyValuePeople": { "type": "object", "required": ["type", "people"], "properties": { "id": { "type": "string" }, "type": { "const": "people" }, "people": { "type": "array", "items": { "type": "object", "properties": { "object": { "type": "string", "const": "user" }, "id": { "type": "string", "format": "uuid" } } } } } },
+      "PropertyValueFiles": {
+        "type": "object", "required": ["type", "files"], "properties": {
+          "id": { "type": "string" },
+          "type": { "const": "files" },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string", "const": "external" },
+                "external": { "type": "object", "properties": { "url": { "type": "string" } } }
+              }
+            }
+          }
+        }
+      },
+      "PropertyValueCheckbox": { "type": "object", "required": ["type", "checkbox"], "properties": { "id": { "type": "string" }, "type": { "const": "checkbox" }, "checkbox": { "type": "boolean" } } },
+      "PropertyValueUrl": { "type": "object", "required": ["type", "url"], "properties": { "id": { "type": "string" }, "type": { "const": "url" }, "url": { "type": "string", "nullable": true } } },
+      "PropertyValueEmail": { "type": "object", "required": ["type", "email"], "properties": { "id": { "type": "string" }, "type": { "const": "email" }, "email": { "type": "string", "nullable": true } } },
+      "PropertyValuePhoneNumber": { "type": "object", "required": ["type", "phone_number"], "properties": { "id": { "type": "string" }, "type": { "const": "phone_number" }, "phone_number": { "type": "string", "nullable": true } } },
+      "PropertyValueRelation": { "type": "object", "required": ["type", "relation"], "properties": { "id": { "type": "string" }, "type": { "const": "relation" }, "relation": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" } }, "required": ["id"] } } } },
+      "CreateDatabaseRequest": {
+        "type": "object",
+        "required": ["title", "properties"],
+        "properties": {
+          "parent": { "$ref": "#/components/schemas/Parent" },
+          "title": { "type": "array", "items": { "$ref": "#/components/schemas/RichTextItem" } },
+          "icon": { "$ref": "#/components/schemas/Icon" },
+          "cover": { "$ref": "#/components/schemas/Cover" },
+          "properties": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/PropertySchema" } },
+          "is_inline": { "type": "boolean", "description": "是否为内联数据库" }
+        }
+      },
+      "UpdateDatabaseRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "array", "items": { "$ref": "#/components/schemas/RichTextItem" } },
+          "icon": { "$ref": "#/components/schemas/Icon" },
+          "cover": { "$ref": "#/components/schemas/Cover" },
+          "properties": { "type": "object", "additionalProperties": { "oneOf": [{ "$ref": "#/components/schemas/PropertySchema" }, { "type": "null" }] } },
+          "archived": { "type": "boolean" }
+        }
+      },
+      "QueryDatabaseRequest": {
+        "type": "object",
+        "properties": {
+          "start_cursor": { "type": "string", "description": "分页游标，使用页面ID作为游标值" },
+          "page_size": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50, "description": "每页记录数" },
+          "after_created_at": { "type": "number", "description": "筛选创建时间晚于此时间戳的记录" },
+          "after_updated_at": { "type": "number", "description": "筛选更新时间晚于此时间戳的记录" }
+        }
+      },
+      "QueryDatabaseResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PaginatedList" },
+          {
+            "properties": {
+              "results": { "type": "array", "items": { "$ref": "#/components/schemas/Page" } },
+              "type": { "type": "string", "const": "page" },
+              "page": { "type": "object" }
+            }
+          }
+        ]
+      },
+      "CreatePageRequest": {
+        "type": "object",
+        "required": ["properties"],
+        "properties": {
+          "parent": { "$ref": "#/components/schemas/Parent" },
+          "icon": { "$ref": "#/components/schemas/Icon" },
+          "cover": { "$ref": "#/components/schemas/Cover" },
+          "properties": { "type": "object", "description": "页面属性", "additionalProperties": { "$ref": "#/components/schemas/CreatePagePropertyValue" } }
+        }
+      },
+      "CreatePageResponse": {
+        "type": "object",
+        "properties": {
+          "object": { "type": "string", "const": "page" },
+          "id": { "type": "string", "format": "uuid", "description": "页面ID" },
+          "createdAt": { "type": "string", "format": "date-time", "description": "创建时间" },
+          "createdBy": { "type": "object", "properties": { "object": { "type": "string", "const": "user" }, "id": { "type": "string", "description": "创建者ID" } } },
+          "updatedAt": { "type": "string", "format": "date-time", "description": "更新时间" },
+          "updatedBy": { "type": "object", "properties": { "object": { "type": "string", "const": "user" }, "id": { "type": "string", "description": "更新者ID" } } },
+          "archived": { "type": "boolean", "description": "是否已归档" },
+          "properties": { "type": "object", "description": "页面属性值", "additionalProperties": { "$ref": "#/components/schemas/PropertyValue" } },
+          "parent": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": { "type": { "type": "string", "const": "database_id" }, "database_id": { "type": "string", "format": "uuid" } },
+                "required": ["type", "database_id"]
+              },
+              {
+                "type": "object",
+                "properties": { "type": { "type": "string", "const": "page_id" }, "page_id": { "type": "string", "format": "uuid" } },
+                "required": ["type", "page_id"]
+              }
+            ]
+          },
+          "url": { "type": "string", "format": "uri", "description": "页面访问URL" }
+        }
+      },
+      "UpdatePageRequest": {
+        "type": "object",
+        "properties": {
+          "properties": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/PropertyValue" } },
+          "icon": { "$ref": "#/components/schemas/Icon" },
+          "cover": { "$ref": "#/components/schemas/Cover" },
+          "archived": { "type": "boolean" }
+        }
+      },
+      "UpdateBlockRequest": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "paragraph", "heading_1", "heading_2", "heading_3", "bulleted_list_item", "numbered_list_item", "to_do",
+              "quote", "toggle", "code", "image", "file", "bookmark", "embed", "callout", "equation", "link_to_page",
+              "template", "synced_block", "divider", "column_list", "column", "table", "table_row", "child_page", "child_database"
+            ]
+          },
+          "archived": { "type": "boolean", "description": "设置为true来归档（删除）块" },
+          "data": { "$ref": "#/components/schemas/BlockData" }
+        }
+      },
+      "DeleteBlockResponse": {
+        "type": "object",
+        "properties": {
+          "object": { "type": "string", "const": "block" },
+          "id": { "type": "string", "format": "uuid" },
+          "deleted": { "type": "boolean" }
+        }
+      },
+      "GetBlockChildrenResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PaginatedList" },
+          { "properties": { "results": { "type": "array", "items": { "$ref": "#/components/schemas/Block" } } } }
+        ]
+      },
+      "AppendBlockChildrenRequest": {
+        "type": "object",
+        "required": ["children"],
+        "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "data"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "paragraph", "heading_1", "heading_2", "heading_3", "bulleted_list_item", "numbered_list_item",
+                    "to_do", "quote", "toggle", "code", "image", "file", "bookmark", "embed", "callout", "equation",
+                    "link_to_page", "template", "synced_block", "divider", "column_list", "column", "table", "table_row",
+                    "child_page", "child_database"
+                  ]
+                },
+                "data": { "$ref": "#/components/schemas/BlockData" }
+              }
+            },
+            "maxItems": 100,
+            "description": "要创建的子块列表，最多100个"
+          }
+        }
+      },
+      "AppendBlockChildrenResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PaginatedList" },
+          { "properties": { "results": { "type": "array", "items": { "$ref": "#/components/schemas/Block" } } } }
+        ]
+      },
+      "V1SearchRequest": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "搜索关键词",
+            "example": "项目计划",
+            "default": ""
+          },
+          "start_cursor": {
+            "type": "string",
+            "description": "分页游标，用于获取下一页结果",
+            "example": "eyJvZmZzZXQiOjEwfQ=="
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10,
+            "description": "每页返回的结果数量"
+          }
+        }
+      },
+      "V1SearchPageResult": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "page"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "页面的唯一标识符"
+          },
+          "created_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "页面创建时间"
+          },
+          "last_edited_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "页面最后编辑时间"
+          },
+          "parent": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/ParentSpaceId" },
+              { "$ref": "#/components/schemas/ParentDatabaseId" },
+              { "$ref": "#/components/schemas/ParentPageId" },
+              { "$ref": "#/components/schemas/ParentBlockId" }
+            ],
+            "nullable": true,
+            "description": "页面的父级对象"
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "页面是否已归档"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "title"
+                  },
+                  "title": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/RichTextItem"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "页面属性"
+          }
+        }
+      },
+      "V1SearchResponse": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/V1SearchPageResult"
+            },
+            "description": "搜索结果页面数组"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true,
+            "description": "下一页游标，为 null 表示没有更多结果"
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "是否还有更多结果"
+          }
+        }
+      },
+      "SearchRequest": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "搜索关键词",
+            "example": "网络渗透"
+          }
+        }
+      },
+      "SearchResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "搜索是否成功",
+            "example": true
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "页面或块的唯一标识符",
+                  "example": "c83e8574-7600-4ac0-beb3-2ab98a906012"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "页面或块的标题",
+                  "example": "域渗透基础"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "页面或块的内容片段",
+                  "example": "## **域控制器(Domain Controller，简写DC)**\n\n域控制器是域中的一台类似管理服务器的计算机..."
+                },
+                "type": {
+                  "type": "string",
+                  "description": "结果类型",
+                  "example": "space"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/databases": {
+      "post": {
+        "summary": "创建数据库",
+        "description": "在现有页面下创建一个新的数据库",
+        "operationId": "createDatabase",
+        "tags": ["数据库"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDatabaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "数据库创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Database"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/databases/{database_id}": {
+      "get": {
+        "summary": "获取数据库",
+        "description": "根据ID获取数据库对象",
+        "operationId": "getDatabase",
+        "tags": ["数据库"],
+        "parameters": [
+          {
+            "name": "database_id",
+            "in": "path",
+            "required": true,
+            "description": "数据库ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取数据库",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Database"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "数据库不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "更新数据库",
+        "description": "更新数据库的属性",
+        "operationId": "updateDatabase",
+        "tags": ["数据库"],
+        "parameters": [
+          {
+            "name": "database_id",
+            "in": "path",
+            "required": true,
+            "description": "数据库ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDatabaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "数据库更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Database"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/databases/{database_id}/query": {
+      "post": {
+        "summary": "查询数据库",
+        "description": "获取数据库中的页面列表，支持分页",
+        "operationId": "queryDatabase",
+        "tags": ["数据库"],
+        "parameters": [
+          {
+            "name": "database_id",
+            "in": "path",
+            "required": true,
+            "description": "数据库ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryDatabaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryDatabaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/pages": {
+      "post": {
+        "summary": "创建页面",
+        "description": "在页面或数据库中创建新页面",
+        "operationId": "createPage",
+        "tags": ["页面"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePageRequest"
+              },
+              "examples": {
+                "create_page_in_database": {
+                  "summary": "在数据库中创建页面",
+                  "value": {
+                    "parent": {
+                      "database_id": "d9824bdc-8445-4327-be8b-5b47500af6ce"
+                    },
+                    "icon": {
+                      "type": "emoji",
+                      "emoji": "📝"
+                    },
+                    "cover": {
+                      "type": "external",
+                      "external": {
+                        "url": "https://example.com/cover.jpg"
+                      }
+                    },
+                    "properties": {
+                      "标题": {
+                        "type": "title",
+                        "title": [
+                          {
+                            "text": {
+                              "content": "我的新页面"
+                            }
+                          }
+                        ]
+                      },
+                      "描述": {
+                        "type": "rich_text",
+                        "rich_text": [
+                          {
+                            "text": {
+                              "content": "这是页面描述"
+                            }
+                          }
+                        ]
+                      },
+                      "状态": {
+                        "type": "select",
+                        "select": {
+                          "name": "进行中"
+                        }
+                      },
+                      "完成": {
+                        "type": "checkbox",
+                        "checkbox": false
+                      },
+                      "截止日期": {
+                        "type": "date",
+                        "date": {
+                          "start": "2024-01-15"
+                        }
+                      }
+                    }
+                  }
+                },
+                "create_page_under_page": {
+                  "summary": "在页面下创建子页面",
+                  "value": {
+                    "parent": {
+                      "page_id": "a1b2c3d4-5678-9012-3456-789012345678"
+                    },
+                    "properties": {
+                      "标题": {
+                        "type": "title",
+                        "title": [
+                          {
+                            "text": {
+                              "content": "子页面标题"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "页面创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePageResponse"
+                },
+                "example": {
+                  "object": "page",
+                  "id": "a1b2c3d4-5678-9012-3456-789012345678",
+                  "createdAt": "2024-01-01T10:00:00.000Z",
+                  "createdBy": {
+                    "object": "user",
+                    "id": "bot-12345"
+                  },
+                  "updatedAt": "2024-01-01T10:00:00.000Z",
+                  "updatedBy": {
+                    "object": "user",
+                    "id": "bot-12345"
+                  },
+                  "archived": false,
+                  "properties": {
+                    "title": {
+                      "id": "title",
+                      "type": "title",
+                      "title": [
+                        {
+                          "type": "text",
+                          "text": {
+                            "content": "我的新页面"
+                          }
+                        }
+                      ]
+                    },
+                    "描述": {
+                      "id": "description",
+                      "type": "rich_text",
+                      "rich_text": [
+                        {
+                          "type": "text",
+                          "text": {
+                            "content": "这是页面描述"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "parent": {
+                    "type": "database_id",
+                    "database_id": "d9824bdc-8445-4327-be8b-5b47500af6ce"
+                  },
+                  "url": "https://buildin.ai/docs/a1b2c3d4-5678-9012-3456-789012345678"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部服务器错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/pages/{page_id}": {
+      "get": {
+        "summary": "获取页面",
+        "description": "根据ID获取页面对象",
+        "operationId": "getPage",
+        "tags": ["页面"],
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "description": "页面ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取页面",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "页面不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "更新页面属性",
+        "description": "更新页面的属性",
+        "operationId": "updatePage",
+        "tags": ["页面"],
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "description": "页面ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "页面更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/blocks/{block_id}": {
+      "get": {
+        "summary": "获取块",
+        "description": "根据ID获取块对象",
+        "operationId": "getBlock",
+        "tags": ["块"],
+        "parameters": [
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "description": "块ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取块",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Block"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "更新块",
+        "description": "更新指定块的内容或属性",
+        "operationId": "updateBlock",
+        "tags": ["块"],
+        "parameters": [
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "description": "块ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBlockRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "块更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Block"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除块",
+        "description": "删除指定块及其所有子块",
+        "operationId": "deleteBlock",
+        "tags": ["块"],
+        "parameters": [
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "description": "块ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "块删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteBlockResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/blocks/{block_id}/children": {
+      "get": {
+        "summary": "获取子块",
+        "description": "获取指定块的子块列表",
+        "operationId": "getBlockChildren",
+        "tags": ["块"],
+        "parameters": [
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "description": "父块ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "start_cursor",
+            "in": "query",
+            "description": "分页游标，使用子块的ID作为游标值",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "每页记录数",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取子块列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetBlockChildrenResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "追加子块",
+        "description": "向指定块追加一个或多个子块",
+        "operationId": "appendBlockChildren",
+        "tags": ["块"],
+        "parameters": [
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "description": "父块ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendBlockChildrenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "子块创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppendBlockChildrenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/search": {
+      "post": {
+        "summary": "搜索页面",
+        "description": "在机器人授权的页面范围内搜索相关内容",
+        "operationId": "v1Search",
+        "tags": ["搜索"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/V1SearchRequest"
+              },
+              "examples": {
+                "search_with_query": {
+                  "summary": "带关键词搜索",
+                  "value": {
+                    "query": "项目计划",
+                    "page_size": 20
+                  }
+                },
+                "paginated_search": {
+                  "summary": "分页搜索",
+                  "value": {
+                    "query": "会议",
+                    "start_cursor": "eyJvZmZzZXQiOjEwfQ==",
+                    "page_size": 10
+                  }
+                },
+                "list_all_pages": {
+                  "summary": "列出所有授权页面",
+                  "value": {
+                    "query": "",
+                    "page_size": 50
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "搜索成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1SearchResponse"
+                },
+                "example": {
+                  "object": "list",
+                  "results": [
+                    {
+                      "object": "page",
+                      "id": "a1b2c3d4-5678-9012-3456-789012345678",
+                      "created_time": "2024-01-01T10:00:00.000Z",
+                      "last_edited_time": "2024-01-15T14:30:00.000Z",
+                      "parent": {
+                        "type": "database_id",
+                        "database_id": "d9824bdc-8445-4327-be8b-5b47500af6ce"
+                      },
+                      "archived": false,
+                      "properties": {
+                        "title": {
+                          "type": "title",
+                          "title": [
+                            {
+                              "type": "text",
+                              "text": {
+                                "content": "项目计划文档"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "next_cursor": "eyJvZmZzZXQiOjIwfQ==",
+                  "has_more": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部服务器错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/pages/search": {
+      "post": {
+        "summary": "搜索页面",
+        "description": "通过向量搜索在空间中查找相关页面和内容",
+        "operationId": "searchPages",
+        "tags": ["页面"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              },
+              "example": {
+                "query": "我今天有什么事情需要做"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "搜索成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                },
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "uuid": "c83e8574-7600-4ac0-beb3-2ab98a906012",
+                      "title": "会议",
+                      "content": "产品定义会议举行...",
+                      "type": "space"
+                    },
+                    {
+                      "uuid": "889131e4-60bd-4b17-a725-e112b07156a9",
+                      "title": "发送邮件",
+                      "content": "发送邮件...",
+                      "type": "space"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部服务器错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/me": {
+      "get": {
+        "summary": "获取机器人创建者信息",
+        "description": "获取当前机器人的创建者用户信息",
+        "operationId": "getMe",
+        "tags": ["用户"],
+        "responses": {
+          "200": {
+            "description": "成功获取用户信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMe"
+                },
+                "example": {
+                  "object": "user",
+                  "id": "875bb809-eab6-467f-80d9-a7de6899d885",
+                  "type": "person",
+                  "person": {
+                    "email": "user@example.com"
+                  },
+                  "name": "张三",
+                  "avatar_url": "https://cdn2.buildin.ai/avatar123.jpg"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "机器人创建者信息不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "数据库",
+      "description": "数据库相关操作"
+    },
+    {
+      "name": "页面",
+      "description": "页面相关操作"
+    },
+    {
+      "name": "块",
+      "description": "块相关操作"
+    },
+    {
+      "name": "搜索",
+      "description": "搜索相关操作"
+    },
+    {
+      "name": "用户",
+      "description": "用户相关操作"
+    }
+  ]
+}
