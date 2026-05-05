@@ -13,9 +13,12 @@
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
+    <PackageReference Include="Spectre.Console.Testing" Version="0.55.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Buildout.Cli\Buildout.Cli.csproj" />
     <ProjectReference Include="..\..\src\Buildout.Core\Buildout.Core.csproj" />
   </ItemGroup>
 

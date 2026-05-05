@@ -11,6 +11,7 @@ public sealed record Page
     public Icon? Icon { get; init; }
     public Parent? Parent { get; init; }
     public Dictionary<string, PropertyValue>? Properties { get; init; }
+    public IReadOnlyList<RichText>? Title { get; init; }
     public bool Archived { get; init; }
     public string? Url { get; init; }
 }

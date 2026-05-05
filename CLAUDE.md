@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Active feature plan: [specs/001-scaffold-api-client/plan.md](./specs/001-scaffold-api-client/plan.md)
+Active feature plan: [specs/002-basic-page-reading/plan.md](./specs/002-basic-page-reading/plan.md)
 
 For technologies, project structure, shell commands, and other context, read
 that plan and its sibling artifacts (`research.md`, `data-model.md`,

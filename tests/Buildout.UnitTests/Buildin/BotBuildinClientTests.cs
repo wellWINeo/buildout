@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Kiota.Abstractions;
 using Microsoft.Kiota.Abstractions.Serialization;
+using Microsoft.Kiota.Serialization.Json;
 using NSubstitute;
 using Xunit;
 
@@ -261,5 +263,180 @@ public sealed class BotBuildinClientTests
         Assert.False(result.Archived);
         Assert.Equal("https://api.buildin.ai/databases/88888888", result.Url);
         Assert.NotNull(result.Title);
+    }
+
+    [Fact]
+    public async Task GetBlockChildrenAsync_MapsBlocks()
+    {
+        var json = """
+        [
+            {
+                "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "type": "paragraph",
+                "has_children": false,
+                "data": {
+                    "rich_text": [{"plain_text": "Hello world", "type": "text"}]
+                }
+            },
+            {
+                "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                "type": "heading_1",
+                "has_children": true,
+                "data": {
+                    "rich_text": [{"plain_text": "Heading", "type": "text"}]
+                }
+            }
+        ]
+        """;
+        var doc = JsonDocument.Parse(json);
+        var parseNode = new JsonParseNode(doc.RootElement);
+        var resultsUntyped = parseNode.GetObjectValue(UntypedNode.CreateFromDiscriminatorValue);
+
+        var response = new Gen.GetBlockChildrenResponse
+        {
+            HasMore = false,
+            Results = resultsUntyped
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.GetBlockChildrenResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.GetBlockChildrenResponse?>(response));
+
+        var result = await _client.GetBlockChildrenAsync("cccccccc-cccc-cccc-cccc-cccccccccccc");
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Results.Count);
+        var para = Assert.IsType<ParagraphBlock>(result.Results[0]);
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", para.Id);
+        Assert.Equal("paragraph", para.Type);
+        var heading = Assert.IsType<Heading1Block>(result.Results[1]);
+        Assert.Equal("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", heading.Id);
+        Assert.Equal("heading_1", heading.Type);
+    }
+
+    [Fact]
+    public async Task GetPageAsync_PopulatesTitle()
+    {
+        var propJson = """
+        {
+            "Name": {
+                "type": "title",
+                "title": [{"plain_text": "My Page Title", "type": "text"}]
+            },
+            "Description": {
+                "type": "rich_text",
+                "rich_text": [{"plain_text": "other", "type": "text"}]
+            }
+        }
+        """;
+        var propDoc = JsonDocument.Parse(propJson);
+        var propParseNode = new JsonParseNode(propDoc.RootElement);
+        var properties = propParseNode.GetObjectValue(Gen.Page_properties.CreateFromDiscriminatorValue);
+
+        var generated = new Gen.Page
+        {
+            Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            Archived = false,
+            Url = "https://api.buildin.ai/pages/22222222",
+            Properties = properties
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.Page>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.Page?>(generated));
+
+        var result = await _client.GetPageAsync("22222222-2222-2222-2222-222222222222");
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Title);
+        Assert.Single(result.Title);
+        Assert.Equal("My Page Title", result.Title[0].Content);
+    }
+
+    [Fact]
+    public async Task GetBlockAsync_MapsMentionRichText()
+    {
+        var pageId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var userId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+        var generated = new Gen.Block
+        {
+            Id = Guid.Parse("66666666-6666-6666-6666-666666666666"),
+            Type = Gen.Block_type.Paragraph,
+            HasChildren = false,
+            Data = new Gen.BlockData
+            {
+                RichText =
+                [
+                    new Gen.RichTextItem
+                    {
+                        PlainText = "page ref",
+                        Type = Gen.RichTextItem_type.Mention,
+                        Mention = new Gen.RichTextItem_mention
+                        {
+                            Type = Gen.RichTextItem_mention_type.Page,
+                            Page = new Gen.RichTextItem_mention_page { Id = pageId }
+                        }
+                    },
+                    new Gen.RichTextItem
+                    {
+                        PlainText = "user ref",
+                        Type = Gen.RichTextItem_type.Mention,
+                        Mention = new Gen.RichTextItem_mention
+                        {
+                            Type = Gen.RichTextItem_mention_type.User,
+                            User = new Gen.RichTextItem_mention_user { Id = userId }
+                        }
+                    },
+                    new Gen.RichTextItem
+                    {
+                        PlainText = "date ref",
+                        Type = Gen.RichTextItem_type.Mention,
+                        Mention = new Gen.RichTextItem_mention
+                        {
+                            Type = Gen.RichTextItem_mention_type.Date,
+                            Date = new Gen.RichTextItem_mention_date { Start = "2025-01-15", End = "2025-01-16" }
+                        }
+                    },
+                    new Gen.RichTextItem
+                    {
+                        PlainText = "plain text",
+                        Type = Gen.RichTextItem_type.Text
+                    }
+                ]
+            }
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.Block>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.Block?>(generated));
+
+        var result = await _client.GetBlockAsync("66666666-6666-6666-6666-666666666666");
+
+        Assert.NotNull(result);
+        var paragraph = Assert.IsType<ParagraphBlock>(result);
+        Assert.NotNull(paragraph.RichTextContent);
+        Assert.Equal(4, paragraph.RichTextContent.Count);
+
+        var pageMention = Assert.IsType<PageMention>(paragraph.RichTextContent[0].Mention);
+        Assert.Equal("11111111-1111-1111-1111-111111111111", pageMention.PageId);
+
+        var userMention = Assert.IsType<UserMention>(paragraph.RichTextContent[1].Mention);
+        Assert.Equal("22222222-2222-2222-2222-222222222222", userMention.UserId);
+
+        var dateMention = Assert.IsType<DateMention>(paragraph.RichTextContent[2].Mention);
+        Assert.Equal("2025-01-15", dateMention.Start);
+        Assert.Equal("2025-01-16", dateMention.End);
+
+        Assert.Null(paragraph.RichTextContent[3].Mention);
     }
 }
