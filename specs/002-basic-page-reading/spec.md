@@ -5,6 +5,15 @@
 **Status**: Draft
 **Input**: User description: "Initial reading support. Both MCP and CLI should support basic reading buildin pages as plain markdown. MCP - add resource buildin://{page_id}. For CLI - `buildout get {page_id}`, check if terminal supports rich markup, if not - just output markdown without styling. _Basic reading_ - means support basic page blocks (headers, lists, code listing), excluding iframes and databases."
 
+## Clarifications
+
+### Session 2026-05-05
+
+- Q: Which set of block types is in scope for this feature — strict literal (heading/lists/code only), extended (adds paragraph + quote + divider + todo + inline formatting), or extended + images? → A: Extended (matches current FR-002 list — paragraph, heading 1/2/3, bulleted list, numbered list, todo, code block, quote, divider, plus inline formatting bold/italic/inline code/links). Images remain unsupported and render as a placeholder.
+- Q: For v1, does the converter fetch the entire block tree, or stop after the first response? → A: Always fetch and return the full content (paginate `next_cursor` to exhaustion at every level). Pagination optimizations, truncation policy, and caching are out of scope here and deferred to a later phase.
+- Q: Does the rendered Markdown begin with the page title as an H1, or is it body-only? → A: Prepend the page title as a single `# <title>` H1 line followed by a blank line, then the rendered body. Both CLI (non-TTY) and MCP produce identical output.
+- Q: How are inline mentions (page / user / date / database) rendered inside otherwise-supported blocks? → A: Page and database mentions render as `[Display title](buildin://<page_id>)` Markdown links; user mentions render as plain `@Display Name`; date mentions render as their ISO date string (e.g. `2026-05-05`). Mentions are not treated as unsupported placeholders.
+
 ## User Scenarios & Testing *(mandatory)*
 
 This feature delivers the first user-visible capability of buildout: turning a
@@ -115,11 +124,14 @@ as the CLI's piped form for the same page.
 - **Transport failure**: the buildin host is unreachable or returns a 5xx /
   malformed response. Both surfaces surface this as a transport-class error
   distinct from a buildin-side error (see FR-009).
-- **Very large pages**: a page exceeding what the buildin API returns in a
-  single response (paginated children) MUST be fully fetched before
-  rendering; partial output is not acceptable. If pagination is not yet
-  implemented in the underlying client, the spec MUST document the page-size
-  ceiling and fail loudly above it rather than silently truncating.
+- **Very large pages**: a page whose block tree exceeds a single buildin API
+  response MUST be fully fetched before rendering — the converter walks
+  `next_cursor` to exhaustion at every level of the tree. Partial output is
+  never acceptable. Pagination-related performance optimizations
+  (concurrent fetching, streaming output, response caching, partial-render
+  modes, page-size ceilings) are explicitly out of scope for this feature
+  and are deferred to a later phase; this feature optimizes for correctness
+  over throughput.
 - **Unicode / right-to-left / emoji**: page content in any Unicode script
   passes through unchanged; the converter MUST NOT mangle, normalise, or
   reorder code points.
@@ -135,10 +147,13 @@ as the CLI's piped form for the same page.
 #### Core conversion (shared by both surfaces)
 
 - **FR-001**: The shared core library MUST expose a single page-to-Markdown
-  rendering operation that takes a buildin page ID, fetches the page (and all
-  its descendant blocks needed to render its body), and returns a CommonMark
-  string. Both presentation surfaces MUST go through this operation; neither
-  may reimplement block→Markdown conversion locally.
+  rendering operation that takes a buildin page ID, fetches the page and the
+  full descendant block tree (paginating `next_cursor` to exhaustion at
+  every level), and returns a CommonMark string. Both presentation surfaces
+  MUST go through this operation; neither may reimplement block→Markdown
+  conversion locally. Performance optimizations around fetching (concurrent
+  requests, streaming output, response caching, partial rendering) are
+  explicitly out of scope for this feature.
 - **FR-002**: The core converter MUST support, at minimum, the following
   buildin block types as first-class output:
   - paragraph (plain text, with inline formatting where present: bold,
@@ -162,6 +177,30 @@ as the CLI's piped form for the same page.
 - **FR-005**: Buildin-internal identifiers (block UUIDs, internal metadata)
   MUST NOT appear in the rendered Markdown unless explicitly required by the
   output of a supported block type.
+- **FR-005a**: The rendered Markdown MUST begin with the page's own title as
+  a single level-1 heading (`# <title>`), followed by a blank line, followed
+  by the rendered body. The title MUST be the value buildin reports for the
+  page; if the page has no title, the H1 line is omitted (the output starts
+  directly with the body). The title is the only buildin-supplied page
+  metadata included in the output for this feature.
+- **FR-005b**: Inline mentions inside any supported block MUST be rendered
+  as readable inline text, not as unsupported-block placeholders, per the
+  following rules:
+  - **Page mention**: `[<page title>](buildin://<page_id>)` — same scheme as
+    the MCP resource URI, so the link target is dereferenceable through the
+    same buildout surface.
+  - **Database mention**: same form as page mention,
+    `[<database title>](buildin://<database_id>)`. (The database's contents
+    remain unsupported per the feature scope; only the *mention* of a
+    database, as an inline link, is supported.)
+  - **User mention**: plain text `@<display name>`. No buildin user ID is
+    emitted.
+  - **Date mention**: the ISO 8601 date string buildin reports (e.g.
+    `2026-05-05`). If buildin returns a date range, render as
+    `<start> – <end>` with an en-dash separator.
+  - **Any other mention type** not listed above: rendered as the displayed
+    plain text buildin provides for it; if buildin provides none, fall
+    through to the unsupported-inline placeholder format used by FR-003.
 
 #### CLI surface
 
@@ -264,19 +303,22 @@ as the CLI's piped form for the same page.
 - Page IDs are passed in whatever form the buildin Bot API accepts (UUID
   with or without dashes). Normalising / validating the ID format is part
   of the buildin client's responsibility, not this feature's.
-- Buildin pages may have arbitrarily many child blocks, but the test
-  fixtures used here represent realistic short-to-medium pages; whole-tree
-  pagination handling is implemented if and only if the underlying client
-  already supports it. If the client does not yet paginate, this feature
-  documents the page-size ceiling rather than silently truncating.
+- Buildin pages may have arbitrarily many child blocks. v1 always fetches
+  the full block tree (paginating `next_cursor` until exhausted at every
+  level) before rendering; correctness is prioritised over latency. The
+  feature does not introduce concurrent fetching, streaming output, or any
+  caching layer — those are deferred. The buildin Bot API client from
+  feature 001 is expected to expose pagination over child blocks; if it
+  does not, this feature MUST add it as part of the work.
 - Terminal-capability detection uses standard signals (stdout is a TTY,
   `NO_COLOR` env var, `TERM`, the underlying rendering library's own
   detection) rather than a custom probe. The CLI framework
   (`Spectre.Console.Cli`) and its broader `Spectre.Console` ecosystem are
   expected to provide this detection out of the box.
-- The MCP resource returns the page body only — no buildin metadata
-  (created/last-edited timestamps, author, parent chain) — in this
-  feature. Including metadata is a future, additive change.
+- The rendered output (both surfaces) includes the page title as an H1 and
+  the rendered body, but no other buildin metadata (created/last-edited
+  timestamps, author, parent chain, icon, cover image). Including
+  additional metadata is a future, additive change.
 - Inline formatting (bold, italic, inline code, links) inside a supported
   block is in scope as part of "supporting" that block; it is not a
   separate block type.
