@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Gen = Buildout.Core.Buildin.Generated.Models;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
@@ -5,7 +6,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Kiota.Abstractions;
 using Microsoft.Kiota.Abstractions.Authentication;
+using Microsoft.Kiota.Abstractions.Serialization;
 using Microsoft.Kiota.Http.HttpClientLibrary;
+using Microsoft.Kiota.Serialization.Json;
 using KiotaApiException = Microsoft.Kiota.Abstractions.ApiException;
 
 namespace Buildout.Core.Buildin;
@@ -280,8 +283,41 @@ public sealed class BotBuildinClient : IBuildinClient
             Icon = MapIcon(gen.Icon),
             Parent = MapParent(gen.Parent),
             Archived = gen.Archived ?? false,
-            Url = gen.Url
+            Url = gen.Url,
+            Title = ExtractTitle(gen.Properties)
         };
+    }
+
+    private static List<RichText>? ExtractTitle(Gen.Page_properties? properties)
+    {
+        if (properties is null) return null;
+
+        using var writer = new JsonSerializationWriter();
+        writer.WriteObjectValue(null, (IParsable)properties);
+        using var stream = writer.GetSerializedContent();
+        using var doc = JsonDocument.Parse(stream);
+
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            if (prop.Value.TryGetProperty("type", out var typeEl)
+                && typeEl.ValueKind == JsonValueKind.String
+                && typeEl.GetString() == "title"
+                && prop.Value.TryGetProperty("title", out var titleEl)
+                && titleEl.ValueKind == JsonValueKind.Array)
+            {
+                var richTextItems = new List<RichText>();
+                foreach (var item in titleEl.EnumerateArray())
+                {
+                    var node = new JsonParseNode(item);
+                    var genItem = node.GetObjectValue(Gen.RichTextItem.CreateFromDiscriminatorValue);
+                    if (genItem is not null)
+                        richTextItems.Add(MapRichText(genItem));
+                }
+                return richTextItems;
+            }
+        }
+
+        return null;
     }
 
     private static Page MapCreatePageResponse(Gen.CreatePageResponse gen)
@@ -368,7 +404,32 @@ public sealed class BotBuildinClient : IBuildinClient
                     Code = gen.Annotations.Code ?? false,
                     Color = gen.Annotations.Color?.ToString() ?? "default"
                 }
-                : null
+                : null,
+            Mention = MapMention(gen.Mention, gen.Type)
+        };
+    }
+
+    private static Mention? MapMention(Gen.RichTextItem_mention? mention, Gen.RichTextItem_type? richTextType)
+    {
+        if (richTextType != Gen.RichTextItem_type.Mention || mention is null)
+            return null;
+
+        return mention.Type switch
+        {
+            Gen.RichTextItem_mention_type.Page => new PageMention
+            {
+                PageId = mention.Page?.Id?.ToString() ?? string.Empty
+            },
+            Gen.RichTextItem_mention_type.User => new UserMention
+            {
+                UserId = mention.User?.Id?.ToString() ?? string.Empty
+            },
+            Gen.RichTextItem_mention_type.Date => new DateMention
+            {
+                Start = mention.Date?.Start ?? string.Empty,
+                End = mention.Date?.End
+            },
+            _ => null
         };
     }
 
@@ -420,9 +481,28 @@ public sealed class BotBuildinClient : IBuildinClient
     private static PaginatedList<Block> MapBlockChildrenResponse(Gen.GetBlockChildrenResponse? gen)
     {
         if (gen is null) return new PaginatedList<Block>();
+
+        var blocks = new List<Block>();
+        if (gen.Results is UntypedArray array)
+        {
+            foreach (var item in array.GetValue())
+            {
+                if (item is null) continue;
+
+                using var writer = new JsonSerializationWriter();
+                writer.WriteObjectValue(null, item);
+                using var stream = writer.GetSerializedContent();
+                using var doc = JsonDocument.Parse(stream);
+                var node = new JsonParseNode(doc.RootElement);
+                var genBlock = node.GetObjectValue(Gen.Block.CreateFromDiscriminatorValue);
+                if (genBlock is not null)
+                    blocks.Add(MapBlock(genBlock));
+            }
+        }
+
         return new PaginatedList<Block>
         {
-            Results = [],
+            Results = blocks,
             HasMore = gen.HasMore ?? false,
             NextCursor = gen.NextCursor
         };

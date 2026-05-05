@@ -1,3 +1,16 @@
-using System;
+using Buildout.Core.DependencyInjection;
+using Buildout.Mcp.Resources;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.Server;
 
-Console.WriteLine("Buildout MCP Host");
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddBuildinClient(builder.Configuration);
+builder.Services.AddBuildoutCore();
+
+builder.Services.AddMcpServer()
+    .WithStdioServerTransport()
+    .WithResources<PageResourceHandler>();
+
+await builder.Build().RunAsync();

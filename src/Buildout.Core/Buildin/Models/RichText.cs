@@ -6,4 +6,5 @@ public sealed record RichText
     public required string Content { get; init; }
     public string? Href { get; init; }
     public Annotations? Annotations { get; init; }
+    public Mention? Mention { get; init; }
 }
