@@ -17,6 +17,7 @@ services.AddBuildoutCore();
 services.AddSingleton<Spectre.Console.IAnsiConsole>(_ => Spectre.Console.AnsiConsole.Console);
 services.AddSingleton<TerminalCapabilities>();
 services.AddSingleton<MarkdownTerminalRenderer>();
+services.AddSingleton<SearchResultStyledRenderer>();
 
 var registrar = new TypeRegistrar(services);
 var app = new CommandApp(registrar);
@@ -24,6 +25,7 @@ var app = new CommandApp(registrar);
 app.Configure(config =>
 {
     config.AddCommand<GetCommand>("get");
+    config.AddCommand<SearchCommand>("search");
 });
 
 await app.RunAsync(args);

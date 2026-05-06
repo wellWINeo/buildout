@@ -1,5 +1,6 @@
 using Buildout.Core.DependencyInjection;
 using Buildout.Mcp.Resources;
+using Buildout.Mcp.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Server;
@@ -11,6 +12,7 @@ builder.Services.AddBuildoutCore();
 
 builder.Services.AddMcpServer()
     .WithStdioServerTransport()
-    .WithResources<PageResourceHandler>();
+    .WithResources<PageResourceHandler>()
+    .WithTools<SearchToolHandler>();
 
 await builder.Build().RunAsync();

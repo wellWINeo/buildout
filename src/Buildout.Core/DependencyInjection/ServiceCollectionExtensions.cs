@@ -5,6 +5,8 @@ using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
 using Buildout.Core.Markdown.Conversion.Mentions;
 using Buildout.Core.Markdown.Internal;
+using Buildout.Core.Search;
+using Buildout.Core.Search.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -67,6 +69,11 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
+
+        services.AddSingleton<ITitleRenderer, TitleRenderer>();
+        services.AddSingleton<AncestorScopeFilter>();
+        services.AddSingleton<ISearchService, SearchService>();
+        services.AddSingleton<ISearchResultFormatter, SearchResultFormatter>();
 
         return services;
     }
