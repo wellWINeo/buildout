@@ -38,23 +38,33 @@ returned by the (fixed) `BotBuildinClient.MapV1SearchResponse`. The
 `ObjectType` value is sourced from `V1SearchPageResult.Object` via the
 mapping update in R2.
 
-### `Page` (modified — additive mapping fix)
+### `Page` (modified — additive)
 
-Located at `src/Buildout.Core/Buildin/Models/Page.cs`. **No changes to
-the record itself** — `Title` and `Parent` are already present from
-feature 002. The change is in `BotBuildinClient.MapV1SearchResponse`,
-which currently leaves both fields unset on emitted records.
+Located at `src/Buildout.Core/Buildin/Models/Page.cs`. `Title` and
+`Parent` are already present from feature 002. **One additive field** is
+required by this feature: `ObjectType` (string?), which surfaces the
+`V1SearchPageResult.Object` discriminator (`"page"` / `"database"`)
+returned by the `/v1/search` endpoint. The buildin search endpoint
+returns *both* page-shaped and database-shaped results through the
+same `Page` record, and the search service needs to label each one in
+the formatter output (FR-005). `ObjectType` is the channel that
+information flows through.
 
-After the fix, `MapV1SearchResponse` populates:
+| New field | Type | Notes |
+|---|---|---|
+| `ObjectType` | `string?` | `"page"` or `"database"` for results from `/v1/search`; `null` for `Page` records produced by `/v1/pages/{id}` (`MapPage`), where the type is implicitly `"page"` and no surface depends on the field. Source-compatible: existing callers ignore it. |
+
+After the mapping fix, `MapV1SearchResponse` populates:
 
 | Field | Source in Kiota response | Notes |
 |---|---|---|
 | `Title` | `V1SearchPageResult.Properties?.Title?.Title` (a `List<RichTextItem>`) | Mapped via the existing `MapRichText` helper (used by `MapPage` / `ExtractTitle` already). Result `IReadOnlyList<RichText>?`; null when the `properties.title` shape is absent on the wire. |
 | `Parent` | `V1SearchPageResult.Parent` (composed-type wrapper) | Mapped via the existing `MapParent` helper. Result is a hand-written `Parent?` discriminator (`ParentDatabase`, `ParentPage`, `ParentBlock`, `ParentWorkspace`). |
+| `ObjectType` | `V1SearchPageResult.Object` (string) | Copied verbatim. `SearchService` translates to `SearchObjectType` enum, defaulting to `Page` if null/unrecognised (defensive — buildin only sends `"page"` / `"database"` on this endpoint in v1). |
 
 `Id`, `CreatedAt`, `LastEditedAt`, and `Archived` continue to be
-populated as today. No fields are removed; no field semantics change.
-The mapping fix is verified by an extension to
+populated as today. No fields are removed; no existing field semantics
+change. The mapping fix is verified by an extension to
 `tests/Buildout.UnitTests/Buildin/BotBuildinClientTests.cs`.
 
 ### `SearchObjectType` (new — small enum)
