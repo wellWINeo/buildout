@@ -529,7 +529,10 @@ public sealed class BotBuildinClient : IBuildinClient
                     Id = r.Id?.ToString() ?? string.Empty,
                     CreatedAt = r.CreatedTime,
                     LastEditedAt = r.LastEditedTime,
-                    Archived = r.Archived ?? false
+                    Archived = r.Archived ?? false,
+                    Title = r.Properties?.Title?.Title?.Select(MapRichText).ToList(),
+                    Parent = MapSearchResultParent(r.Parent),
+                    ObjectType = r.Object
                 });
             }
         }
@@ -539,5 +542,19 @@ public sealed class BotBuildinClient : IBuildinClient
             HasMore = gen.HasMore ?? false,
             NextCursor = gen.NextCursor
         };
+    }
+
+    private static Parent? MapSearchResultParent(Gen.V1SearchPageResult.V1SearchPageResult_parent? gen)
+    {
+        if (gen is null) return null;
+        if (gen.ParentDatabaseId is not null)
+            return new ParentDatabase(gen.ParentDatabaseId.DatabaseId?.ToString() ?? string.Empty);
+        if (gen.ParentPageId is not null)
+            return new ParentPage(gen.ParentPageId.PageId?.ToString() ?? string.Empty);
+        if (gen.ParentBlockId is not null)
+            return new ParentBlock(gen.ParentBlockId.BlockId?.ToString() ?? string.Empty);
+        if (gen.ParentSpaceId is not null)
+            return new ParentWorkspace(gen.ParentSpaceId.Type);
+        return null;
     }
 }

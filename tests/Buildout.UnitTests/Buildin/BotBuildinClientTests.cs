@@ -439,4 +439,231 @@ public sealed class BotBuildinClientTests
 
         Assert.Null(paragraph.RichTextContent[3].Mention);
     }
+
+    [Fact]
+    public async Task SearchPagesAsync_MapsTitleFromProperties()
+    {
+        var response = new Gen.V1SearchResponse
+        {
+            Results =
+            [
+                new Gen.V1SearchPageResult
+                {
+                    Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    CreatedTime = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                    LastEditedTime = new DateTimeOffset(2025, 1, 2, 0, 0, 0, TimeSpan.Zero),
+                    Archived = false,
+                    Object = "page",
+                    Properties = new Gen.V1SearchPageResult_properties
+                    {
+                        Title = new Gen.V1SearchPageResult_properties_title
+                        {
+                            Title = [new Gen.RichTextItem { PlainText = "Hello Search", Type = Gen.RichTextItem_type.Text }]
+                        }
+                    }
+                }
+            ]
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.V1SearchResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.V1SearchResponse?>(response));
+
+        var result = await _client.SearchPagesAsync(new PageSearchRequest { Query = "test" });
+
+        Assert.NotNull(result);
+        var page = Assert.Single(result.Results);
+        Assert.NotNull(page.Title);
+        Assert.Single(page.Title);
+        Assert.Equal("Hello Search", page.Title[0].Content);
+    }
+
+    [Fact]
+    public async Task SearchPagesAsync_MapsParentPage()
+    {
+        var parent = new Gen.V1SearchPageResult.V1SearchPageResult_parent
+        {
+            ParentPageId = new Gen.ParentPageId { PageId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), Type = "page_id" }
+        };
+
+        var response = new Gen.V1SearchResponse
+        {
+            Results =
+            [
+                new Gen.V1SearchPageResult
+                {
+                    Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    Archived = false,
+                    Parent = parent
+                }
+            ]
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.V1SearchResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.V1SearchResponse?>(response));
+
+        var result = await _client.SearchPagesAsync(new PageSearchRequest { Query = "test" });
+
+        Assert.NotNull(result);
+        var page = Assert.Single(result.Results);
+        Assert.NotNull(page.Parent);
+        Assert.IsType<ParentPage>(page.Parent);
+        Assert.Equal("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", ((ParentPage)page.Parent!).Id);
+    }
+
+    [Fact]
+    public async Task SearchPagesAsync_MapsObjectType()
+    {
+        var response = new Gen.V1SearchResponse
+        {
+            Results =
+            [
+                new Gen.V1SearchPageResult
+                {
+                    Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    Archived = false,
+                    Object = "page"
+                }
+            ]
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.V1SearchResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.V1SearchResponse?>(response));
+
+        var result = await _client.SearchPagesAsync(new PageSearchRequest { Query = "test" });
+
+        Assert.NotNull(result);
+        var page = Assert.Single(result.Results);
+        Assert.Equal("page", page.ObjectType);
+    }
+
+    [Fact]
+    public async Task SearchPagesAsync_NullOrEmptyTitle_NullOrEmptyResult()
+    {
+        var response = new Gen.V1SearchResponse
+        {
+            Results =
+            [
+                new Gen.V1SearchPageResult
+                {
+                    Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    Archived = false,
+                    Properties = new Gen.V1SearchPageResult_properties
+                    {
+                        Title = new Gen.V1SearchPageResult_properties_title { Title = [] }
+                    }
+                },
+                new Gen.V1SearchPageResult
+                {
+                    Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                    Archived = false,
+                    Properties = new Gen.V1SearchPageResult_properties()
+                }
+            ]
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.V1SearchResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.V1SearchResponse?>(response));
+
+        var result = await _client.SearchPagesAsync(new PageSearchRequest { Query = "test" });
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Results.Count);
+        Assert.NotNull(result.Results[0].Title);
+        Assert.Empty(result.Results[0].Title!);
+        Assert.Null(result.Results[1].Title);
+    }
+
+    [Fact]
+    public async Task SearchPagesAsync_MapsParentDatabase()
+    {
+        var parent = new Gen.V1SearchPageResult.V1SearchPageResult_parent
+        {
+            ParentDatabaseId = new Gen.ParentDatabaseId { DatabaseId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), Type = "database_id" }
+        };
+
+        var response = new Gen.V1SearchResponse
+        {
+            Results =
+            [
+                new Gen.V1SearchPageResult
+                {
+                    Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    Archived = false,
+                    Parent = parent
+                }
+            ]
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.V1SearchResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.V1SearchResponse?>(response));
+
+        var result = await _client.SearchPagesAsync(new PageSearchRequest { Query = "test" });
+
+        Assert.NotNull(result);
+        var page = Assert.Single(result.Results);
+        Assert.NotNull(page.Parent);
+        Assert.IsType<ParentDatabase>(page.Parent);
+        Assert.Equal("cccccccc-cccc-cccc-cccc-cccccccccccc", ((ParentDatabase)page.Parent!).Id);
+    }
+
+    [Fact]
+    public async Task SearchPagesAsync_MapsExistingFields()
+    {
+        var created = new DateTimeOffset(2025, 3, 10, 8, 0, 0, TimeSpan.Zero);
+        var edited = new DateTimeOffset(2025, 3, 11, 9, 0, 0, TimeSpan.Zero);
+
+        var response = new Gen.V1SearchResponse
+        {
+            HasMore = true,
+            NextCursor = "abc",
+            Results =
+            [
+                new Gen.V1SearchPageResult
+                {
+                    Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+                    CreatedTime = created,
+                    LastEditedTime = edited,
+                    Archived = true
+                }
+            ]
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.V1SearchResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.V1SearchResponse?>(response));
+
+        var result = await _client.SearchPagesAsync(new PageSearchRequest { Query = "test" });
+
+        Assert.NotNull(result);
+        Assert.True(result.HasMore);
+        Assert.Equal("abc", result.NextCursor);
+        var page = Assert.Single(result.Results);
+        Assert.Equal("dddddddd-dddd-dddd-dddd-dddddddddddd", page.Id);
+        Assert.Equal(created, page.CreatedAt);
+        Assert.Equal(edited, page.LastEditedAt);
+        Assert.True(page.Archived);
+    }
 }

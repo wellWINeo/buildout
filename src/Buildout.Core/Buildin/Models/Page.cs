@@ -13,5 +13,6 @@ public sealed record Page
     public Dictionary<string, PropertyValue>? Properties { get; init; }
     public IReadOnlyList<RichText>? Title { get; init; }
     public bool Archived { get; init; }
+    public string? ObjectType { get; init; }
     public string? Url { get; init; }
 }
