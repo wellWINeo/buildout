@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build --configuration Release
+
+  test-unit:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test tests/Buildout.UnitTests --configuration Release
+
+  test-integration:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test tests/Buildout.IntegrationTests --configuration Release
+
+  publish:
+    needs: [test-unit, test-integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet publish src/Buildout.Mcp -c Release -p:PublishSingleFile=true --output publish/mcp
+      - run: dotnet publish src/Buildout.Cli -c Release -p:PublishSingleFile=true --output publish/cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buildout-mcp
+          path: publish/mcp/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buildout-cli
+          path: publish/cli/
