@@ -1,34 +1,39 @@
 using System.IO.Pipelines;
-using System.Text.Json.Nodes;
-using Anthropic.SDK;
-using Anthropic.SDK.Common;
-using Anthropic.SDK.Messaging;
-using Annotations = Buildout.Core.Buildin.Models.Annotations;
 using Buildout.Core.Buildin;
-using Buildout.Core.Buildin.Models;
 using Buildout.Core.DependencyInjection;
+using Buildout.IntegrationTests.Buildin;
 using Buildout.Mcp.Resources;
 using Buildout.Mcp.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ModelContextProtocol;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using NSubstitute;
 using Xunit;
 
 namespace Buildout.IntegrationTests.Llm;
 
-public sealed class PageReadingLlmTests(ITestOutputHelper output)
+[Collection("BuildinWireMock")]
+public sealed class PageReadingLlmTests
 {
-    private readonly ITestOutputHelper _output = output;
+    private readonly ITestOutputHelper _output;
+    private readonly BuildinWireMockFixture _fixture;
+
+    public PageReadingLlmTests(ITestOutputHelper output, BuildinWireMockFixture fixture)
+    {
+        _output = output;
+        _fixture = fixture;
+        _fixture.Reset();
+    }
 
     [Fact]
     public async Task LlmCanAnswerQuestionsAboutRenderedPage()
     {
-        var apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+        var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             return;
@@ -53,96 +58,95 @@ public sealed class PageReadingLlmTests(ITestOutputHelper output)
                       Answer in a single sentence.
                       """;
 
-        var client = new AnthropicClient(new APIAuthentication(apiKey));
+        var httpClient = new HttpClient { BaseAddress = new Uri("https://openrouter.ai/api/v1") };
+        httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://github.com/buildout");
 
-        var parameters = new MessageParameters
-        {
-            Model = "claude-haiku-4-5-20250415",
-            MaxTokens = 200,
-            Messages = [new Message { Role = RoleType.User, Content = [new TextContent { Text = prompt }] }],
-        };
+        var kernel = Kernel.CreateBuilder()
+            .AddOpenAIChatCompletion(
+                modelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                apiKey: apiKey,
+                httpClient: httpClient)
+            .Build();
 
-        var response = await client.Messages.GetClaudeMessageAsync(parameters);
+        var chatService = kernel.GetRequiredService<IChatCompletionService>();
+        var history = new ChatHistory();
+        history.AddUserMessage(prompt);
+        var response = await chatService.GetChatMessageContentAsync(history);
 
-        Assert.NotEmpty(response.Content);
-        var text = string.Join("", response.Content.OfType<TextContent>().Select(c => c.Text));
-        _output.WriteLine($"LLM response: {text}");
+        _output.WriteLine($"LLM response: {response.Content}");
 
-        Assert.Contains("4.2", text);
-        Assert.Contains("Enterprise", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("4.2", response.Content);
+        Assert.Contains("Enterprise", response.Content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task LlmCanFindAndReadPage()
     {
-        var apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+        var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
             return;
 
-        var buildinClient = Substitute.For<IBuildinClient>();
-
-        buildinClient.SearchPagesAsync(
-                Arg.Is<PageSearchRequest>(r => r.Query!.Contains("quarterly")),
-                Arg.Any<CancellationToken>())
-            .Returns(new PageSearchResults
+        BuildinStubs.RegisterSearchPages(_fixture.Server, new
+        {
+            @object = "list",
+            results = new object[]
             {
-                Results =
-                [
-                    new()
+                new
+                {
+                    id = "33333333-3333-3333-3333-333333333333",
+                    archived = false,
+                    created_time = "2025-03-01T12:00:00Z",
+                    last_edited_time = "2025-03-02T12:00:00Z",
+                    properties = new { title = new { title = new[] { new { type = "text", plain_text = "Q3 Revenue Report" } } } }
+                },
+                new
+                {
+                    id = "44444444-4444-4444-4444-444444444444",
+                    archived = false,
+                    created_time = "2025-03-01T12:00:00Z",
+                    last_edited_time = "2025-03-02T12:00:00Z",
+                    properties = new { title = new { title = new[] { new { type = "text", plain_text = "Marketing Plan" } } } }
+                }
+            },
+            has_more = false
+        });
+
+        BuildinStubs.RegisterGetPage(_fixture.Server, new
+        {
+            id = "33333333-3333-3333-3333-333333333333",
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = "https://api.buildin.ai/pages/33333333",
+            properties = new { title = new { title = new[] { new { type = "text", plain_text = "Quarterly Revenue Report" } } } }
+        });
+
+        BuildinStubs.RegisterGetBlockChildren(_fixture.Server, new
+        {
+            @object = "list",
+            results = new object[]
+            {
+                new
+                {
+                    id = "block-1",
+                    type = "paragraph",
+                    created_time = "2025-01-01T00:00:00Z",
+                    has_children = false,
+                    data = new
                     {
-                        Id = "q3-page-id",
-                        Title = [new RichText { Type = "text", Content = "Q3 Revenue Report" }],
-                        Archived = false,
-                        ObjectType = "page"
-                    },
-                    new()
-                    {
-                        Id = "mkt-page-id",
-                        Title = [new RichText { Type = "text", Content = "Marketing Plan" }],
-                        Archived = false,
-                        ObjectType = "page"
+                        rich_text = new object[]
+                        {
+                            new { type = "text", plain_text = "Total revenue for Q3 2025 was " },
+                            new { type = "text", plain_text = "$4.2 million", annotations = new { bold = true } },
+                            new { type = "text", plain_text = ", up 12% from Q2. The largest contributor was the Enterprise segment at $2.8 million." }
+                        }
                     }
-                ],
-                HasMore = false
-            });
+                }
+            },
+            has_more = false
+        });
 
-        buildinClient.GetPageAsync("q3-page-id", Arg.Any<CancellationToken>())
-            .Returns(new Page
-            {
-                Id = "q3-page-id",
-                Title = [new RichText { Type = "text", Content = "Quarterly Revenue Report" }],
-                Archived = false,
-                ObjectType = "page"
-            });
-
-        buildinClient.GetBlockChildrenAsync("q3-page-id", Arg.Any<BlockChildrenQuery?>(),
-                Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block>
-            {
-                Results =
-                [
-                    new ParagraphBlock
-                    {
-                        Id = "block-1",
-                        RichTextContent =
-                        [
-                            new RichText { Type = "text", Content = "Total revenue for Q3 2025 was " },
-                            new RichText
-                            {
-                                Type = "text", Content = "$4.2 million",
-                                Annotations = new Annotations { Bold = true }
-                            },
-                            new RichText
-                            {
-                                Type = "text",
-                                Content = ", up 12% from Q2. The largest contributor was the Enterprise segment at $2.8 million."
-                            }
-                        ]
-                    }
-                ],
-                HasMore = false
-            });
-
+        var buildinClient = _fixture.CreateClient();
         var services = new ServiceCollection();
         services.AddSingleton<IBuildinClient>(buildinClient);
         services.AddBuildoutCore();
@@ -169,92 +173,52 @@ public sealed class PageReadingLlmTests(ITestOutputHelper output)
             new McpClientOptions(),
             sp.GetRequiredService<ILoggerFactory>());
 
-        var tools = new List<Anthropic.SDK.Common.Tool>
-        {
-            new Function("search",
-                "Search buildin pages by query. Returns one match per line, tab-separated: <page_id>\\t<object_type>\\t<title>. Use read_buildin_page with the page_id to read a match.",
-                JsonNode.Parse("{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Non-empty search query.\"},\"pageId\":{\"type\":\"string\",\"description\":\"Optional buildin page UUID. When set, restricts results to descendants of this page.\"}},\"required\":[\"query\"]}")!),
-            new Function("read_buildin_page",
-                "Read a Buildin page by page ID and return its rendered Markdown content. Use the page_id from search results.",
-                JsonNode.Parse("{\"type\":\"object\",\"properties\":{\"pageId\":{\"type\":\"string\",\"description\":\"The Buildin page ID\"}},\"required\":[\"pageId\"]}")!)
-        };
+        var openRouterHttp = new HttpClient { BaseAddress = new Uri("https://openrouter.ai/api/v1") };
+        openRouterHttp.DefaultRequestHeaders.Add("HTTP-Referer", "https://github.com/buildout");
 
-        var anthropicClient = new AnthropicClient(new APIAuthentication(apiKey));
+        var kernel = Kernel.CreateBuilder()
+            .AddOpenAIChatCompletion(
+                modelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                apiKey: apiKey,
+                httpClient: openRouterHttp)
+            .Build();
 
-        var messages = new List<Message>
-        {
-            new()
-            {
-                Role = RoleType.User,
-                Content = [new TextContent { Text = "Which page describes Q3 revenue, and what was the total?" }]
-            }
-        };
-
-        var searchInvoked = false;
-        var readQ3Page = false;
-        var finalText = "";
-
-        for (var i = 0; i < 10; i++)
-        {
-            var parameters = new MessageParameters
-            {
-                Model = "claude-haiku-4-5-20250415",
-                MaxTokens = 1024,
-                Tools = tools,
-                Messages = messages,
-            };
-
-            var response = await anthropicClient.Messages.GetClaudeMessageAsync(parameters);
-
-            var toolUses = response.Content.OfType<ToolUseContent>().ToList();
-            if (toolUses.Count == 0)
-            {
-                finalText = string.Join("", response.Content.OfType<TextContent>().Select(c => c.Text));
-                break;
-            }
-
-            messages.Add(response.Message);
-
-            var toolResults = new List<ContentBase>();
-            foreach (var toolUse in toolUses)
-            {
-                string result;
-                if (toolUse.Name == "search")
+        kernel.Plugins.AddFromFunctions("buildin",
+        [
+            KernelFunctionFactory.CreateFromMethod(
+                async (string query) =>
                 {
-                    searchInvoked = true;
-                    var query = toolUse.Input["query"]?.ToString() ?? "";
-                    var mcpResult = await mcpClient.CallToolAsync("search",
+                    var result = await mcpClient.CallToolAsync("search",
                         new Dictionary<string, object?> { ["query"] = query });
-                    result = mcpResult.Content.OfType<TextContentBlock>().First().Text;
-                }
-                else if (toolUse.Name == "read_buildin_page")
+                    return result.Content.OfType<TextContentBlock>().First().Text;
+                },
+                "search",
+                "Search buildin pages by query. Returns matches with page IDs and titles.",
+                [new KernelParameterMetadata("query") { Description = "Search query", IsRequired = true }]),
+
+            KernelFunctionFactory.CreateFromMethod(
+                async (string pageId) =>
                 {
-                    var pageId = toolUse.Input["pageId"]?.ToString() ?? "";
-                    if (pageId == "q3-page-id")
-                        readQ3Page = true;
-                    var resourceResult = await mcpClient.ReadResourceAsync($"buildin://{pageId}");
-                    result = resourceResult.Contents.OfType<TextResourceContents>().First().Text;
-                }
-                else
-                {
-                    result = $"Unknown tool: {toolUse.Name}";
-                }
+                    var result = await mcpClient.ReadResourceAsync($"buildin://{pageId}");
+                    return result.Contents.OfType<TextResourceContents>().First().Text;
+                },
+                "read_buildin_page",
+                "Read a buildin page and return its rendered Markdown content.",
+                [new KernelParameterMetadata("pageId") { Description = "Buildin page ID", IsRequired = true }])
+        ]);
 
-                toolResults.Add(new ToolResultContent
-                {
-                    ToolUseId = toolUse.Id,
-                    Content = [new TextContent { Text = result }]
-                });
-            }
+        var settings = new OpenAIPromptExecutionSettings
+        {
+            FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+        };
 
-            messages.Add(new Message { Role = RoleType.User, Content = toolResults });
-        }
+        var result = await kernel.InvokePromptAsync(
+            "Which page describes Q3 revenue, and what was the total?",
+            new KernelArguments(settings));
 
-        _output.WriteLine($"Final response: {finalText}");
+        _output.WriteLine($"LLM response: {result}");
 
-        Assert.True(searchInvoked, "LLM did not invoke search");
-        Assert.True(readQ3Page, "LLM did not read buildin://q3-page-id");
-        Assert.Contains("4.2", finalText);
+        Assert.Contains("4.2", result.ToString());
 
         await mcpClient.DisposeAsync();
         await server.DisposeAsync();

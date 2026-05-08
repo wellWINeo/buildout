@@ -251,7 +251,9 @@ public sealed class SearchToolTests : IAsyncLifetime
         services.AddSingleton(caps);
         services.AddSingleton<SearchResultStyledRenderer>();
 
-        var registrar = new TypeRegistrar(services);
+        // Pin IAnsiConsole so the TypeRegistrar ignores Spectre's attempt to override it
+        var pinnedTypes = new HashSet<Type> { typeof(Spectre.Console.IAnsiConsole) };
+        var registrar = new TypeRegistrar(services, pinnedTypes);
         var app = new CommandApp(registrar);
         app.Configure(config =>
         {
@@ -259,29 +261,32 @@ public sealed class SearchToolTests : IAsyncLifetime
             config.AddCommand<SearchCommand>("search");
         });
 
-        var originalOut = Console.Out;
-        var sb = new System.Text.StringBuilder();
-        await using var sw = new StringWriter(sb);
-        Console.SetOut(sw);
-        try
-        {
-            await app.RunAsync(args);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
-
-        return sb.ToString();
+        await app.RunAsync(args);
+        return testConsole.Output;
     }
 
     private sealed class TypeRegistrar : ITypeRegistrar
     {
         private readonly IServiceCollection _services;
-        public TypeRegistrar(IServiceCollection services) => _services = services;
+        private readonly HashSet<Type> _pinnedTypes;
+
+        public TypeRegistrar(IServiceCollection services, HashSet<Type>? pinnedTypes = null)
+        {
+            _services = services;
+            _pinnedTypes = pinnedTypes ?? [];
+        }
+
         public void Register(Type service, Type implementation) => _services.AddSingleton(service, implementation);
-        public void RegisterInstance(Type service, object implementation) => _services.AddSingleton(service, implementation);
-        public void RegisterLazy(Type service, Func<object> factory) => _services.AddSingleton(service, _ => factory());
+        public void RegisterInstance(Type service, object implementation)
+        {
+            if (!_pinnedTypes.Contains(service))
+                _services.AddSingleton(service, implementation);
+        }
+        public void RegisterLazy(Type service, Func<object> factory)
+        {
+            if (!_pinnedTypes.Contains(service))
+                _services.AddSingleton(service, _ => factory());
+        }
         public ITypeResolver Build() => new TypeResolver(_services.BuildServiceProvider());
     }
 

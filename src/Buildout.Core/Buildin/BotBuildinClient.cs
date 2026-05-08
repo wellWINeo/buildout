@@ -222,7 +222,7 @@ public sealed class BotBuildinClient : IBuildinClient
         {
             var error = ex as Gen.Error;
             var buildinError = new ApiError(
-                error?.Status ?? 0,
+                error?.Status ?? ex.ResponseStatusCode,
                 error?.Code is not null ? GetEnumValue(error.Code) : null,
                 error?.Message ?? ex.Message,
                 string.Empty);
@@ -234,7 +234,7 @@ public sealed class BotBuildinClient : IBuildinClient
             {
                 var error = apiEx as Gen.Error;
                 var buildinError = new ApiError(
-                    error?.Status ?? 0,
+                    error?.Status ?? apiEx.ResponseStatusCode,
                     error?.Code is not null ? GetEnumValue(error.Code) : null,
                     error?.Message ?? apiEx.Message,
                     string.Empty);
