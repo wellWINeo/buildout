@@ -1,4 +1,3 @@
-using System.Text;
 using Buildout.Cli.Commands;
 using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin.Errors;
@@ -13,10 +12,10 @@ namespace Buildout.IntegrationTests.Cli;
 
 public sealed class SearchCommandTests
 {
-    private static (CommandApp app, TestConsole console, ISearchService service) CreateApp(
+    private static (CommandApp app, TestConsole console) CreateApp(
+        ISearchService service,
         bool styledStdout = false)
     {
-        var service = Substitute.For<ISearchService>();
         var formatter = new SearchResultFormatter();
 
         var services = new ServiceCollection();
@@ -33,7 +32,9 @@ public sealed class SearchCommandTests
         services.AddSingleton(caps);
         services.AddSingleton<SearchResultStyledRenderer>();
 
-        var registrar = new TypeRegistrar(services);
+        // Pin IAnsiConsole so the TypeRegistrar ignores Spectre's attempt to override it
+        var pinnedTypes = new HashSet<Type> { typeof(Spectre.Console.IAnsiConsole) };
+        var registrar = new TypeRegistrar(services, pinnedTypes);
 
         var app = new CommandApp(registrar);
         app.Configure(config =>
@@ -42,7 +43,7 @@ public sealed class SearchCommandTests
             config.AddCommand<SearchCommand>("search");
         });
 
-        return (app, testConsole, service);
+        return (app, testConsole);
     }
 
     private static List<SearchMatch> MakeMatches(params (string id, string type, string title)[] items)
@@ -58,7 +59,7 @@ public sealed class SearchCommandTests
     [Fact]
     public async Task HappyPath_NonTty_StdoutIsFormatterBody()
     {
-        var (app, _, service) = CreateApp(styledStdout: false);
+        var service = Substitute.For<ISearchService>();
         var matches = MakeMatches(
             ("id-1", "page", "First"),
             ("id-2", "database", "Second"));
@@ -67,20 +68,10 @@ public sealed class SearchCommandTests
 
         var expected = new SearchResultFormatter().Format(matches);
 
-        var originalOut = Console.Out;
-        var sb = new StringBuilder();
-        await using var sw = new StringWriter(sb);
-        Console.SetOut(sw);
-        try
-        {
-            var exitCode = await app.RunAsync(["search", "test"]);
-            Assert.Equal(0, exitCode);
-            Assert.Equal(expected, sb.ToString());
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
+        var (app, console) = CreateApp(service, styledStdout: false);
+        var exitCode = await app.RunAsync(["search", "test"]);
+        Assert.Equal(0, exitCode);
+        Assert.Equal(expected, console.Output);
     }
 
     [Fact]
@@ -105,24 +96,14 @@ public sealed class SearchCommandTests
     [Fact]
     public async Task NoMatches_NonTty_StdoutIsEmpty()
     {
-        var (app, _, service) = CreateApp(styledStdout: false);
+        var service = Substitute.For<ISearchService>();
         service.SearchAsync("test", null, Arg.Any<CancellationToken>())
             .Returns(new List<SearchMatch>());
 
-        var originalOut = Console.Out;
-        var sb = new StringBuilder();
-        await using var sw = new StringWriter(sb);
-        Console.SetOut(sw);
-        try
-        {
-            var exitCode = await app.RunAsync(["search", "test"]);
-            Assert.Equal(0, exitCode);
-            Assert.Equal("", sb.ToString());
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
+        var (app, console) = CreateApp(service, styledStdout: false);
+        var exitCode = await app.RunAsync(["search", "test"]);
+        Assert.Equal(0, exitCode);
+        Assert.Equal("", console.Output);
     }
 
     [Fact]
@@ -140,7 +121,8 @@ public sealed class SearchCommandTests
     [Fact]
     public async Task EmptyQuery_ReturnsExit2()
     {
-        var (app, _, service) = CreateApp(styledStdout: true);
+        var service = Substitute.For<ISearchService>();
+        var (app, _) = CreateApp(service, styledStdout: true);
 
         var exitCode = await app.RunAsync(["search", ""]);
         Assert.Equal(2, exitCode);
@@ -150,7 +132,8 @@ public sealed class SearchCommandTests
     [Fact]
     public async Task WhitespaceQuery_ReturnsExit2()
     {
-        var (app, _, service) = CreateApp(styledStdout: true);
+        var service = Substitute.For<ISearchService>();
+        var (app, _) = CreateApp(service, styledStdout: true);
 
         var exitCode = await app.RunAsync(["search", "   "]);
         Assert.Equal(2, exitCode);
@@ -160,11 +143,12 @@ public sealed class SearchCommandTests
     [Fact]
     public async Task AuthFailure_ReturnsExit4()
     {
-        var (app, _, service) = CreateApp(styledStdout: false);
+        var service = Substitute.For<ISearchService>();
         service.SearchAsync("test", null, Arg.Any<CancellationToken>())
             .Returns<Task<IReadOnlyList<SearchMatch>>>(_ => throw new BuildinApiException(
                 new ApiError(401, "unauthorized", "Invalid token", string.Empty)));
 
+        var (app, _) = CreateApp(service, styledStdout: false);
         var exitCode = await app.RunAsync(["search", "test"]);
         Assert.Equal(4, exitCode);
     }
@@ -172,11 +156,12 @@ public sealed class SearchCommandTests
     [Fact]
     public async Task TransportFailure_ReturnsExit5()
     {
-        var (app, _, service) = CreateApp(styledStdout: false);
+        var service = Substitute.For<ISearchService>();
         service.SearchAsync("test", null, Arg.Any<CancellationToken>())
             .Returns<Task<IReadOnlyList<SearchMatch>>>(_ => throw new BuildinApiException(
                 new TransportError(new HttpRequestException("Connection refused"))));
 
+        var (app, _) = CreateApp(service, styledStdout: false);
         var exitCode = await app.RunAsync(["search", "test"]);
         Assert.Equal(5, exitCode);
     }
@@ -184,11 +169,12 @@ public sealed class SearchCommandTests
     [Fact]
     public async Task UnexpectedError_ReturnsExit6()
     {
-        var (app, _, service) = CreateApp(styledStdout: false);
+        var service = Substitute.For<ISearchService>();
         service.SearchAsync("test", null, Arg.Any<CancellationToken>())
             .Returns<Task<IReadOnlyList<SearchMatch>>>(_ => throw new BuildinApiException(
                 new UnknownError(500, "Internal error")));
 
+        var (app, _) = CreateApp(service, styledStdout: false);
         var exitCode = await app.RunAsync(["search", "test"]);
         Assert.Equal(6, exitCode);
     }
@@ -196,7 +182,7 @@ public sealed class SearchCommandTests
     [Fact]
     public async Task ScopedSearch_ReturnsOnlyDescendants()
     {
-        var (app, _, service) = CreateApp(styledStdout: false);
+        var service = Substitute.For<ISearchService>();
         var scopedMatches = MakeMatches(
             ("a-id", "page", "Page A"),
             ("b-id", "page", "Page B"),
@@ -206,53 +192,34 @@ public sealed class SearchCommandTests
 
         var expected = new SearchResultFormatter().Format(scopedMatches);
 
-        var originalOut = Console.Out;
-        var sb = new StringBuilder();
-        await using var sw = new StringWriter(sb);
-        Console.SetOut(sw);
-        try
-        {
-            var exitCode = await app.RunAsync(["search", "q", "--page", "a-id"]);
-            Assert.Equal(0, exitCode);
-            Assert.Equal(expected, sb.ToString());
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
+        var (app, console) = CreateApp(service, styledStdout: false);
+        var exitCode = await app.RunAsync(["search", "q", "--page", "a-id"]);
+        Assert.Equal(0, exitCode);
+        Assert.Equal(expected, console.Output);
     }
 
     [Fact]
     public async Task ScopedSearch_UnrelatedPage_ReturnsEmpty()
     {
-        var (app, _, service) = CreateApp(styledStdout: false);
+        var service = Substitute.For<ISearchService>();
         service.SearchAsync("q", "unrelated-id", Arg.Any<CancellationToken>())
             .Returns(new List<SearchMatch>());
 
-        var originalOut = Console.Out;
-        var sb = new StringBuilder();
-        await using var sw = new StringWriter(sb);
-        Console.SetOut(sw);
-        try
-        {
-            var exitCode = await app.RunAsync(["search", "q", "--page", "unrelated-id"]);
-            Assert.Equal(0, exitCode);
-            Assert.Equal("", sb.ToString());
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
+        var (app, console) = CreateApp(service, styledStdout: false);
+        var exitCode = await app.RunAsync(["search", "q", "--page", "unrelated-id"]);
+        Assert.Equal(0, exitCode);
+        Assert.Equal("", console.Output);
     }
 
     [Fact]
     public async Task ScopedSearch_MissingPage_ReturnsExit3()
     {
-        var (app, _, service) = CreateApp(styledStdout: false);
+        var service = Substitute.For<ISearchService>();
         service.SearchAsync("q", "missing-id", Arg.Any<CancellationToken>())
             .Returns<Task<IReadOnlyList<SearchMatch>>>(_ => throw new BuildinApiException(
                 new ApiError(404, "object_not_found", "Could not find page", string.Empty)));
 
+        var (app, _) = CreateApp(service, styledStdout: false);
         var exitCode = await app.RunAsync(["search", "q", "--page", "missing-id"]);
         Assert.Equal(3, exitCode);
     }
@@ -260,7 +227,7 @@ public sealed class SearchCommandTests
     [Fact]
     public async Task ScopedSearch_OutputIsSubsetOfUnscoped()
     {
-        var (app, _, service) = CreateApp(styledStdout: false);
+        var service = Substitute.For<ISearchService>();
         var allMatches = MakeMatches(
             ("a-id", "page", "Page A"),
             ("b-id", "page", "Page B"),
@@ -275,40 +242,16 @@ public sealed class SearchCommandTests
         service.SearchAsync("q", null, Arg.Any<CancellationToken>())
             .Returns(allMatches);
 
-        var originalOut = Console.Out;
-        var scopedSb = new StringBuilder();
-        var unscopedSb = new StringBuilder();
+        var (scopedApp, scopedConsole) = CreateApp(service, styledStdout: false);
+        var scopedExitCode = await scopedApp.RunAsync(["search", "q", "--page", "a-id"]);
+        Assert.Equal(0, scopedExitCode);
 
-        await using (var sw = new StringWriter(scopedSb))
-        {
-            Console.SetOut(sw);
-            try
-            {
-                var exitCode = await app.RunAsync(["search", "q", "--page", "a-id"]);
-                Assert.Equal(0, exitCode);
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
+        var (unscopedApp, unscopedConsole) = CreateApp(service, styledStdout: false);
+        var unscopedExitCode = await unscopedApp.RunAsync(["search", "q"]);
+        Assert.Equal(0, unscopedExitCode);
 
-        await using (var sw = new StringWriter(unscopedSb))
-        {
-            Console.SetOut(sw);
-            try
-            {
-                var exitCode = await app.RunAsync(["search", "q"]);
-                Assert.Equal(0, exitCode);
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-
-        var scopedOutput = scopedSb.ToString();
-        var unscopedOutput = unscopedSb.ToString();
+        var scopedOutput = scopedConsole.Output;
+        var unscopedOutput = unscopedConsole.Output;
         Assert.Contains(scopedOutput, unscopedOutput);
         Assert.NotEqual(scopedOutput, unscopedOutput);
     }
@@ -316,12 +259,25 @@ public sealed class SearchCommandTests
     private sealed class TypeRegistrar : ITypeRegistrar
     {
         private readonly IServiceCollection _services;
+        private readonly HashSet<Type> _pinnedTypes;
 
-        public TypeRegistrar(IServiceCollection services) => _services = services;
+        public TypeRegistrar(IServiceCollection services, HashSet<Type>? pinnedTypes = null)
+        {
+            _services = services;
+            _pinnedTypes = pinnedTypes ?? [];
+        }
 
         public void Register(Type service, Type implementation) => _services.AddSingleton(service, implementation);
-        public void RegisterInstance(Type service, object implementation) => _services.AddSingleton(service, implementation);
-        public void RegisterLazy(Type service, Func<object> factory) => _services.AddSingleton(service, _ => factory());
+        public void RegisterInstance(Type service, object implementation)
+        {
+            if (!_pinnedTypes.Contains(service))
+                _services.AddSingleton(service, implementation);
+        }
+        public void RegisterLazy(Type service, Func<object> factory)
+        {
+            if (!_pinnedTypes.Contains(service))
+                _services.AddSingleton(service, _ => factory());
+        }
         public ITypeResolver Build() => new TypeResolver(_services.BuildServiceProvider());
     }
 

@@ -56,7 +56,7 @@ public sealed class SearchCommand : AsyncCommand<SearchCommand.Settings>
             }
             else
             {
-                await Console.Out.WriteAsync(body);
+                _console.Write(new Text(body));
             }
 
             return 0;

@@ -43,7 +43,7 @@ public sealed class GetCommand : AsyncCommand<GetCommand.Settings>
             }
             else
             {
-                await Console.Out.WriteAsync(markdown);
+                _console.Write(new Text(markdown));
             }
 
             return 0;

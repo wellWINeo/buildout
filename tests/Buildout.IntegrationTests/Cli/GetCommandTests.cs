@@ -1,4 +1,3 @@
-using System.Text;
 using Buildout.Cli.Commands;
 using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin;
@@ -65,7 +64,9 @@ public sealed class GetCommandTests
         services.AddSingleton(caps);
         services.AddSingleton<MarkdownTerminalRenderer>();
 
-        var registrar = new TypeRegistrar(services);
+        // Pin IAnsiConsole so the TypeRegistrar ignores Spectre's attempt to override it
+        var pinnedTypes = new HashSet<Type> { typeof(Spectre.Console.IAnsiConsole) };
+        var registrar = new TypeRegistrar(services, pinnedTypes);
 
         var app = new CommandApp(registrar);
         app.Configure(config =>
@@ -118,23 +119,12 @@ public sealed class GetCommandTests
     {
         var client = _fixture.CreateClient();
         SetupPage("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Test Page", "paragraph", "Hello world");
-        var (app, _) = CreateApp(client, styledStdout: false);
+        var (app, console) = CreateApp(client, styledStdout: false);
 
-        var originalOut = Console.Out;
-        var sb = new StringBuilder();
-        await using var sw = new StringWriter(sb);
-        Console.SetOut(sw);
-        try
-        {
-            var exitCode = await app.RunAsync(["get", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]);
-            Assert.Equal(0, exitCode);
-            Assert.Contains("Test Page", sb.ToString());
-            Assert.Contains("Hello world", sb.ToString());
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
+        var exitCode = await app.RunAsync(["get", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]);
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Test Page", console.Output);
+        Assert.Contains("Hello world", console.Output);
     }
 
     [Fact]
@@ -142,23 +132,12 @@ public sealed class GetCommandTests
     {
         var client = _fixture.CreateClient();
         SetupPage("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Title", "paragraph", "Body text");
-        var (app, _) = CreateApp(client, styledStdout: false);
+        var (app, console) = CreateApp(client, styledStdout: false);
 
-        var originalOut = Console.Out;
-        var sb = new StringBuilder();
-        await using var sw = new StringWriter(sb);
-        Console.SetOut(sw);
-        try
-        {
-            var exitCode = await app.RunAsync(["get", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]);
-            Assert.Equal(0, exitCode);
-            Assert.Contains("# Title", sb.ToString());
-            Assert.Contains("Body text", sb.ToString());
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
+        var exitCode = await app.RunAsync(["get", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]);
+        Assert.Equal(0, exitCode);
+        Assert.Contains("# Title", console.Output);
+        Assert.Contains("Body text", console.Output);
     }
 
     [Fact]
@@ -188,7 +167,7 @@ public sealed class GetCommandTests
         var markdown = await coreRenderer.RenderAsync("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         renderer.Render(markdown);
 
-        var hasAnsiEscape = console.Output.Contains("\x1b[") || console.Output.Contains("\u001b[");
+        var hasAnsiEscape = console.Output.Contains("\x1b[") || console.Output.Contains('[');
         Assert.True(hasAnsiEscape, "Rich mode output should contain ANSI escape codes");
     }
 
@@ -197,22 +176,11 @@ public sealed class GetCommandTests
     {
         var client = _fixture.CreateClient();
         SetupPage("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Title", "paragraph", "Body");
-        var (app, _) = CreateApp(client, styledStdout: false);
+        var (app, console) = CreateApp(client, styledStdout: false);
 
-        var originalOut = Console.Out;
-        var sb = new StringBuilder();
-        await using var sw = new StringWriter(sb);
-        Console.SetOut(sw);
-        try
-        {
-            var exitCode = await app.RunAsync(["get", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]);
-            Assert.Equal(0, exitCode);
-            Assert.False(sb.ToString().Contains('\x1b'), "Plain mode should not contain ANSI escape codes");
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
+        var exitCode = await app.RunAsync(["get", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]);
+        Assert.Equal(0, exitCode);
+        Assert.False(console.Output.Contains('\x1b'), "Plain mode should not contain ANSI escape codes");
     }
 
     [Fact]
@@ -300,12 +268,25 @@ public sealed class GetCommandTests
     private sealed class TypeRegistrar : ITypeRegistrar
     {
         private readonly IServiceCollection _services;
+        private readonly HashSet<Type> _pinnedTypes;
 
-        public TypeRegistrar(IServiceCollection services) => _services = services;
+        public TypeRegistrar(IServiceCollection services, HashSet<Type>? pinnedTypes = null)
+        {
+            _services = services;
+            _pinnedTypes = pinnedTypes ?? [];
+        }
 
         public void Register(Type service, Type implementation) => _services.AddSingleton(service, implementation);
-        public void RegisterInstance(Type service, object implementation) => _services.AddSingleton(service, implementation);
-        public void RegisterLazy(Type service, Func<object> factory) => _services.AddSingleton(service, _ => factory());
+        public void RegisterInstance(Type service, object implementation)
+        {
+            if (!_pinnedTypes.Contains(service))
+                _services.AddSingleton(service, implementation);
+        }
+        public void RegisterLazy(Type service, Func<object> factory)
+        {
+            if (!_pinnedTypes.Contains(service))
+                _services.AddSingleton(service, _ => factory());
+        }
         public ITypeResolver Build() => new TypeResolver(_services.BuildServiceProvider());
     }
 
