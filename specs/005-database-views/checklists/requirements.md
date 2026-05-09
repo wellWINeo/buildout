@@ -38,10 +38,16 @@
   assumption is wrong (e.g., a different buildin API revision is in
   scope), revisit the spec before `/speckit-plan`.
 - A companion document (`design-sketches.md`) shows concrete
-  renderings for each view style. Sketches are illustrative — exact
-  width budgets and divider characters are deferred to `plan.md`.
+  renderings for each view style, including the inline expansion
+  used when a page contains a `child_database` block. Sketches are
+  illustrative — exact width budgets and divider characters are
+  deferred to `plan.md`.
 - FR mentions of CLI/MCP/exit codes refer to existing project
   conventions (features 002, 003, 004) rather than introducing new
   technical commitments; that re-use is the intended boundary.
+- User Story 4 + FR-016–FR-021 + SC-008–SC-010 cover inline
+  expansion of `child_database` blocks during page reads. This
+  introduces a new block type to `Buildout.Core` (called out in
+  Assumptions) but no new buildin client method.
 - Items marked incomplete require spec updates before
   `/speckit-clarify` or `/speckit-plan`.

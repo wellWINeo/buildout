@@ -18,11 +18,17 @@ Every rendered view starts with one metadata line so a downstream
 reader knows what they are looking at:
 
 ```
-# <database title> — <style> view
-> grouped by: <property>   sorted: <property> asc   filtered: <summary>
+# <database title> — <style> view (<parameters>)
 ```
 
-The second line is omitted when no parameters apply.
+`<parameters>` is omitted entirely when no view-style parameters
+apply (the table, gallery, and list styles). When a parameter
+applies, it is shown inline in parentheses on the title line — for
+example `(grouped by Status)` for a board, `(by Due)` for a
+calendar, `(by Phase)` for a timeline. Sort order is **not**
+summarised: this feature does not introduce a client-side sort, so
+rows always appear in the order returned by the database query
+endpoint (see Common Rules → Order).
 
 ---
 
@@ -59,8 +65,9 @@ exceeding the soft column-width budget, switch to a stacked layout:
 
 ## 2. Board (Kanban)
 
-Group rows by a select/multi-select/status property given via
-`--group-by`. Up to three non-empty groups MAY be rendered
+Group rows by a `select`, `multi-select`, or `checkbox` property
+given via `--group-by`. (Buildin "status" columns are themselves
+exposed as `select`.) Up to three non-empty groups MAY be rendered
 side-by-side; otherwise stacked sections.
 
 **Side-by-side (≤ 3 groups):**
@@ -235,6 +242,74 @@ specific style chosen.
   client-side sort. Calendar/timeline group-by-date layouts are the
   only exception, and even there the in-group order follows query
   order.
+
+## 7. Inline (Embedded `child_database` Block)
+
+When a page contains a `child_database` block, the page-read pipeline
+substitutes a fixed table-style rendering at the block's position.
+Differences from the standalone Table sketch (§ 1):
+
+- Heading is `##`-level (page sub-section) carrying the database
+  title, NOT the standalone `# <title> — table view` line.
+- No metadata sub-line (`> grouped by:` etc.) — there are no
+  parameters to summarise.
+- Style is fixed; no flags apply.
+- On failure to fetch / read the embedded database, a single-line
+  placeholder replaces the block; the page render does NOT abort.
+
+**Example (success):**
+
+```
+…paragraph above the block…
+
+## Tasks
+
+| Title          | Status      | Due        | Owner |
+|----------------|-------------|------------|-------|
+| Design API     | Open        | 2026-05-15 | Alice |
+| Fix bug #2     | In Review   | 2026-05-12 | Bob   |
+| Deploy v2      | Done        | 2026-05-10 | Carol |
+
+…paragraph below the block…
+```
+
+**Example (failure cases):**
+
+```
+…paragraph above the block…
+
+[child database: not found — Tasks]
+
+…paragraph below the block…
+```
+
+```
+…paragraph above the block…
+
+[child database: access denied — Tasks]
+
+…paragraph below the block…
+```
+
+```
+…paragraph above the block…
+
+[child database: transport error — Tasks]
+
+…paragraph below the block…
+```
+
+```
+…paragraph above the block…
+
+[child database: malformed]
+
+…paragraph below the block…
+```
+
+The placeholder uses the `child_database` block's denormalized
+`Title` when available, falling back to `(unknown)` when the block
+carries no title (rare but possible if the payload is malformed).
 
 ## Mapping to OpenAPI Reality
 

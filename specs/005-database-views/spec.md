@@ -117,6 +117,61 @@ plain-mode CLI output for the same arguments.
 
 ---
 
+### User Story 4 - Embedded Databases Render Inline When Reading a Page (Priority: P3)
+
+As a user reading a page that has a database embedded inside it (a
+"child database" block in buildin's page contents), I want the page
+read to expand that database inline as a view, so I see the page's
+substantive content in one output instead of a placeholder I have to
+chase with a second command.
+
+**Why this priority**: Useful but secondary. Standalone `db view`
+already covers the explicit case; inline expansion is an ergonomic
+improvement for `get`. P3 because it depends on the renderer from
+P1 and on the existing page-read pipeline, and because pages without
+embedded databases are unaffected.
+
+**Independent Test**: Read (via CLI `get` and via the MCP page
+resource) a fixture page that contains exactly one `child_database`
+block. Verify the rendered markdown contains the embedded database's
+table-style rendering inline at the position of the `child_database`
+block, and that pages with no `child_database` blocks render
+identically to before this feature.
+
+**Acceptance Scenarios**:
+
+1. **Given** a page containing one or more `child_database` blocks,
+   **When** the page is read, **Then** each such block is replaced in
+   the output by the embedded database's table-style rendering,
+   prefixed by a sub-section heading carrying the database's title
+   and preserving the page's surrounding block order.
+2. **Given** a page with no `child_database` blocks, **When** the
+   page is read, **Then** the output is byte-identical to what the
+   page-read produced before this feature (no regressions on the
+   common case).
+3. **Given** a `child_database` block whose target database the
+   credential cannot read (404, 401, 403, transport error), **When**
+   the page is read, **Then** the page render does NOT abort — a
+   single-line placeholder is substituted at that block's position
+   identifying the failure class (e.g. `[child database: not found
+   — <title>]` for 404, `[child database: access denied — <title>]`
+   for 401/403; full mapping in `data-model.md`), and surrounding
+   content renders normally.
+4. **Given** an embedded database with many rows, **When** it is
+   rendered inline, **Then** the renderer paginates rows to
+   exhaustion (same correctness rule as standalone), and the
+   embedded rendering uses the table style only — no `--style`,
+   `--group-by`, or `--date-property` options apply to inline
+   expansions in this version.
+5. **Given** a database whose rows are pages that themselves contain
+   `child_database` blocks, **When** the outer page is read,
+   **Then** only the outer page's `child_database` blocks are
+   expanded — the rows of the embedded database are NOT recursively
+   expanded into their own embedded databases. Recursion is one
+   level deep.
+
+---
+
 ### Edge Cases
 
 - **Empty database (zero rows)**: Render the metadata header and an empty
@@ -146,6 +201,19 @@ plain-mode CLI output for the same arguments.
 - **Unknown `--style` or unknown group-by/date property name**:
   Validation error before any network call, with a message listing
   valid options derived from the database schema where applicable.
+- **Page with multiple `child_database` blocks**: Each is fetched
+  and rendered independently in document order; one failing
+  expansion does not affect the others.
+- **`child_database` block whose database the credential cannot
+  read**: Replaced by a single-line placeholder, never causes the
+  page render to fail.
+- **Page contains a `child_database` block with no embedded id /
+  malformed payload**: Same placeholder behavior as above; the
+  surrounding page renders normally.
+- **Database mention in page text** (existing
+  `DatabaseMentionConverter`): Continues to render as a reference,
+  unchanged. Mentions are not expanded by this feature; only the
+  `child_database` block type is.
 
 ## Requirements *(mandatory)*
 
@@ -208,6 +276,33 @@ plain-mode CLI output for the same arguments.
   MUST be mapped to the same MCP error codes already used by existing
   read-only tools.
 
+#### Page-Read Integration
+
+- **FR-016**: The page-read pipeline (used by both the CLI `get`
+  command and the MCP page resource) MUST recognize `child_database`
+  blocks in a page's contents and replace each one in the rendered
+  markdown with the embedded database's table-style rendering,
+  preserving the surrounding block order.
+- **FR-017**: Inline expansion MUST use the table style with default
+  parameters; it MUST NOT introduce new flags or arguments on `get`
+  or on the page resource. The `db view` command and the
+  `database_view` MCP tool remain the only surfaces that accept
+  view-style parameters.
+- **FR-018**: A failure to render an embedded database (404, 401/403,
+  transport, malformed block payload) MUST NOT abort the page render;
+  a single-line placeholder identifying the failure class MUST be
+  emitted in place of that block, and surrounding content MUST render
+  unchanged.
+- **FR-019**: Inline expansion MUST be exactly one level deep: the
+  rows of an embedded database are NOT recursively expanded into
+  their own embedded databases.
+- **FR-020**: Pages with no `child_database` blocks MUST produce
+  byte-identical output to the page-read behavior that existed
+  before this feature (no regression on the common case).
+- **FR-021**: Database mentions inside page text MUST continue to
+  render as references via the existing mention converter; this
+  feature MUST NOT change mention rendering.
+
 #### Cross-cutting
 
 - **FR-014**: The operation MUST NOT make any real network call to
@@ -215,7 +310,8 @@ plain-mode CLI output for the same arguments.
   applies unchanged.
 - **FR-015**: The implementation MUST share a single core renderer
   between CLI and MCP; neither surface is permitted to re-implement
-  view rendering.
+  view rendering. The same renderer MUST be reused by the inline
+  expansion in FR-016.
 
 ### Key Entities
 
@@ -244,6 +340,11 @@ plain-mode CLI output for the same arguments.
 - **Render Parameters**: The user-supplied controls that pick a style
   and tell it what property to group/sort by. Validated before any
   network call.
+- **Child Database Block**: A buildin block that embeds a database
+  inside a page's contents. Carries the embedded database's id (and
+  in the buildin payload typically a denormalized title). Rendered
+  by this feature as an inline table-style view at the block's
+  position; never expanded recursively.
 
 ## Success Criteria *(mandatory)*
 
@@ -273,6 +374,20 @@ plain-mode CLI output for the same arguments.
 - **SC-007**: The view operation cannot mutate buildin state under any
   input combination (verified by a contract test asserting only GET /
   POST-query endpoints are touched).
+- **SC-008**: A page that contains one or more `child_database` blocks
+  is rendered (via both the CLI `get` command and the MCP page
+  resource) with each `child_database` block replaced by the embedded
+  database's table-style rendering, verified by a fixture-based
+  integration test.
+- **SC-009**: A page that contains a `child_database` block whose
+  target database returns 404/401/403/transport-error renders
+  successfully with a single-line placeholder at the block's
+  position; the surrounding page content matches a golden fixture
+  byte-for-byte.
+- **SC-010**: A page that contains zero `child_database` blocks
+  produces output byte-identical to the page-read output produced
+  before this feature lands (no-regression test pinned by golden
+  fixture).
 
 ## Assumptions
 
@@ -308,3 +423,17 @@ plain-mode CLI output for the same arguments.
 - **No changes to the buildin client interface signature** beyond what
   is already needed to read databases and query rows; the feature does
   not require new buildin client methods.
+- **A `ChildDatabaseBlock` model is introduced** in `Buildout.Core`
+  alongside the existing block types (paragraph, heading, list,
+  todo, code, quote, divider, image, embed, table). Its
+  discriminator value follows buildin's payload (`child_database`).
+  This is a new model, not a new client method, and is required to
+  support inline expansion (FR-016).
+- **Inline expansion fans out to the same buildin endpoints
+  (`GET /v1/databases/{id}` and `POST /v1/databases/{id}/query`)**
+  per `child_database` block found. The read-only invariant
+  (SC-007) holds unchanged: those are the only endpoints the
+  rendering code path may touch.
+- **Recursion depth is fixed at one** for inline expansion. Pages
+  embedded as rows of an embedded database are not recursively
+  expanded. Removing this cap requires a follow-up feature.

@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Active feature plan: [specs/004-cicd-pipeline/plan.md](./specs/004-cicd-pipeline/plan.md)
+Active feature plan: [specs/005-database-views/plan.md](./specs/005-database-views/plan.md)
 
 For technologies, project structure, shell commands, and other context, read
 that plan and its sibling artifacts (`research.md`, `data-model.md`,
