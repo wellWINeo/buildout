@@ -1,5 +1,9 @@
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Authentication;
+using Buildout.Core.DatabaseViews;
+using Buildout.Core.DatabaseViews.Properties;
+using Buildout.Core.DatabaseViews.Rendering;
+using Buildout.Core.DatabaseViews.Styles;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
@@ -58,6 +62,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new CodeConverter());
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new QuoteConverter());
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new DividerConverter());
+        services.AddSingleton<IBlockToMarkdownConverter>(static sp =>
+            new ChildDatabaseConverter(sp.GetRequiredService<IDatabaseViewRenderer>()));
 
         services.AddSingleton<IMentionToMarkdownConverter>(static _ => new PageMentionConverter());
         services.AddSingleton<IMentionToMarkdownConverter>(static _ => new DatabaseMentionConverter());
@@ -74,6 +80,21 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AncestorScopeFilter>();
         services.AddSingleton<ISearchService, SearchService>();
         services.AddSingleton<ISearchResultFormatter, SearchResultFormatter>();
+
+        services.AddSingleton<CellBudget>(static _ => new CellBudget(24, "…"));
+        services.AddSingleton<IPropertyValueFormatter, PropertyValueFormatter>();
+        services.AddSingleton<IDatabaseViewStyle, TableViewStyle>();
+        services.AddSingleton<IDatabaseViewStyle, BoardViewStyle>();
+        services.AddSingleton<IDatabaseViewStyle, GalleryViewStyle>();
+        services.AddSingleton<IDatabaseViewStyle, ListViewStyle>();
+        services.AddSingleton<IDatabaseViewStyle, CalendarViewStyle>();
+        services.AddSingleton<IDatabaseViewStyle, TimelineViewStyle>();
+        services.AddSingleton<IDatabaseViewRenderer, DatabaseViewRenderer>();
+        services.AddSingleton<IReadOnlyDictionary<DatabaseViewStyle, IDatabaseViewStyle>>(sp =>
+        {
+            var styles = sp.GetServices<IDatabaseViewStyle>();
+            return styles.ToDictionary(s => s.Key);
+        });
 
         return services;
     }

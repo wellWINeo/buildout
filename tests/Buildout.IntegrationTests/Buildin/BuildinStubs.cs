@@ -94,4 +94,28 @@ public static class BuildinStubs
                     next_cursor = (string?)null
                 }));
     }
+
+    public static void RegisterGetDatabase(WireMockServer server, string databaseId, object responseBody, int statusCode = 200)
+    {
+        server
+            .Given(Request.Create()
+                .WithPath($"/v1/databases/{databaseId}")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(statusCode)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(responseBody));
+    }
+
+    public static void RegisterQueryDatabase(WireMockServer server, string databaseId, object responseBody)
+    {
+        server
+            .Given(Request.Create()
+                .WithPath($"/v1/databases/{databaseId}/query")
+                .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(responseBody));
+    }
 }

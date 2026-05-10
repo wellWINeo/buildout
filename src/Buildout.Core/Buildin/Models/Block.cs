@@ -125,6 +125,8 @@ public sealed record ChildPageBlock : Block
 public sealed record ChildDatabaseBlock : Block
 {
     public string? Title { get; init; }
+    // In buildin, child_database block ID == the database ID
+    public string DatabaseId => Id;
     public ChildDatabaseBlock() : base("child_database") { }
 }
 
