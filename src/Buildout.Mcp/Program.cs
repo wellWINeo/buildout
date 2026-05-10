@@ -13,6 +13,7 @@ builder.Services.AddBuildoutCore();
 builder.Services.AddMcpServer()
     .WithStdioServerTransport()
     .WithResources<PageResourceHandler>()
-    .WithTools<SearchToolHandler>();
+    .WithTools<SearchToolHandler>()
+    .WithTools<DatabaseViewToolHandler>();
 
 await builder.Build().RunAsync();

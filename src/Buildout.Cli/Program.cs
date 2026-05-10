@@ -26,6 +26,10 @@ app.Configure(config =>
 {
     config.AddCommand<GetCommand>("get");
     config.AddCommand<SearchCommand>("search");
+    config.AddBranch<DbSettings>("db", db =>
+    {
+        db.AddCommand<DbViewCommand>("view");
+    });
 });
 
 await app.RunAsync(args);
