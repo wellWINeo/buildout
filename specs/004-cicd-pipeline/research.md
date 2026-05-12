@@ -105,21 +105,21 @@ var kernel = builder.Build();
 
 **Plugin registration for tool calling**:
 
-MCP tools are discovered via `McpClient.ListToolsAsync()` and dynamically
-mapped to Semantic Kernel functions using the MCP-native tool names,
-descriptions, and parameter schemas. A bridge helper (`McpSkBridge`)
-calls `ListToolsAsync()`, iterates the results, and creates
-`KernelFunctionFactory.CreateFromMethod` delegates that call
-`mcpClient.CallToolAsync(toolName, args)` — preserving the exact MCP
-metadata (not hand-authored descriptions). MCP resources are similarly
-discovered via `ListResourceTemplatesAsync()` and wrapped as callable
-SK functions (e.g., `read_buildin_page(pageId)` →
-`mcpClient.ReadResourceAsync("buildin://{pageId}")`).
+MCP tools are discovered via `McpClient.ListToolsAsync()` and converted
+to Semantic Kernel functions using the built-in `AsKernelFunction()`
+extension method on `McpClientTool` (which extends `AIFunction`). This
+is the official integration path documented by the Semantic Kernel team:
+`kernel.Plugins.AddFromFunctions("name", tools.Select(t => t.AsKernelFunction()))`.
 
-This approach validates that the MCP server's `[McpServerTool]` and
-`[McpServerResource]` metadata is sufficient for an LLM to understand
-and correctly use the tools — which is the actual contract buildout's
-MCP server provides to LLM clients.
+A test helper (`McpSkBridge`) encapsulates the harness setup (in-process
+MCP server + client), tool discovery, plugin registration, and resource
+wrapping. MCP resources are not tools and cannot use `AsKernelFunction()`,
+so a thin wrapper exposes `buildin://{pageId}` as a callable SK function
+via `mcpClient.ReadResourceAsync()`.
+
+This approach validates that the MCP server's `[McpServerTool]` metadata
+is sufficient for an LLM to understand and correctly use the tools —
+which is the actual contract buildout's MCP server provides to LLM clients.
 
 **Skip logic**: Tests check for `OPENROUTER_API_KEY` environment
 variable. If absent, the test returns early (skip, not fail) — same

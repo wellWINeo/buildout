@@ -81,7 +81,7 @@ the existing five-project .NET solution.
 - 1 new WireMock fixture class + 1 stub definitions class.
 - 3 modified integration test files (MockedHttpHarnessTests,
   GetCommandTests, PageReadingLlmTests).
-- 1 new MCP-to-SK bridge helper (McpSkBridge.cs).
+- 1 new MCP-to-SK bridge helper (McpSkBridge.cs) using native AsKernelFunction().
 - 1 new contract test file (WireMock stub ↔ OpenAPI schema validation).
 - 2 modified `.csproj` files (add WireMock + SK, remove Anthropic).
 - ~1 new contract file in `contracts/`.
@@ -164,8 +164,8 @@ tests/
     Cli/
       GetCommandTests.cs                        # MODIFIED: uses WireMock + real BotBuildinClient
     Llm/
-      McpSkBridge.cs                              # NEW: MCP-to-SK plugin bridge (discovers tools via McpClient.ListToolsAsync())
-      PageReadingLlmTests.cs                    # MODIFIED: uses WireMock + Semantic Kernel with MCP-native tool discovery instead of hand-authored wrappers
+      McpSkBridge.cs                              # NEW: MCP-to-SK bridge using native AsKernelFunction() + resource wrapper
+      PageReadingLlmTests.cs                    # REWRITTEN: 3 tests (search+read, database_view, error) using McpSkBridge instead of hand-authored wrappers
     Mcp/
       SearchToolTests.cs                        # UNCHANGED (mocks ISearchService, not IBuildinClient)
     SmokeTests.cs                               # UNCHANGED

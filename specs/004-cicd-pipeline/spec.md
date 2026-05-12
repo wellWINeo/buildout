@@ -187,11 +187,14 @@ on a machine with the .NET 10 runtime installed.
   `https://openrouter.ai/api/v1` using model
   `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`.
 - **FR-007**: MCP tools in LLM tests MUST be registered as Semantic Kernel
-  plugins with `FunctionChoiceBehavior.Auto()` to enable automatic tool
-  calling. Tool names, descriptions, and parameter schemas MUST be sourced
-  from the MCP protocol via `McpClient.ListToolsAsync()` — not hand-authored
-  in the test code. This validates that the MCP server's `[McpServerTool]`
-  metadata is sufficient for an LLM to discover and correctly use the tools.
+  plugins using the native `McpClientTool.AsKernelFunction()` extension
+  method (available in `Microsoft.SemanticKernel.Core` 1.44.0+) with
+  `FunctionChoiceBehavior.Auto()` to enable automatic tool calling. Tool
+  names, descriptions, and parameter schemas are sourced from the MCP
+  protocol via `McpClient.ListToolsAsync()` — not hand-authored in the
+  test code. This validates that the MCP server's `[McpServerTool]`
+  metadata is sufficient for an LLM to discover and correctly use the
+  tools.
 - **FR-008**: LLM integration tests MUST be skipped (not failed) when
   `OPENROUTER_API_KEY` is not set in the environment.
 - **FR-009**: LLM integration tests MUST run on push to `main` and on
@@ -238,13 +241,12 @@ on a machine with the .NET 10 runtime installed.
   `AddOpenAIChatCompletion` using a custom `HttpClient` pointing to
   `https://openrouter.ai/api/v1`, enabling tool-call-driven integration
   tests against the free-tier OpenRouter model.
-- **MCP-to-SK Plugin Bridge**: A test helper that calls
-  `McpClient.ListToolsAsync()` to discover available MCP tools and their
-  schemas, then dynamically creates Semantic Kernel `KernelFunction`
-  instances using the MCP-native names, descriptions, and parameter
-  metadata. This ensures the LLM sees exactly what the MCP server exposes —
-  validating that MCP tool metadata is LLM-comprehensible without
-  hand-authored wrappers.
+- **MCP-to-SK Plugin Bridge**: A test helper (`McpSkBridge`) that calls
+  `McpClient.ListToolsAsync()` to discover available MCP tools, converts
+  each `McpClientTool` to a Semantic Kernel `KernelFunction` using the
+  built-in `AsKernelFunction()` extension, and wraps MCP resources (e.g.,
+  `buildin://{pageId}`) as callable SK functions. The LLM sees exactly
+  the tool metadata the MCP server exposes — no hand-authored wrappers.
 - **MCP Resource-to-Function Wrapper**: Since Semantic Kernel has no native
   concept of MCP resources, a thin wrapper exposes the `buildin://{pageId}`
   resource template as an SK function (e.g., `read_buildin_page(pageId)`)
@@ -263,10 +265,10 @@ on a machine with the .NET 10 runtime installed.
 - **SC-003**: All integration tests pass with zero network calls to
   buildin.ai (verifiable by WireMock request journal).
 - **SC-004**: LLM integration tests successfully discover MCP tools via
-  `McpClient.ListToolsAsync()`, register them as Semantic Kernel plugins
-  with MCP-native schemas, and the LLM correctly calls `search`,
-  `database_view`, and `buildin://` resources to return grounded answers
-  on every CI run where the API key is available.
+  `McpClient.ListToolsAsync()`, convert them to Semantic Kernel functions
+  using the native `AsKernelFunction()` extension, and the LLM correctly
+  calls `search`, `database_view`, and `buildin://` resources to return
+  grounded answers on every CI run where the API key is available.
 - **SC-005**: Published artifacts are downloadable from every successful
   workflow run and executable on any machine with the .NET 10 runtime.
 - **SC-006**: Removing the `Anthropic.SDK` package from
@@ -297,13 +299,14 @@ on a machine with the .NET 10 runtime installed.
 - The OpenRouter free-tier model
   (`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`) supports
   OpenAI-compatible tool/function calling.
-- The MCP SDK's `McpClient` provides `ListToolsAsync()` and
-  `ReadResourceAsync()` that can be bridged to Semantic Kernel plugin
-  functions without an official SK-MCP connector package.
+- The MCP SDK's `McpClientTool` extends `Microsoft.Extensions.AI.AIFunction`
+  and can be converted to a Semantic Kernel `KernelFunction` via the built-in
+  `AsKernelFunction()` extension method (available since SK 1.44.0). No
+  official SK-MCP connector package is required.
 - MCP tool descriptions and parameter descriptions (from `[Description]`
   attributes on `[McpServerTool]` methods) are surfaced through the MCP
   protocol and are sufficient for an LLM to understand how to call each tool.
-- MCP resources (via `[McpServerResource]` templates) can be exposed to the
-  LLM as callable functions (e.g., `read_buildin_page(pageId)`), since
-  Semantic Kernel does not have a native resource concept — only tool
-  functions.
+- MCP resources (via `[McpServerResource]` templates) are not convertible via
+  `AsKernelFunction()` since they are not tools. A thin wrapper exposes the
+  `buildin://{pageId}` resource template as an SK function calling
+  `McpClient.ReadResourceAsync()`.

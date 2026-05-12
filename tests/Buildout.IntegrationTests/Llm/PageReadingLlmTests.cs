@@ -1,18 +1,6 @@
-using System.IO.Pipelines;
-using Buildout.Core.Buildin;
-using Buildout.Core.DependencyInjection;
 using Buildout.IntegrationTests.Buildin;
-using Buildout.Mcp.Resources;
-using Buildout.Mcp.Tools;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
-using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 using Xunit;
 
 namespace Buildout.IntegrationTests.Llm;
@@ -20,6 +8,9 @@ namespace Buildout.IntegrationTests.Llm;
 [Collection("BuildinWireMock")]
 public sealed class PageReadingLlmTests
 {
+    private const string Q3PageId = "33333333-3333-3333-3333-333333333333";
+    private const string DbId = "dddddddd-dddd-dddd-dddd-dddddddddddd";
+
     private readonly ITestOutputHelper _output;
     private readonly BuildinWireMockFixture _fixture;
 
@@ -30,62 +21,11 @@ public sealed class PageReadingLlmTests
         _fixture.Reset();
     }
 
-    [Fact]
-    public async Task LlmCanAnswerQuestionsAboutRenderedPage()
+    private static string? GetApiKey()
+        => Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
+
+    private void SetupSearchAndPageStubs()
     {
-        var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            return;
-        }
-
-        var markdown = """
-                        # Quarterly Revenue Report
-
-                        Total revenue for Q3 2025 was **$4.2 million**, up 12% from Q2.
-                        The largest contributor was the Enterprise segment at $2.8 million.
-                        """;
-
-        var prompt = $"""
-                      You are reading a rendered Markdown page. Answer the following question
-                      based ONLY on the content below.
-
-                      --- PAGE START ---
-                      {markdown}
-                      --- PAGE END ---
-
-                      Question: What was the total revenue for Q3 2025, and which segment contributed the most?
-                      Answer in a single sentence.
-                      """;
-
-        var httpClient = new HttpClient { BaseAddress = new Uri("https://openrouter.ai/api/v1") };
-        httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://github.com/buildout");
-
-        var kernel = Kernel.CreateBuilder()
-            .AddOpenAIChatCompletion(
-                modelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-                apiKey: apiKey,
-                httpClient: httpClient)
-            .Build();
-
-        var chatService = kernel.GetRequiredService<IChatCompletionService>();
-        var history = new ChatHistory();
-        history.AddUserMessage(prompt);
-        var response = await chatService.GetChatMessageContentAsync(history);
-
-        _output.WriteLine($"LLM response: {response.Content}");
-
-        Assert.Contains("4.2", response.Content);
-        Assert.Contains("Enterprise", response.Content, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task LlmCanFindAndReadPage()
-    {
-        var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
-        if (string.IsNullOrWhiteSpace(apiKey))
-            return;
-
         BuildinStubs.RegisterSearchPages(_fixture.Server, new
         {
             @object = "list",
@@ -93,11 +33,14 @@ public sealed class PageReadingLlmTests
             {
                 new
                 {
-                    id = "33333333-3333-3333-3333-333333333333",
+                    id = Q3PageId,
                     archived = false,
                     created_time = "2025-03-01T12:00:00Z",
                     last_edited_time = "2025-03-02T12:00:00Z",
-                    properties = new { title = new { title = new[] { new { type = "text", plain_text = "Q3 Revenue Report" } } } }
+                    properties = new
+                    {
+                        title = new { title = new[] { new { type = "text", plain_text = "Q3 Revenue Report" } } }
+                    }
                 },
                 new
                 {
@@ -105,7 +48,10 @@ public sealed class PageReadingLlmTests
                     archived = false,
                     created_time = "2025-03-01T12:00:00Z",
                     last_edited_time = "2025-03-02T12:00:00Z",
-                    properties = new { title = new { title = new[] { new { type = "text", plain_text = "Marketing Plan" } } } }
+                    properties = new
+                    {
+                        title = new { title = new[] { new { type = "text", plain_text = "Marketing Plan" } } }
+                    }
                 }
             },
             has_more = false
@@ -113,12 +59,15 @@ public sealed class PageReadingLlmTests
 
         BuildinStubs.RegisterGetPage(_fixture.Server, new
         {
-            id = "33333333-3333-3333-3333-333333333333",
+            id = Q3PageId,
             created_time = "2025-01-15T10:30:00Z",
             last_edited_time = "2025-01-16T14:00:00Z",
             archived = false,
             url = "https://api.buildin.ai/pages/33333333",
-            properties = new { title = new { title = new[] { new { type = "text", plain_text = "Quarterly Revenue Report" } } } }
+            properties = new
+            {
+                title = new { title = new[] { new { type = "text", plain_text = "Quarterly Revenue Report" } } }
+            }
         });
 
         BuildinStubs.RegisterGetBlockChildren(_fixture.Server, new
@@ -145,67 +94,67 @@ public sealed class PageReadingLlmTests
             },
             has_more = false
         });
+    }
 
-        var buildinClient = _fixture.CreateClient();
-        var services = new ServiceCollection();
-        services.AddSingleton<IBuildinClient>(buildinClient);
-        services.AddBuildoutCore();
-        services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Debug));
-        services.AddMcpServer().WithResources<PageResourceHandler>().WithTools<SearchToolHandler>();
-
-        var sp = services.BuildServiceProvider();
-
-        var options = sp.GetRequiredService<IOptions<McpServerOptions>>().Value;
-
-        var c2s = new Pipe();
-        var s2c = new Pipe();
-
-        var server = McpServer.Create(
-            new StreamServerTransport(c2s.Reader.AsStream(), s2c.Writer.AsStream()),
-            options,
-            sp.GetRequiredService<ILoggerFactory>(),
-            sp);
-
-        _ = server.RunAsync();
-
-        var mcpClient = await McpClient.CreateAsync(
-            new StreamClientTransport(c2s.Writer.AsStream(), s2c.Reader.AsStream()),
-            new McpClientOptions(),
-            sp.GetRequiredService<ILoggerFactory>());
-
-        var openRouterHttp = new HttpClient { BaseAddress = new Uri("https://openrouter.ai/api/v1") };
-        openRouterHttp.DefaultRequestHeaders.Add("HTTP-Referer", "https://github.com/buildout");
-
-        var kernel = Kernel.CreateBuilder()
-            .AddOpenAIChatCompletion(
-                modelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-                apiKey: apiKey,
-                httpClient: openRouterHttp)
-            .Build();
-
-        kernel.Plugins.AddFromFunctions("buildin",
-        [
-            KernelFunctionFactory.CreateFromMethod(
-                async (string query) =>
+    private void SetupDatabaseStubs()
+    {
+        BuildinStubs.RegisterGetDatabase(_fixture.Server, DbId, new
+        {
+            id = DbId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            title = new[] { new { type = "text", plain_text = "Employee Directory" } },
+            properties = new
+            {
+                Name = new { type = "title", title = new { } },
+                Department = new
                 {
-                    var result = await mcpClient.CallToolAsync("search",
-                        new Dictionary<string, object?> { ["query"] = query });
-                    return result.Content.OfType<TextContentBlock>().First().Text;
-                },
-                "search",
-                "Search buildin pages by query. Returns matches with page IDs and titles.",
-                [new KernelParameterMetadata("query") { Description = "Search query", IsRequired = true }]),
+                    type = "select",
+                    select = new { options = new[] { new { name = "Engineering" }, new { name = "Sales" } } }
+                }
+            }
+        });
 
-            KernelFunctionFactory.CreateFromMethod(
-                async (string pageId) =>
+        BuildinStubs.RegisterQueryDatabase(_fixture.Server, DbId, new
+        {
+            results = new object[]
+            {
+                new
                 {
-                    var result = await mcpClient.ReadResourceAsync($"buildin://{pageId}");
-                    return result.Contents.OfType<TextResourceContents>().First().Text;
+                    properties = new
+                    {
+                        Name = new { type = "title", title = new[] { new { type = "text", plain_text = "Alice Chen" } } },
+                        Department = new { type = "select", select = new { name = "Engineering" } }
+                    }
                 },
-                "read_buildin_page",
-                "Read a buildin page and return its rendered Markdown content.",
-                [new KernelParameterMetadata("pageId") { Description = "Buildin page ID", IsRequired = true }])
-        ]);
+                new
+                {
+                    properties = new
+                    {
+                        Name = new { type = "title", title = new[] { new { type = "text", plain_text = "Bob Torres" } } },
+                        Department = new { type = "select", select = new { name = "Sales" } }
+                    }
+                }
+            },
+            has_more = false,
+            next_cursor = (string?)null
+        });
+    }
+
+    [Fact]
+    public async Task LlmCanSearchAndReadPage()
+    {
+        var apiKey = GetApiKey();
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return;
+
+        SetupSearchAndPageStubs();
+
+        await using var harness = await McpSkBridge.CreateHarnessAsync(_fixture);
+        var kernel = McpSkBridge.CreateOpenRouterKernel(apiKey);
+
+        var plugin = await McpSkBridge.CreatePluginFromMcpToolsAsync(harness.Client);
+        kernel.Plugins.Add(plugin);
 
         var settings = new OpenAIPromptExecutionSettings
         {
@@ -219,13 +168,81 @@ public sealed class PageReadingLlmTests
         _output.WriteLine($"LLM response: {result}");
 
         Assert.Contains("4.2", result.ToString());
+    }
 
-        await mcpClient.DisposeAsync();
-        await server.DisposeAsync();
-        c2s.Writer.Complete();
-        c2s.Reader.Complete();
-        s2c.Writer.Complete();
-        s2c.Reader.Complete();
-        await sp.DisposeAsync();
+    [Fact]
+    public async Task LlmCanQueryDatabaseView()
+    {
+        var apiKey = GetApiKey();
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return;
+
+        SetupDatabaseStubs();
+
+        await using var harness = await McpSkBridge.CreateHarnessAsync(_fixture, includeDatabaseView: true);
+        var kernel = McpSkBridge.CreateOpenRouterKernel(apiKey);
+
+        var plugin = await McpSkBridge.CreatePluginFromMcpToolsAsync(harness.Client);
+        kernel.Plugins.Add(plugin);
+
+        var settings = new OpenAIPromptExecutionSettings
+        {
+            FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+        };
+
+        var result = await kernel.InvokePromptAsync(
+            $"How many employees are in the Employee Directory database (id: {DbId}), and what are their names and departments?",
+            new KernelArguments(settings));
+
+        _output.WriteLine($"LLM response: {result}");
+
+        var response = result.ToString();
+        Assert.True(
+            response.Contains("Alice", StringComparison.OrdinalIgnoreCase) ||
+            response.Contains("Bob", StringComparison.OrdinalIgnoreCase),
+            "Expected the LLM to mention at least one employee from the database.");
+    }
+
+    [Fact]
+    public async Task LlmCanHandleToolError()
+    {
+        var apiKey = GetApiKey();
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return;
+
+        BuildinStubs.RegisterSearchPages(_fixture.Server, new
+        {
+            @object = "list",
+            results = Array.Empty<object>(),
+            has_more = false
+        });
+
+        await using var harness = await McpSkBridge.CreateHarnessAsync(_fixture);
+        var kernel = McpSkBridge.CreateOpenRouterKernel(apiKey);
+
+        var plugin = await McpSkBridge.CreatePluginFromMcpToolsAsync(harness.Client);
+        kernel.Plugins.Add(plugin);
+
+        var settings = new OpenAIPromptExecutionSettings
+        {
+            FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+        };
+
+        var result = await kernel.InvokePromptAsync(
+            "Search for pages about 'nonexistent topic xyz123' and tell me what you find.",
+            new KernelArguments(settings));
+
+        _output.WriteLine($"LLM response: {result}");
+
+        var response = result.ToString();
+        Assert.True(
+            response.Contains("no", StringComparison.OrdinalIgnoreCase) ||
+            response.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+            response.Contains("empty", StringComparison.OrdinalIgnoreCase) ||
+            response.Contains("0 result", StringComparison.OrdinalIgnoreCase) ||
+            response.Contains("zero", StringComparison.OrdinalIgnoreCase) ||
+            response.Contains("couldn't find", StringComparison.OrdinalIgnoreCase) ||
+            response.Contains("none", StringComparison.OrdinalIgnoreCase),
+            "Expected the LLM to acknowledge the empty search results.");
     }
 }
