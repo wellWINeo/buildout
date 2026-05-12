@@ -105,12 +105,21 @@ var kernel = builder.Build();
 
 **Plugin registration for tool calling**:
 
-MCP tool operations are wrapped in `[KernelFunction]` methods that
-delegate to the MCP tool handlers. Alternatively, SK's
-`OpenAIPromptExecutionSettings` with `FunctionChoiceBehavior.Auto()`
-can use manually constructed `Function` definitions matching the MCP
-tool schemas — the same pattern as the current Anthropic test but
-with SK's orchestration.
+MCP tools are discovered via `McpClient.ListToolsAsync()` and dynamically
+mapped to Semantic Kernel functions using the MCP-native tool names,
+descriptions, and parameter schemas. A bridge helper (`McpSkBridge`)
+calls `ListToolsAsync()`, iterates the results, and creates
+`KernelFunctionFactory.CreateFromMethod` delegates that call
+`mcpClient.CallToolAsync(toolName, args)` — preserving the exact MCP
+metadata (not hand-authored descriptions). MCP resources are similarly
+discovered via `ListResourceTemplatesAsync()` and wrapped as callable
+SK functions (e.g., `read_buildin_page(pageId)` →
+`mcpClient.ReadResourceAsync("buildin://{pageId}")`).
+
+This approach validates that the MCP server's `[McpServerTool]` and
+`[McpServerResource]` metadata is sufficient for an LLM to understand
+and correctly use the tools — which is the actual contract buildout's
+MCP server provides to LLM clients.
 
 **Skip logic**: Tests check for `OPENROUTER_API_KEY` environment
 variable. If absent, the test returns early (skip, not fail) — same

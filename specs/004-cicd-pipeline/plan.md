@@ -23,8 +23,9 @@ Three supporting changes ship in the same feature:
    `AddOpenAIChatCompletion` with a custom `HttpClient` pointing at
    `https://openrouter.ai/api/v1`, using model
    `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`. MCP tools are
-   registered as SK plugins with `FunctionChoiceBehavior.Auto()` for
-   automatic tool calling.
+   discovered via `McpClient.ListToolsAsync()` and dynamically registered
+   as SK plugins using MCP-native schemas and descriptions — validating
+   that the MCP server's tool metadata is LLM-comprehensible.
 
 3. **GitHub Actions workflow** (`.github/workflows/ci.yml`) defines four
    jobs — `build`, `test-unit`, `test-integration`, `publish` — with
@@ -80,6 +81,7 @@ the existing five-project .NET solution.
 - 1 new WireMock fixture class + 1 stub definitions class.
 - 3 modified integration test files (MockedHttpHarnessTests,
   GetCommandTests, PageReadingLlmTests).
+- 1 new MCP-to-SK bridge helper (McpSkBridge.cs).
 - 1 new contract test file (WireMock stub ↔ OpenAPI schema validation).
 - 2 modified `.csproj` files (add WireMock + SK, remove Anthropic).
 - ~1 new contract file in `contracts/`.
@@ -162,7 +164,8 @@ tests/
     Cli/
       GetCommandTests.cs                        # MODIFIED: uses WireMock + real BotBuildinClient
     Llm/
-      PageReadingLlmTests.cs                    # MODIFIED: uses WireMock + Semantic Kernel instead of NSubstitute + Anthropic SDK
+      McpSkBridge.cs                              # NEW: MCP-to-SK plugin bridge (discovers tools via McpClient.ListToolsAsync())
+      PageReadingLlmTests.cs                    # MODIFIED: uses WireMock + Semantic Kernel with MCP-native tool discovery instead of hand-authored wrappers
     Mcp/
       SearchToolTests.cs                        # UNCHANGED (mocks ISearchService, not IBuildinClient)
     SmokeTests.cs                               # UNCHANGED

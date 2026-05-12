@@ -68,20 +68,27 @@ in sync with `openapi.json`.
 
 ---
 
-### User Story 3 - LLM Integration Tests via OpenRouter and Semantic Kernel (Priority: P2)
+### User Story 3 - LLM Integration Tests for MCP Tool Calling (Priority: P2)
 
 As a developer, LLM-powered integration tests validate that an LLM can
-successfully invoke MCP tools and interpret their output, using OpenRouter
-with a free-tier model (`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`)
-via the Semantic Kernel SDK.
+discover MCP tools through the protocol, understand their schemas and
+descriptions, call them with correct parameters, and produce grounded
+answers from the results — using OpenRouter with a free-tier model
+(`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`) via the Semantic
+Kernel SDK.
 
-**Why this priority**: LLM contract validation is a constitution requirement
-(Principle IV, MCP tool changes section) but depends on P1 infrastructure
-(build + mock server) being in place first.
+**Why this priority**: MCP tool descriptions, parameter schemas, and output
+formats are the contract between buildout and any LLM client. Validating that
+an LLM can understand and correctly use these contracts through the MCP
+protocol (not hand-authored wrappers) is essential for ensuring buildout's
+MCP server is production-ready. This depends on P1 infrastructure (build +
+mock server) being in place first.
 
 **Independent Test**: Set `OPENROUTER_API_KEY` and run the LLM integration
-tests. The test uses Semantic Kernel with the specified OpenRouter model,
-drives MCP tools, and asserts the LLM's response contains expected content.
+tests. Each test connects an in-process MCP server to an LLM via Semantic
+Kernel, asks a question requiring tool use, and asserts the LLM discovers
+and calls the correct MCP tools with correct parameters and returns a
+grounded answer.
 
 **Acceptance Scenarios**:
 
@@ -89,12 +96,27 @@ drives MCP tools, and asserts the LLM's response contains expected content.
    integration test runs, **Then** Semantic Kernel sends requests to OpenRouter
    using model `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` via its
    OpenAI-compatible endpoint.
-2. **Given** the LLM test with MCP tools registered as Semantic Kernel
-   plugins, **When** the LLM is asked a question requiring tool use, **Then**
-   it invokes the `search` and/or `read_buildin_page` tools through Semantic
-   Kernel's auto function calling and returns an answer grounded in tool
-   output.
-3. **Given** `OPENROUTER_API_KEY` is not set, **When** the LLM integration
+2. **Given** an in-process MCP server exposing `search`, `database_view`
+   tools and `buildin://{pageId}` resource template, **When** the test
+   registers MCP tools as SK plugins using schemas discovered via
+   `McpClient.ListToolsAsync()` (not hand-authored descriptions), **Then**
+   the LLM receives tool descriptions and parameter schemas that exactly match
+   the MCP server's `[McpServerTool]` metadata.
+3. **Given** the LLM is asked "Which page describes Q3 revenue, and what was
+   the total?", **When** the `search` tool and `buildin://` resource are
+   available, **Then** the LLM calls `search` with a relevant query, reads
+   the matching page via the resource, and returns an answer grounded in the
+   page content (e.g., contains "4.2").
+4. **Given** the LLM is asked a question about a database's contents,
+   **When** the `database_view` tool is available, **Then** the LLM calls
+   `database_view` with a correct `database_id` parameter and optionally a
+   `style` parameter, and returns an answer grounded in the rendered output.
+5. **Given** an MCP tool returns an error (e.g., search with empty query
+   returns `InvalidParams`, or a non-existent resource returns
+   `ResourceNotFound`), **When** the LLM receives the error, **Then** it
+   recovers gracefully and informs the user about the error rather than
+   producing a hallucinated answer.
+6. **Given** `OPENROUTER_API_KEY` is not set, **When** the LLM integration
    test runs, **Then** the test is skipped (not failed).
 
 ---
@@ -136,6 +158,13 @@ on a machine with the .NET 10 runtime installed.
   gracefully.
 - What happens when `dotnet publish` succeeds but the artifact exceeds
   GitHub's upload size limits?
+- What happens when the LLM calls an MCP tool with incorrect parameters —
+  does the test framework detect this and fail the test?
+- What happens when the MCP tool descriptions are ambiguous and the LLM
+  calls the wrong tool — how does the test distinguish "wrong tool" from
+  "correct tool, different phrasing"?
+- What happens when the free-tier model is too small to reliably perform
+  multi-tool orchestration — should the test have retry/timeout logic?
 
 ## Requirements *(mandatory)*
 
@@ -157,9 +186,12 @@ on a machine with the .NET 10 runtime installed.
   `AddOpenAIChatCompletion` configured to call OpenRouter at
   `https://openrouter.ai/api/v1` using model
   `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`.
-- **FR-007**: MCP tools invoked by LLM tests MUST be registered as Semantic
-  Kernel plugins with `FunctionChoiceBehavior.Auto()` to enable automatic
-  tool calling.
+- **FR-007**: MCP tools in LLM tests MUST be registered as Semantic Kernel
+  plugins with `FunctionChoiceBehavior.Auto()` to enable automatic tool
+  calling. Tool names, descriptions, and parameter schemas MUST be sourced
+  from the MCP protocol via `McpClient.ListToolsAsync()` — not hand-authored
+  in the test code. This validates that the MCP server's `[McpServerTool]`
+  metadata is sufficient for an LLM to discover and correctly use the tools.
 - **FR-008**: LLM integration tests MUST be skipped (not failed) when
   `OPENROUTER_API_KEY` is not set in the environment.
 - **FR-009**: LLM integration tests MUST run on push to `main` and on
@@ -168,6 +200,19 @@ on a machine with the .NET 10 runtime installed.
 - **FR-010**: The Anthropic SDK dependency (`Anthropic.SDK` NuGet package) in
   `Buildout.IntegrationTests` MUST be removed and replaced with the Semantic
   Kernel OpenAI connector.
+- **FR-015**: LLM integration tests MUST cover all three MCP surfaces: the
+  `search` tool, the `database_view` tool, and the `buildin://{pageId}`
+  resource template.
+- **FR-016**: LLM integration tests MUST NOT contain tests that only validate
+  LLM reading comprehension of pre-rendered Markdown without exercising MCP
+  tool calling. Pure Markdown comprehension is already covered by unit tests
+  for the rendering pipeline.
+- **FR-017**: At least one LLM integration test MUST exercise multi-tool
+  orchestration — the LLM chaining two or more MCP tool/resource calls to
+  answer a single question.
+- **FR-018**: At least one LLM integration test MUST exercise an MCP error
+  path — the LLM receiving a tool error and producing a sensible response
+  rather than a hallucinated answer.
 - **FR-011**: When all tests pass, the workflow MUST publish
   framework-dependent single-file artifacts for `Buildout.Mcp` and
   `Buildout.Cli`.
@@ -193,6 +238,17 @@ on a machine with the .NET 10 runtime installed.
   `AddOpenAIChatCompletion` using a custom `HttpClient` pointing to
   `https://openrouter.ai/api/v1`, enabling tool-call-driven integration
   tests against the free-tier OpenRouter model.
+- **MCP-to-SK Plugin Bridge**: A test helper that calls
+  `McpClient.ListToolsAsync()` to discover available MCP tools and their
+  schemas, then dynamically creates Semantic Kernel `KernelFunction`
+  instances using the MCP-native names, descriptions, and parameter
+  metadata. This ensures the LLM sees exactly what the MCP server exposes —
+  validating that MCP tool metadata is LLM-comprehensible without
+  hand-authored wrappers.
+- **MCP Resource-to-Function Wrapper**: Since Semantic Kernel has no native
+  concept of MCP resources, a thin wrapper exposes the `buildin://{pageId}`
+  resource template as an SK function (e.g., `read_buildin_page(pageId)`)
+  with the description sourced from the MCP resource template metadata.
 - **Published Artifacts**: Framework-dependent single-file executables for
   `Buildout.Mcp` and `Buildout.Cli`, produced by `dotnet publish`.
 
@@ -206,9 +262,11 @@ on a machine with the .NET 10 runtime installed.
   slower than the longest individual job.
 - **SC-003**: All integration tests pass with zero network calls to
   buildin.ai (verifiable by WireMock request journal).
-- **SC-004**: LLM integration tests successfully invoke MCP tools via
-  Semantic Kernel and the OpenRouter free-tier model, returning grounded
-  answers on every CI run where the API key is available.
+- **SC-004**: LLM integration tests successfully discover MCP tools via
+  `McpClient.ListToolsAsync()`, register them as Semantic Kernel plugins
+  with MCP-native schemas, and the LLM correctly calls `search`,
+  `database_view`, and `buildin://` resources to return grounded answers
+  on every CI run where the API key is available.
 - **SC-005**: Published artifacts are downloadable from every successful
   workflow run and executable on any machine with the .NET 10 runtime.
 - **SC-006**: Removing the `Anthropic.SDK` package from
@@ -239,3 +297,13 @@ on a machine with the .NET 10 runtime installed.
 - The OpenRouter free-tier model
   (`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`) supports
   OpenAI-compatible tool/function calling.
+- The MCP SDK's `McpClient` provides `ListToolsAsync()` and
+  `ReadResourceAsync()` that can be bridged to Semantic Kernel plugin
+  functions without an official SK-MCP connector package.
+- MCP tool descriptions and parameter descriptions (from `[Description]`
+  attributes on `[McpServerTool]` methods) are surfaced through the MCP
+  protocol and are sufficient for an LLM to understand how to call each tool.
+- MCP resources (via `[McpServerResource]` templates) can be exposed to the
+  LLM as callable functions (e.g., `read_buildin_page(pageId)`), since
+  Semantic Kernel does not have a native resource concept — only tool
+  functions.

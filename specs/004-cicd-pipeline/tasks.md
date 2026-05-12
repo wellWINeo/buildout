@@ -92,25 +92,29 @@
 
 ---
 
-## Phase 5: User Story 3 — LLM Integration Tests via OpenRouter and Semantic Kernel (Priority: P2)
+## Phase 5: User Story 3 — LLM Integration Tests for MCP Tool Calling (Priority: P2)
 
-**Goal**: LLM integration tests use Semantic Kernel + OpenRouter free-tier model instead of Anthropic SDK. Tests skip without `OPENROUTER_API_KEY`.
+**Goal**: LLM integration tests validate that an LLM can discover MCP tools through the protocol, understand their schemas, call them with correct parameters, and produce grounded answers. Tests use Semantic Kernel + OpenRouter free-tier model. Tests skip without `OPENROUTER_API_KEY`. No test validates pure Markdown reading comprehension without MCP tool calling (FR-016).
 
-**Independent Test**: Set `OPENROUTER_API_KEY`, run `PageReadingLlmTests` — Semantic Kernel drives MCP tools via OpenRouter. Unset key → tests skip.
+**Independent Test**: Set `OPENROUTER_API_KEY`, run `PageReadingLlmTests` — Semantic Kernel discovers MCP tools via `McpClient.ListToolsAsync()`, LLM calls tools with correct parameters, returns grounded answers. Unset key → tests skip.
 
 ### Tests for User Story 3
 
-- [ ] T023 [US3] Write failing test `LlmCanAnswerQuestionsAboutRenderedPage` using Semantic Kernel in `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` — configure `Kernel` with `AddOpenAIChatCompletion` pointing to `https://openrouter.ai/api/v1`, model `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`, send a prompt about rendered Markdown, assert response contains expected content, skip if `OPENROUTER_API_KEY` absent
-- [ ] T024 [US3] Write failing test `LlmCanFindAndReadPage` using Semantic Kernel in `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` — register MCP tools as SK plugins with `FunctionChoiceBehavior.Auto()`, use `BuildinWireMockFixture` for buildin responses, assert LLM invokes `search` and `read_buildin_page` tools and returns grounded answer, skip if `OPENROUTER_API_KEY` absent
+- [ ] T023 [US3] Create MCP-to-SK plugin bridge helper in `tests/Buildout.IntegrationTests/Llm/McpSkBridge.cs` — a static helper class that accepts a connected `McpClient`, calls `ListToolsAsync()` to discover available tools and their schemas, and returns a `KernelPlugin` containing one `KernelFunction` per MCP tool with name, description, and parameter metadata sourced from the MCP protocol (not hand-authored). Also exposes MCP resources as SK functions (e.g., `read_buildin_page`) using resource template metadata from `ListResourceTemplatesAsync()`.
+- [ ] T024 [US3] Write `LlmCanSearchAndReadPage` test in `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` — sets up in-process MCP server + McpClient + Semantic Kernel with `McpSkBridge`, registers all MCP tools via the bridge, asks "Which page describes Q3 revenue, and what was the total?" with `FunctionChoiceBehavior.Auto()`, asserts response contains "4.2". Uses `BuildinWireMockFixture` for buildin stubs. Validates that the LLM discovers and calls `search` then reads the page via `buildin://` resource (FR-007, FR-015, FR-017).
+- [ ] T025 [P] [US3] Write `LlmCanQueryDatabaseView` test in `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` — sets up MCP server with `database_view` tool registered via `McpSkBridge`, asks a question requiring database data, asserts the LLM calls `database_view` with a correct `database_id` parameter and returns an answer grounded in the rendered output (FR-015).
+- [ ] T026 [P] [US3] Write `LlmCanHandleToolError` test in `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` — configures WireMock stubs that cause an MCP tool error (e.g., empty search query returns `InvalidParams`, or non-existent resource returns `ResourceNotFound`), asks the LLM a question requiring that tool, asserts the LLM's response acknowledges the error or adapts rather than hallucinating an answer (FR-018).
+- [ ] T027 [US3] Remove `LlmCanAnswerQuestionsAboutRenderedPage` test from `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` — this test only validates LLM reading comprehension of hardcoded Markdown without any MCP involvement and is therefore out of scope for MCP tool calling tests (FR-016).
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Implement Semantic Kernel configuration helper in `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` — create `Kernel` with `AddOpenAIChatCompletion` + custom `HttpClient { BaseAddress = "https://openrouter.ai/api/v1" }`, read `OPENROUTER_API_KEY` from environment, skip if absent
-- [ ] T026 [US3] Implement MCP tool plugin wrapper for Semantic Kernel in `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` — wrap `search` and `read_buildin_page` as `[KernelFunction]` methods or `KernelPluginFactory.CreateFromFunctions` delegates that call the MCP server through `McpClient`
-- [ ] T027 [US3] Remove all `Anthropic.SDK` using directives and `AnthropicClient` usage from `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs`
-- [ ] T028 [US3] Add `[Collection("BuildinWireMock")]` to `PageReadingLlmTests`, inject `BuildinWireMockFixture`, replace `Substitute.For<IBuildinClient>()` with `fixture.CreateClient()`, override stubs for search and page data
+- [ ] T028 [US3] Implement Semantic Kernel configuration in `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` — create `Kernel` with `AddOpenAIChatCompletion` + custom `HttpClient { BaseAddress = "https://openrouter.ai/api/v1" }`, read `OPENROUTER_API_KEY` from environment, skip if absent.
+- [ ] T029 [US3] Implement `McpSkBridge.CreatePluginAsync(mcpClient, pluginName)` — calls `mcpClient.ListToolsAsync()`, maps each tool to a `KernelFunctionFactory.CreateFromMethod` delegate that calls `mcpClient.CallToolAsync(toolName, args)`, using the MCP tool's `Name` as the SK function name, `Description` as the SK function description, and each `Tool.InputSchema` property as the SK parameter metadata. For resources, calls `mcpClient.ListResourceTemplatesAsync()` and wraps each as a callable function.
+- [ ] T030 [US3] Refactor existing `LlmCanFindAndReadPage` test to use `McpSkBridge` instead of hand-authored `KernelFunctionFactory.CreateFromMethod` wrappers — or merge into `LlmCanSearchAndReadPage` (T024) if the scenarios overlap.
+- [ ] T031 [US3] Add `[Collection("BuildinWireMock")]` to `PageReadingLlmTests`, inject `BuildinWireMockFixture`, use `fixture.CreateClient()` for buildin client. Register `DatabaseViewToolHandler` in the MCP server DI for T025.
+- [ ] T032 [US3] Remove all `Anthropic.SDK` using directives and `AnthropicClient` usage from `tests/Buildout.IntegrationTests/Llm/PageReadingLlmTests.cs` if any remnants remain.
 
-**Checkpoint**: LLM tests run via Semantic Kernel + OpenRouter. Anthropic SDK fully removed. Tests skip without API key.
+**Checkpoint**: LLM tests discover MCP tools via protocol, LLM calls all three MCP surfaces (search, database_view, resource), error paths are exercised. No hand-authored tool wrappers. No pure Markdown comprehension tests. Anthropic SDK fully removed. Tests skip without API key.
 
 ---
 
@@ -122,9 +126,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T029 [US4] Verify `publish` job in `.github/workflows/ci.yml` produces correct artifacts — ensure `dotnet publish` uses `-c Release -p:PublishSingleFile=true` for both `Buildout.Mcp` and `Buildout.Cli`
-- [ ] T030 [US4] Verify `actions/upload-artifact@v4` steps produce two downloadable artifacts: `buildout-mcp` and `buildout-cli`
-- [ ] T031 [US4] Verify `publish` job has `needs: [test-unit, test-integration]` and does not run when either test job fails (test by intentionally breaking a test and pushing)
+- [ ] T033 [US4] Verify `publish` job in `.github/workflows/ci.yml` produces correct artifacts — ensure `dotnet publish` uses `-c Release -p:PublishSingleFile=true` for both `Buildout.Mcp` and `Buildout.Cli`
+- [ ] T034 [US4] Verify `actions/upload-artifact@v4` steps produce two downloadable artifacts: `buildout-mcp` and `buildout-cli`
+- [ ] T035 [US4] Verify `publish` job has `needs: [test-unit, test-integration]` and does not run when either test job fails (test by intentionally breaking a test and pushing)
 
 **Checkpoint**: Artifacts downloadable from successful CI runs. Publish skipped on test failure.
 
@@ -134,11 +138,11 @@
 
 **Purpose**: Final cleanup and verification.
 
-- [ ] T032 Remove `MockHttpHandler` inner class from `tests/Buildout.IntegrationTests/Buildin/MockedHttpHarnessTests.cs` if any remnants remain
-- [ ] T033 Verify no `using Anthropic.SDK` references remain anywhere in the codebase: `rg "Anthropic" tests/`
-- [ ] T034 Verify no `Substitute.For<IBuildinClient>()` remains in `tests/Buildout.IntegrationTests/` (excluding `SearchToolTests` which mocks `ISearchService`)
-- [ ] T035 Run full test suite: `dotnet test` — all green
-- [ ] T036 Run quickstart.md validation — verify each command in the definition-of-done section
+- [ ] T036 Remove `MockHttpHandler` inner class from `tests/Buildout.IntegrationTests/Buildin/MockedHttpHarnessTests.cs` if any remnants remain
+- [ ] T037 Verify no `using Anthropic.SDK` references remain anywhere in the codebase: `rg "Anthropic" tests/`
+- [ ] T038 Verify no `Substitute.For<IBuildinClient>()` remains in `tests/Buildout.IntegrationTests/` (excluding `SearchToolTests` which mocks `ISearchService`)
+- [ ] T039 Run full test suite: `dotnet test` — all green
+- [ ] T040 Run quickstart.md validation — verify each command in the definition-of-done section
 
 ---
 
@@ -173,7 +177,9 @@
 - T002, T003, T004 can run in parallel (different packages in same file, but sequential is fine too).
 - T010, T011, T012 can run in parallel (different test files).
 - T017, T018, T019, T020 can run in parallel (independent contract tests).
-- T023, T024 can run in parallel (independent LLM tests).
+- T023 is the prerequisite for T024, T025, T026 (McpSkBridge must exist first).
+- T024, T025, T026 can run in parallel after T023 (independent test scenarios).
+- T028, T029, T031, T032 are implementation tasks that can proceed once T023's design is stable.
 - US1 and US2 phases can run in parallel with separate agents.
 
 ---
@@ -199,6 +205,19 @@ Task T019: "Contract test GET /v1/blocks/{block_id}/children"
 Task T020: "Contract test POST /v1/pages/search"
 ```
 
+## Parallel Example: User Story 3
+
+```
+# Phase 2 complete, US1 mostly done. US3 starts:
+Task T023: "Create McpSkBridge helper"
+
+# Then launch LLM tests in parallel:
+Task T024: "LlmCanSearchAndReadPage (multi-tool: search + resource)"
+Task T025: "LlmCanQueryDatabaseView (database_view tool)"
+Task T026: "LlmCanHandleToolError (error path)"
+Task T027: "Remove LlmCanAnswerQuestionsAboutRenderedPage"
+```
+
 ---
 
 ## Implementation Strategy
@@ -216,7 +235,7 @@ Task T020: "Contract test POST /v1/pages/search"
 1. Setup + Foundational → Foundation ready
 2. Add US1 → CI runs, tests green (MVP!)
 3. Add US2 → Contract tests verify stubs match `openapi.json`
-4. Add US3 → LLM tests via Semantic Kernel + OpenRouter
+4. Add US3 → LLM tests discover MCP tools via protocol, call all three MCP surfaces
 5. Add US4 → Artifact publishing verified
 6. Polish → Final cleanup
 
