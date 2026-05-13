@@ -5,6 +5,13 @@
 **Status**: Draft
 **Input**: User description: "page creation (support back conversion from markdown to buildin API blocks), identify which params should accept such tool"
 
+## Clarifications
+
+### Session 2026-05-13
+
+- Q: How should the tool discriminate between page, database, and workspace parents — probe the buildin API, or require an explicit kind parameter? → A: Auto-probe the parent kind from the supplied id on every create; the tool exposes no `--parent-kind` / `parent_kind` parameter on either surface. The probe is a single GET against the buildin API (page-by-id, falling back to database-by-id) issued before `createPage`, and its result determines whether `--property` flags are accepted (database) or rejected (page/workspace).
+- Q: What shape should the MCP `create_page` success response take — a plain text id body, a JSON object, or an MCP `resource_link`? → A: A single MCP `resource_link` content item whose URI is `buildin://<new_page_id>`. The MCP tool returns no text body. The byte-identical CLI/MCP invariant established by features 002/003 does NOT apply to this tool — the CLI's `--print id` text output and the MCP `resource_link` are equivalent at the level of "carries the new page id", not at the level of "byte-identical wire form". Round-trip tests assert the id matches, not the encoding.
+
 ## User Scenarios & Testing *(mandatory)*
 
 This feature delivers the first user-visible *write* capability of buildout:
@@ -93,10 +100,11 @@ exists.
 **Independent Test**: Start the MCP server against the same mocked buildin
 client used in US1. From a test client, list tools and discover `create_page`
 with an input schema matching FR-011. Invoke it with the same body used in
-US1's fixture; assert the returned tool result body equals the new page ID
-(the same string the CLI prints in plain mode). Then read
-`buildin://<new_page_id>` through the same MCP server and assert the
-rendered Markdown round-trips per the compatibility matrix. The cheap-LLM
+US1's fixture; assert the response contains exactly one `resource_link`
+content item whose URI is `buildin://<new_page_id>` (the new page id
+extracted from that URI equals the id the CLI prints in plain mode).
+Then read `buildin://<new_page_id>` through the same MCP server and
+assert the rendered Markdown round-trips per the compatibility matrix. The cheap-LLM
 integration test from features 002/003 MUST be extended (or a sibling added)
 to demonstrate an LLM chaining `create_page` → `buildin://{page_id}`
 end-to-end.
@@ -109,9 +117,9 @@ end-to-end.
    and the optional fields enumerated in FR-011. Its description identifies
    the tool as "create a new buildin page from a Markdown document".
 2. **Given** a valid invocation, **When** the tool runs, **Then** the
-   response is a single tool-result content block whose plain text body is
-   byte-identical to the CLI's plain-mode stdout for the same inputs
-   (FR-014), and is not styled with terminal codes.
+   response carries exactly one MCP `resource_link` content item whose
+   URI is `buildin://<new_page_id>` (FR-014). The response carries no
+   text body; the new page id is recovered from the URI.
 3. **Given** a buildin error (404 parent, 401/403 auth, transport, generic
    4xx/5xx), **When** the tool runs, **Then** the server returns an
    MCP-protocol error mapped to the same MCP error code already used by the
@@ -334,11 +342,13 @@ block type in isolation and in nested combinations.
   given by `--property` flags; when `--parent` resolves to a page id or
   workspace identifier, only the title is set and `--property` flags
   produce a validation error (no properties exist outside a database).
-  Discriminating database from page identifiers is a `/speckit-plan`
-  decision — either a probe call (`GET /v1/databases/{id}` versus
-  `GET /v1/pages/{id}`) or an explicit `--parent-kind` switch is
-  acceptable so long as the user-facing command does not require the
-  user to know the kind in the common case.
+  The tool MUST auto-probe the parent kind from the supplied id (single
+  GET — page-by-id first, falling back to database-by-id) before issuing
+  `createPage`; no `--parent-kind` / `parent_kind` parameter is exposed
+  on either surface. If the probe fails (the id is neither a readable
+  page nor a readable database under the caller's credential), the
+  operation MUST exit with the parent-not-found failure class before any
+  write call is issued.
 - **FR-011**: The MCP `create_page` tool's input schema MUST be a
   one-to-one mapping of FR-009's CLI surface, with these field names:
   - `parent_id` (string, required)
@@ -351,7 +361,8 @@ block type in isolation and in nested combinations.
     object whose keys are property names and whose values are the same
     plain-text serialisations the CLI's `--property` flag accepts. An
     empty `{}` is equivalent to absence. Same v1 scope as FR-009.
-  - No `print` field — the MCP tool's response shape is fixed by FR-014.
+  - No `print` field — the MCP tool's response shape is fixed by
+    FR-014 (a `resource_link` to `buildin://<new_page_id>`).
 - **FR-012**: CLI exit codes MUST match the taxonomy already used by
   `get` and `search`: validation error, page-not-found (for the parent),
   authentication/authorisation, transport, unexpected. "Successful
@@ -366,10 +377,15 @@ block type in isolation and in nested combinations.
   Markdown-driven page creation. The tool MUST be discoverable in
   standard MCP tool listing.
 - **FR-014**: A successful `create_page` invocation MUST return a single
-  text tool-result content block whose body is exactly the new page id
-  followed by a single newline — byte-identical to the CLI's
-  `--print id` output for the same inputs. This is the shared, parseable
-  wire form a downstream LLM or shell uses.
+  MCP `resource_link` content item whose URI is `buildin://<new_page_id>`
+  and whose name/title carries the page's title (the one written, per
+  FR-005). The response MUST NOT include a text content item containing
+  the id; the new page id is recoverable from the URI. The MCP
+  `resource_link` and the CLI `--print id` output are equivalent at the
+  level of "carries the new page id", not byte-identical wire forms —
+  this is the one MCP/CLI surface in the project that deliberately
+  diverges on wire form (other read tools remain text-only and stay
+  byte-identical to their CLI counterparts).
 - **FR-015**: A failure (validation, parent-not-found, auth/transport,
   buildin-side error, partial creation) MUST be surfaced as an
   MCP-protocol error mapped to the existing error-class taxonomy. In
@@ -426,8 +442,12 @@ block type in isolation and in nested combinations.
   the converter, exercised by tests, governs which round-trips are
   lossless versus documented-lossy.
 - **New page id**: the buildin-assigned identifier returned by
-  `createPage`. The single piece of state this operation produces; it is
-  what both surfaces print/return so the caller can pipe to read.
+  `createPage`. The single piece of state this operation produces. The
+  CLI surfaces it as plain text on stdout (under `--print id`); the MCP
+  tool surfaces it as the page id encoded in the URI of a
+  `resource_link` content item pointing at `buildin://<new_page_id>`
+  (FR-014). Both surfaces let the caller chain into a subsequent read
+  via the existing `buildin://{page_id}` resource.
 
 ## Success Criteria *(mandatory)*
 
@@ -448,8 +468,12 @@ block type in isolation and in nested combinations.
   in source order. Verified by a test that records every request the
   mocked buildin client receives.
 - **SC-004**: For the same inputs and the same buildin response fixture,
-  the CLI's plain-mode stdout is byte-identical to the body returned by
-  the MCP `create_page` tool. Verified by an automated test.
+  the new page id printed on stdout by the CLI's plain mode (`--print id`)
+  equals the page id encoded in the URI of the MCP `create_page` tool's
+  `resource_link` content item. The two surfaces deliberately use
+  different wire forms (text id vs MCP `resource_link`); this SC asserts
+  semantic equivalence, not byte identity. Verified by an automated test
+  that extracts and compares the ids.
 - **SC-005**: Failure modes — invalid Markdown, missing title, unknown
   parent, auth failure, transport failure, partial creation — each
   surface distinctly through the CLI exit codes and MCP error messages
@@ -492,11 +516,13 @@ block type in isolation and in nested combinations.
   plain-text property kinds enumerated in FR-009. People / files /
   relation / rollup / formula property writes are deferred to a future
   feature. A page or workspace parent never accepts property values.
-- **Probing parent kind is a `/speckit-plan` decision.** The user-facing
-  surface does not force the user to declare whether their parent is a
-  page or a database; the implementation may probe or accept an explicit
-  switch, so long as the common case (a page parent) requires no extra
-  flag.
+- **Parent-kind probing is part of the create operation, not a separate
+  user-facing step.** Per the 2026-05-13 clarification, the tool always
+  probes the supplied id (page-by-id first, database-by-id fallback)
+  before `createPage`; the user-facing surface exposes no parent-kind
+  parameter on either CLI or MCP. The probe's GET is counted as part of
+  this feature's API-call budget; it is not a precondition the caller
+  is expected to satisfy.
 - **The buildin API's 100-block per-request limit is the only batching
   constraint v1 honours.** Larger bodies are split sequentially.
   Per-batch concurrency, streaming progress, retry-on-rate-limit, and
@@ -513,7 +539,6 @@ block type in isolation and in nested combinations.
   reused unchanged from features 002/003.** This feature adds no new
   cross-cutting infrastructure.
 - **Final command name, MCP tool name, exact stdout JSON shape under
-  `--print json`, exact validation-error messages, and the
-  page-vs-database parent-kind discrimination strategy are
+  `--print json`, and exact validation-error messages are
   `/speckit-plan` decisions.** This spec fixes only the contracts callers
   depend on.
