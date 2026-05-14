@@ -2,11 +2,14 @@ using System.IO.Pipelines;
 using Buildout.Core.Buildin;
 using Buildout.Core.DependencyInjection;
 using Buildout.IntegrationTests.Buildin;
+using Buildout.IntegrationTests.Llm;
 using Buildout.Mcp.Resources;
 using Buildout.Mcp.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -18,6 +21,7 @@ namespace Buildout.IntegrationTests.Mcp;
 public sealed class CreatePageRoundTripWithCheapLlmTests : IAsyncLifetime
 {
     private readonly BuildinWireMockFixture _fixture;
+    private readonly ITestOutputHelper _output;
 
     private const string ParentId = "00000000-0000-0000-0000-000000000001";
     private const string NewPageId = "00000000-0000-0000-0000-000000000002";
@@ -28,8 +32,9 @@ public sealed class CreatePageRoundTripWithCheapLlmTests : IAsyncLifetime
     private Pipe _c2s = null!;
     private Pipe _s2c = null!;
 
-    public CreatePageRoundTripWithCheapLlmTests(BuildinWireMockFixture fixture)
+    public CreatePageRoundTripWithCheapLlmTests(ITestOutputHelper output, BuildinWireMockFixture fixture)
     {
+        _output = output;
         _fixture = fixture;
         _fixture.Reset();
 
@@ -71,7 +76,7 @@ public sealed class CreatePageRoundTripWithCheapLlmTests : IAsyncLifetime
             last_edited_time = "2025-01-16T14:00:00Z",
             archived = false,
             url = $"https://api.buildin.ai/pages/{NewPageId}",
-            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+            properties = new { title = new { type = "title", title = new[] { new { type = "text", plain_text = "My Page" } } } }
         });
 
         // 4. Get block children (for resource read)
@@ -152,7 +157,7 @@ public sealed class CreatePageRoundTripWithCheapLlmTests : IAsyncLifetime
     [Fact]
     public async Task CreatePage_ReadBack_ParagraphMatchesInput()
     {
-        const string markdown = "Hello world";
+        const string markdown = "# My Page\n\nHello world";
 
         var result = await _mcpClient.CallToolAsync("create_page", new Dictionary<string, object?>
         {
@@ -173,7 +178,7 @@ public sealed class CreatePageRoundTripWithCheapLlmTests : IAsyncLifetime
     [Fact]
     public async Task CreatePage_ResourceLinkUri_ContainsNewPageId()
     {
-        const string markdown = "Hello world";
+        const string markdown = "# My Page\n\nHello world";
 
         var result = await _mcpClient.CallToolAsync("create_page", new Dictionary<string, object?>
         {
@@ -183,5 +188,29 @@ public sealed class CreatePageRoundTripWithCheapLlmTests : IAsyncLifetime
 
         var link = Assert.IsType<ResourceLinkBlock>(Assert.Single(result.Content));
         Assert.Equal($"buildin://{NewPageId}", link.Uri);
+    }
+
+    [Fact]
+    public async Task LlmCanCreatePageAndReadItBack()
+    {
+        var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return;
+
+        var kernel = McpSkBridge.CreateOpenRouterKernel(apiKey);
+        var plugin = await McpSkBridge.CreatePluginFromMcpToolsAsync(_mcpClient);
+        kernel.Plugins.Add(plugin);
+
+        var settings = new OpenAIPromptExecutionSettings
+        {
+            FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+        };
+
+        var result = await kernel.InvokePromptAsync(
+            $"Create a new buildin page under parent ID {ParentId} with title 'My Page' and content '# My Page\n\nHello world.'. Then read the page back and tell me the body content.",
+            new KernelArguments(settings));
+
+        _output.WriteLine($"LLM response: {result}");
+        Assert.Contains("Hello world", result.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 }

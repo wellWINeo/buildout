@@ -62,6 +62,15 @@ public sealed class PageCreator : IPageCreator
 
         var title = input.Title ?? document.Title;
 
+        // FR-005: title is required
+        if (string.IsNullOrWhiteSpace(title))
+            return new CreatePageOutcome
+            {
+                NewPageId = string.Empty,
+                FailureClass = FailureClass.Validation,
+                UnderlyingException = new ArgumentException("Cannot determine the new page's title: no leading '# Title' heading found and --title was not provided.")
+            };
+
         // Fix E: validate page parent + properties (FR-010)
         if (parentKind is ParentKind.Page && input.Properties?.Count > 0)
             return new CreatePageOutcome
