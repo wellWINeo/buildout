@@ -6,7 +6,15 @@
       "version": "1.31.1",
       "commands": [
         "kiota"
-      ]
+      ],
+      "rollForward": false
+    },
+    "ilspycmd": {
+      "version": "10.0.1.8346",
+      "commands": [
+        "ilspycmd"
+      ],
+      "rollForward": false
     }
   }
 }

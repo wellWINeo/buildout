@@ -24,6 +24,7 @@ var app = new CommandApp(registrar);
 
 app.Configure(config =>
 {
+    config.AddCommand<CreateCommand>("create");
     config.AddCommand<GetCommand>("get");
     config.AddCommand<SearchCommand>("search");
     config.AddBranch<DbSettings>("db", db =>

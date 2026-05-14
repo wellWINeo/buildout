@@ -5,6 +5,10 @@ using Buildout.Core.DatabaseViews.Properties;
 using Buildout.Core.DatabaseViews.Rendering;
 using Buildout.Core.DatabaseViews.Styles;
 using Buildout.Core.Markdown;
+using Buildout.Core.Markdown.Authoring;
+using Buildout.Core.Markdown.Authoring.Blocks;
+using Buildout.Core.Markdown.Authoring.Inline;
+using Buildout.Core.Markdown.Authoring.Properties;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
 using Buildout.Core.Markdown.Conversion.Mentions;
@@ -95,6 +99,22 @@ public static class ServiceCollectionExtensions
             var styles = sp.GetServices<IDatabaseViewStyle>();
             return styles.ToDictionary(s => s.Key);
         });
+
+        services.AddSingleton<IMarkdownToBlocksParser, MarkdownToBlocksParser>();
+        services.AddSingleton<IMarkdownBlockParser, ParagraphBlockParser>();
+        services.AddSingleton<IMarkdownBlockParser, HeadingBlockParser>();
+        services.AddSingleton<IMarkdownBlockParser, BulletedListItemBlockParser>();
+        services.AddSingleton<IMarkdownBlockParser, NumberedListItemBlockParser>();
+        services.AddSingleton<IMarkdownBlockParser, ToDoBlockParser>();
+        services.AddSingleton<IMarkdownBlockParser, CodeBlockParser>();
+        services.AddSingleton<IMarkdownBlockParser, QuoteBlockParser>();
+        services.AddSingleton<IMarkdownBlockParser, DividerBlockParser>();
+        services.AddSingleton<IInlineMarkdownParser, InlineMarkdownParser>();
+        services.AddSingleton<IDatabasePropertyValueParser, DatabasePropertyValueParser>();
+        services.AddSingleton<AppendBatcher>();
+        services.AddSingleton<ParentKindProbe>();
+        services.AddSingleton<MentionLinkRecovery>();
+        services.AddSingleton<IPageCreator, PageCreator>();
 
         return services;
     }
