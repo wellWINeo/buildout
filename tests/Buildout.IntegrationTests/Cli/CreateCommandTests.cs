@@ -86,6 +86,8 @@ public sealed class CreateCommandTests
     private static string GenerateLargeMarkdown()
     {
         var sb = new StringBuilder();
+        sb.AppendLine("# Large Test Page");
+        sb.AppendLine();
 
         for (int i = 0; i < 60; i++)
         {
@@ -128,6 +130,242 @@ public sealed class CreateCommandTests
             Assert.Equal(0, exitCode);
             Assert.True(sw.Elapsed < TimeSpan.FromSeconds(4),
                 $"Expected create to complete in < 4s, took {sw.Elapsed.TotalSeconds:F2}s");
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task CreateCommand_PlainMarkdown_OutputsPageId()
+    {
+        BuildinStubs.RegisterPageProbe(_fixture.Server, ParentId, new
+        {
+            id = ParentId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = $"https://api.buildin.ai/pages/{ParentId}",
+            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+        });
+        BuildinStubs.RegisterCreatePage(_fixture.Server, new
+        {
+            id = NewPageId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = $"https://api.buildin.ai/pages/{NewPageId}",
+            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+        });
+        BuildinStubs.RegisterGetBlockChildren(_fixture.Server);
+
+        var client = _fixture.CreateClient();
+        var (app, console) = CreateCliApp(client);
+
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, "# My Page\n\nHello world.");
+
+            var exitCode = await app.RunAsync(["create", tempFile, "--parent", ParentId]);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal(NewPageId, console.Output.Trim());
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task CreateCommand_PrintJson_OutputsValidJson()
+    {
+        BuildinStubs.RegisterPageProbe(_fixture.Server, ParentId, new
+        {
+            id = ParentId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = $"https://api.buildin.ai/pages/{ParentId}",
+            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+        });
+        BuildinStubs.RegisterCreatePage(_fixture.Server, new
+        {
+            id = NewPageId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = $"https://api.buildin.ai/pages/{NewPageId}",
+            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+        });
+        BuildinStubs.RegisterGetBlockChildren(_fixture.Server);
+
+        var client = _fixture.CreateClient();
+        var (app, console) = CreateCliApp(client);
+
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, "# Json Test\n\nContent.");
+
+            var exitCode = await app.RunAsync(["create", tempFile, "--parent", ParentId, "--print", "json"]);
+
+            Assert.Equal(0, exitCode);
+            var rawJson = console.Output.Trim().Replace("\n", "").Replace("\r", "");
+            var json = System.Text.Json.JsonDocument.Parse(rawJson).RootElement;
+            Assert.Equal(NewPageId, json.GetProperty("id").GetString());
+            Assert.Equal($"buildin://{NewPageId}", json.GetProperty("uri").GetString());
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task CreateCommand_PrintNone_OutputsNothing()
+    {
+        BuildinStubs.RegisterPageProbe(_fixture.Server, ParentId, new
+        {
+            id = ParentId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = $"https://api.buildin.ai/pages/{ParentId}",
+            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+        });
+        BuildinStubs.RegisterCreatePage(_fixture.Server, new
+        {
+            id = NewPageId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = $"https://api.buildin.ai/pages/{NewPageId}",
+            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+        });
+        BuildinStubs.RegisterGetBlockChildren(_fixture.Server);
+
+        var client = _fixture.CreateClient();
+        var (app, console) = CreateCliApp(client);
+
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, "# Silent Test\n\nContent.");
+
+            var exitCode = await app.RunAsync(["create", tempFile, "--parent", ParentId, "--print", "none"]);
+
+            Assert.Equal(0, exitCode);
+            Assert.True(string.IsNullOrWhiteSpace(console.Output), $"Expected no output but got: {console.Output}");
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task CreateCommand_NoTitle_ReturnsExitCode2()
+    {
+        BuildinStubs.RegisterPageProbe(_fixture.Server, ParentId, new
+        {
+            id = ParentId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = $"https://api.buildin.ai/pages/{ParentId}",
+            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+        });
+
+        var client = _fixture.CreateClient();
+        var (app, console) = CreateCliApp(client);
+
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, "No leading heading here.");
+
+            var exitCode = await app.RunAsync(["create", tempFile, "--parent", ParentId]);
+
+            Assert.Equal(2, exitCode);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task CreateCommand_ParentNotFound_ReturnsExitCode3()
+    {
+        BuildinStubs.RegisterPageProbeNotFound(_fixture.Server, ParentId);
+        BuildinStubs.RegisterDatabaseProbeNotFound(_fixture.Server, ParentId);
+
+        var client = _fixture.CreateClient();
+        var (app, console) = CreateCliApp(client);
+
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, "# Some Page\n\nContent.");
+
+            var exitCode = await app.RunAsync(["create", tempFile, "--parent", ParentId]);
+
+            Assert.Equal(3, exitCode);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task CreateCommand_AppendFails_ReturnsExitCode6WithPartialId()
+    {
+        BuildinStubs.RegisterPageProbe(_fixture.Server, ParentId, new
+        {
+            id = ParentId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = $"https://api.buildin.ai/pages/{ParentId}",
+            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+        });
+        BuildinStubs.RegisterCreatePage(_fixture.Server, new
+        {
+            id = NewPageId,
+            created_time = "2025-01-15T10:30:00Z",
+            last_edited_time = "2025-01-16T14:00:00Z",
+            archived = false,
+            url = $"https://api.buildin.ai/pages/{NewPageId}",
+            properties = new { title = new { type = "title", title = Array.Empty<object>() } }
+        });
+        BuildinStubs.RegisterGetBlockChildren(_fixture.Server);
+        BuildinStubs.RegisterAppendBlockChildrenFailure(_fixture.Server, NewPageId, 500);
+
+        var client = _fixture.CreateClient();
+        var (app, console) = CreateCliApp(client);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# Partial Page");
+        sb.AppendLine();
+        for (int i = 0; i < 110; i++)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Paragraph {i + 1}: content line.");
+            sb.AppendLine();
+        }
+
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, sb.ToString());
+
+            var exitCode = await app.RunAsync(["create", tempFile, "--parent", ParentId]);
+
+            Assert.Equal(6, exitCode);
+            Assert.Contains(NewPageId, console.Output);
         }
         finally
         {
