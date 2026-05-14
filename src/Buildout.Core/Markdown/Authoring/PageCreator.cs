@@ -22,7 +22,6 @@ public sealed class PageCreator : IPageCreator
 
     public async Task<CreatePageOutcome> CreateAsync(CreatePageInput input, CancellationToken cancellationToken = default)
     {
-        // Fix B: wrap probe call in exception handlers
         ParentKind parentKind;
         try
         {
@@ -41,44 +40,12 @@ public sealed class PageCreator : IPageCreator
             return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Unexpected, UnderlyingException = ex };
         }
 
-        if (parentKind is ParentKind.NotFound)
-            return new CreatePageOutcome
-            {
-                NewPageId = string.Empty,
-                FailureClass = FailureClass.NotFound,
-                UnderlyingException = new InvalidOperationException($"Parent '{input.ParentId}' is neither a page nor a database.")
-            };
-
-        // Fix C: validate icon/cover not yet supported
-        if (input.Icon != null || input.CoverUrl != null)
-            return new CreatePageOutcome
-            {
-                NewPageId = string.Empty,
-                FailureClass = FailureClass.Validation,
-                UnderlyingException = new ArgumentException("--icon and --cover are not supported in v1; omit them or use the Buildin web UI.")
-            };
-
         var document = _parser.Parse(input.Markdown);
-
         var title = input.Title ?? document.Title;
 
-        // FR-005: title is required
-        if (string.IsNullOrWhiteSpace(title))
-            return new CreatePageOutcome
-            {
-                NewPageId = string.Empty,
-                FailureClass = FailureClass.Validation,
-                UnderlyingException = new ArgumentException("Cannot determine the new page's title: no leading '# Title' heading found and --title was not provided.")
-            };
-
-        // Fix E: validate page parent + properties (FR-010)
-        if (parentKind is ParentKind.Page && input.Properties?.Count > 0)
-            return new CreatePageOutcome
-            {
-                NewPageId = string.Empty,
-                FailureClass = FailureClass.Validation,
-                UnderlyingException = new ArgumentException($"--property is only valid when the parent is a database; '{input.ParentId}' resolved to a page.")
-            };
+        var validationOutcome = ValidateRequest(input, parentKind, title);
+        if (validationOutcome is not null)
+            return validationOutcome;
 
         Dictionary<string, PropertyValue> properties;
         try
@@ -87,17 +54,11 @@ public sealed class PageCreator : IPageCreator
         }
         catch (ArgumentException ex)
         {
-            return new CreatePageOutcome
-            {
-                NewPageId = string.Empty,
-                FailureClass = FailureClass.Validation,
-                UnderlyingException = ex
-            };
+            return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Validation, UnderlyingException = ex };
         }
 
         var allBatches = AppendBatcher.BatchTopLevel(document.Body);
         var firstBatch = allBatches.Count > 0 ? allBatches[0] : null;
-        var remainingBatches = allBatches.Skip(1).ToArray();
 
         var parent = parentKind switch
         {
@@ -120,41 +81,70 @@ public sealed class PageCreator : IPageCreator
         }
         catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 400 })
         {
+            return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Validation, UnderlyingException = ex };
+        }
+        catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
+        {
+            return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Auth, UnderlyingException = ex };
+        }
+        catch (BuildinApiException ex) when (ex.Error is TransportError)
+        {
+            return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Transport, UnderlyingException = ex };
+        }
+        catch (BuildinApiException ex)
+        {
+            return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Unexpected, UnderlyingException = ex };
+        }
+
+        var partialOutcome = await AppendBlocksAsync(page, document, allBatches, cancellationToken);
+        if (partialOutcome is not null)
+            return partialOutcome;
+
+        return new CreatePageOutcome { NewPageId = page.Id, ResolvedTitle = title };
+    }
+
+    private static CreatePageOutcome? ValidateRequest(CreatePageInput input, ParentKind parentKind, string? title)
+    {
+        if (parentKind is ParentKind.NotFound)
+            return new CreatePageOutcome
+            {
+                NewPageId = string.Empty,
+                FailureClass = FailureClass.NotFound,
+                UnderlyingException = new InvalidOperationException($"Parent '{input.ParentId}' is neither a page nor a database.")
+            };
+
+        if (input.Icon != null || input.CoverUrl != null)
             return new CreatePageOutcome
             {
                 NewPageId = string.Empty,
                 FailureClass = FailureClass.Validation,
-                UnderlyingException = ex
+                UnderlyingException = new ArgumentException("--icon and --cover are not supported in v1; omit them or use the Buildin web UI.")
             };
-        }
-        catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
-        {
-            return new CreatePageOutcome
-            {
-                NewPageId = string.Empty,
-                FailureClass = FailureClass.Auth,
-                UnderlyingException = ex
-            };
-        }
-        catch (BuildinApiException ex) when (ex.Error is TransportError)
-        {
-            return new CreatePageOutcome
-            {
-                NewPageId = string.Empty,
-                FailureClass = FailureClass.Transport,
-                UnderlyingException = ex
-            };
-        }
-        catch (BuildinApiException ex)
-        {
-            return new CreatePageOutcome
-            {
-                NewPageId = string.Empty,
-                FailureClass = FailureClass.Unexpected,
-                UnderlyingException = ex
-            };
-        }
 
+        // FR-005: title is required
+        if (string.IsNullOrWhiteSpace(title))
+            return new CreatePageOutcome
+            {
+                NewPageId = string.Empty,
+                FailureClass = FailureClass.Validation,
+                UnderlyingException = new ArgumentException("Cannot determine the new page's title: no leading '# Title' heading found and --title was not provided.")
+            };
+
+        if (parentKind is ParentKind.Page && input.Properties?.Count > 0)
+            return new CreatePageOutcome
+            {
+                NewPageId = string.Empty,
+                FailureClass = FailureClass.Validation,
+                UnderlyingException = new ArgumentException($"--property is only valid when the parent is a database; '{input.ParentId}' resolved to a page.")
+            };
+
+        return null;
+    }
+
+    private async Task<CreatePageOutcome?> AppendBlocksAsync(Page page, AuthoredDocument document, IReadOnlyList<IReadOnlyList<Block>> allBatches, CancellationToken cancellationToken)
+    {
+        var firstBatch = allBatches.Count > 0 ? allBatches[0] : null;
+        var remainingBatches = allBatches.Skip(1).ToArray();
         var idMap = new Dictionary<BlockSubtreeWrite, string>();
 
         var firstChunkSubtrees = document.Body.Take(firstBatch?.Count ?? 0).ToList();
@@ -164,9 +154,6 @@ public sealed class PageCreator : IPageCreator
             for (int i = 0; i < firstChunkSubtrees.Count && i < resp.Results.Count; i++)
                 idMap[firstChunkSubtrees[i]] = resp.Results[i].Id;
         }
-
-        var batchesAppended = 0;
-        var totalAppendBatches = remainingBatches.Length + document.Body.Count(s => s.Children.Count > 0);
 
         try
         {
@@ -179,7 +166,6 @@ public sealed class PageCreator : IPageCreator
                 for (int i = 0; i < batchSubtrees.Count && i < appendResult.Results.Count; i++)
                     idMap[batchSubtrees[i]] = appendResult.Results[i].Id;
                 offset += batch.Count;
-                batchesAppended++;
             }
 
             foreach (var subtree in document.Body.Where(s => s.Children.Count > 0))
@@ -187,10 +173,8 @@ public sealed class PageCreator : IPageCreator
                 if (!idMap.TryGetValue(subtree, out var blockId))
                     continue;
                 await AppendNestedRecursive(blockId, subtree.Children, idMap, cancellationToken);
-                batchesAppended++;
             }
         }
-        // Fix A: return outcome instead of throwing PartialCreationException
         catch (Exception ex) when (ex is BuildinApiException or OperationCanceledException)
         {
             return new CreatePageOutcome
@@ -202,10 +186,9 @@ public sealed class PageCreator : IPageCreator
             };
         }
 
-        return new CreatePageOutcome { NewPageId = page.Id, ResolvedTitle = title };
+        return null;
     }
 
-    // Fix G: updated AppendNestedRecursive with idMap
     private async Task AppendNestedRecursive(string parentBlockId, IReadOnlyList<BlockSubtreeWrite> children, Dictionary<BlockSubtreeWrite, string> idMap, CancellationToken cancellationToken)
     {
         for (int i = 0; i < children.Count; i += 100)
@@ -226,7 +209,6 @@ public sealed class PageCreator : IPageCreator
         }
     }
 
-    // Fix F: non-static, uses _propertyParser, delete MapPropertyValue
     private Dictionary<string, PropertyValue> BuildProperties(ParentKind parentKind, string? title, CreatePageInput input)
     {
         var properties = new Dictionary<string, PropertyValue>();
