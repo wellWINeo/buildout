@@ -132,14 +132,8 @@ public sealed class ReadCreateReadRoundTripTests
     }
 
     [Fact]
-    public async Task ToDoBlock_Unchecked_LeadingSpaceShift_DocumentedLoss()
+    public async Task ToDoBlock_Unchecked_IsLossless()
     {
-        // The Markdig task-list parser leaves the checkbox inline (" [ ] ") as part
-        // of the paragraph's inline sequence. The TaskList inline is skipped by
-        // InlineMarkdownParser, but the following LiteralInline begins with a space
-        // (the separator between checkbox and text). This means the parsed Content
-        // is " Task" (leading space), so the second render produces "- [ ]  Task\n"
-        // (double space). This is a known parser-side quirk, not a converter bug.
         var block = new ToDoBlock
         {
             RichTextContent = [new RichText { Type = "text", Content = "Task" }],
@@ -152,18 +146,12 @@ public sealed class ReadCreateReadRoundTripTests
 
         var markdown2 = await RenderBlockAsync(parsed, "page-2");
 
-        Assert.NotEqual(markdown1, markdown2);
-        Assert.Equal("- [ ] Task\n", markdown1);
-        Assert.Equal("- [ ]  Task\n", markdown2);  // extra leading space in content
-        Assert.IsType<ToDoBlock>(parsed);
-        Assert.False(((ToDoBlock)parsed).Checked);
+        Assert.Equal(markdown1, markdown2);
     }
 
     [Fact]
-    public async Task ToDoBlock_Checked_LeadingSpaceShift_DocumentedLoss()
+    public async Task ToDoBlock_Checked_IsLossless()
     {
-        // Same quirk as the unchecked case: the parsed content gets a leading space,
-        // producing a double-space between the checkbox and the text on re-render.
         var block = new ToDoBlock
         {
             RichTextContent = [new RichText { Type = "text", Content = "Task" }],
@@ -176,11 +164,7 @@ public sealed class ReadCreateReadRoundTripTests
 
         var markdown2 = await RenderBlockAsync(parsed, "page-2");
 
-        Assert.NotEqual(markdown1, markdown2);
-        Assert.Equal("- [x] Task\n", markdown1);
-        Assert.Equal("- [x]  Task\n", markdown2);  // extra leading space in content
-        Assert.IsType<ToDoBlock>(parsed);
-        Assert.True(((ToDoBlock)parsed).Checked);
+        Assert.Equal(markdown1, markdown2);
     }
 
     [Fact]

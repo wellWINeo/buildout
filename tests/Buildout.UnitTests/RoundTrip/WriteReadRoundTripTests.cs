@@ -176,9 +176,7 @@ public class WriteReadRoundTripTests
         var renderer = CreateRenderer(client);
         var rendered = await renderer.RenderAsync("page-id");
 
-        // The parser captures the text after "- [ ] " as the inline content;
-        // ToDoConverter renders "- [ ] {inline}", producing a double-space before the text.
-        Assert.Equal("- [ ]  Task" + Environment.NewLine, rendered);
+        Assert.Equal("- [ ] Task" + Environment.NewLine, rendered);
     }
 
     [Fact]
@@ -192,9 +190,7 @@ public class WriteReadRoundTripTests
         var renderer = CreateRenderer(client);
         var rendered = await renderer.RenderAsync("page-id");
 
-        // The parser captures the text after "- [x] " as the inline content;
-        // ToDoConverter renders "- [x] {inline}", producing a double-space before the text.
-        Assert.Equal("- [x]  Done" + Environment.NewLine, rendered);
+        Assert.Equal("- [x] Done" + Environment.NewLine, rendered);
     }
 
     [Fact]
