@@ -15,5 +15,4 @@ public sealed record CreatePageInput
     public string? Icon { get; init; }
     public string? CoverUrl { get; init; }
     public IReadOnlyDictionary<string, string>? Properties { get; init; }
-    public CreatePagePrintMode? Print { get; init; }
 }

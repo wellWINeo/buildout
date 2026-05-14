@@ -36,8 +36,7 @@ public sealed class CreateCommand : AsyncCommand<CreateSettings>
             Title = settings.Title,
             Icon = settings.Icon,
             CoverUrl = settings.CoverUrl,
-            Properties = properties.Count > 0 ? properties : null,
-            Print = printMode
+            Properties = properties.Count > 0 ? properties : null
         };
 
         var outcome = await _creator.CreateAsync(input, cancellationToken);
@@ -91,29 +90,29 @@ public sealed class CreateCommand : AsyncCommand<CreateSettings>
         return dict;
     }
 
-    private static int HandleFailure(CreatePageOutcome outcome)
+    private int HandleFailure(CreatePageOutcome outcome)
     {
         var message = outcome.UnderlyingException?.Message ?? "Unknown error.";
 
         switch (outcome.FailureClass)
         {
             case FailureClass.Validation:
-                Console.Error.WriteLine($"Validation error: {message}");
+                _console.WriteLine($"Validation error: {message}");
                 return 2;
             case FailureClass.NotFound:
-                Console.Error.WriteLine($"Not found: {message}");
+                _console.WriteLine($"Not found: {message}");
                 return 3;
             case FailureClass.Auth:
-                Console.Error.WriteLine($"Authentication failure: {message}");
+                _console.WriteLine($"Authentication failure: {message}");
                 return 4;
             case FailureClass.Transport:
-                Console.Error.WriteLine($"Transport failure: {message}");
+                _console.WriteLine($"Transport failure: {message}");
                 return 5;
             case FailureClass.Partial:
-                Console.Error.WriteLine($"Partial failure: page {outcome.PartialPageId ?? outcome.NewPageId} created but not fully populated. {message}");
+                _console.WriteLine($"Partial failure: page {outcome.PartialPageId ?? outcome.NewPageId} created but not fully populated. {message}");
                 return 6;
             default:
-                Console.Error.WriteLine($"Unexpected error: {message}");
+                _console.WriteLine($"Unexpected error: {message}");
                 return 6;
         }
     }
@@ -126,7 +125,7 @@ public sealed class CreateCommand : AsyncCommand<CreateSettings>
                 _console.WriteLine(pageId);
                 break;
             case CreatePagePrintMode.Json:
-                _console.WriteLine($"{{\"id\":\"{pageId}\",\"uri\":\"buildin://{pageId}\"}}");
+                _console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { id = pageId, uri = $"buildin://{pageId}" }));
                 break;
         }
     }
