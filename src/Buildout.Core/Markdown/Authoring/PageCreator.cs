@@ -1,7 +1,7 @@
-using System.Globalization;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Markdown.Authoring.Properties;
 
 namespace Buildout.Core.Markdown.Authoring;
 
@@ -10,17 +10,36 @@ public sealed class PageCreator : IPageCreator
     private readonly ParentKindProbe _probe;
     private readonly IMarkdownToBlocksParser _parser;
     private readonly IBuildinClient _client;
+    private readonly IDatabasePropertyValueParser _propertyParser;
 
-    public PageCreator(ParentKindProbe probe, IMarkdownToBlocksParser parser, IBuildinClient client)
+    public PageCreator(ParentKindProbe probe, IMarkdownToBlocksParser parser, IBuildinClient client, IDatabasePropertyValueParser propertyParser)
     {
         _probe = probe;
         _parser = parser;
         _client = client;
+        _propertyParser = propertyParser;
     }
 
     public async Task<CreatePageOutcome> CreateAsync(CreatePageInput input, CancellationToken cancellationToken = default)
     {
-        var parentKind = await _probe.ProbeAsync(input.ParentId, cancellationToken);
+        // Fix B: wrap probe call in exception handlers
+        ParentKind parentKind;
+        try
+        {
+            parentKind = await _probe.ProbeAsync(input.ParentId, cancellationToken);
+        }
+        catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
+        {
+            return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Auth, UnderlyingException = ex };
+        }
+        catch (BuildinApiException ex) when (ex.Error is TransportError)
+        {
+            return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Transport, UnderlyingException = ex };
+        }
+        catch (BuildinApiException ex)
+        {
+            return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Unexpected, UnderlyingException = ex };
+        }
 
         if (parentKind is ParentKind.NotFound)
             return new CreatePageOutcome
@@ -30,11 +49,42 @@ public sealed class PageCreator : IPageCreator
                 UnderlyingException = new InvalidOperationException($"Parent '{input.ParentId}' is neither a page nor a database.")
             };
 
+        // Fix C: validate icon/cover not yet supported
+        if (input.Icon != null || input.CoverUrl != null)
+            return new CreatePageOutcome
+            {
+                NewPageId = string.Empty,
+                FailureClass = FailureClass.Validation,
+                UnderlyingException = new ArgumentException("--icon and --cover are not supported in v1; omit them or use the Buildin web UI.")
+            };
+
         var document = _parser.Parse(input.Markdown);
 
         var title = input.Title ?? document.Title;
 
-        var properties = BuildProperties(parentKind, title, input);
+        // Fix E: validate page parent + properties (FR-010)
+        if (parentKind is ParentKind.Page && input.Properties?.Count > 0)
+            return new CreatePageOutcome
+            {
+                NewPageId = string.Empty,
+                FailureClass = FailureClass.Validation,
+                UnderlyingException = new ArgumentException($"--property is only valid when the parent is a database; '{input.ParentId}' resolved to a page.")
+            };
+
+        Dictionary<string, PropertyValue> properties;
+        try
+        {
+            properties = BuildProperties(parentKind, title, input);
+        }
+        catch (ArgumentException ex)
+        {
+            return new CreatePageOutcome
+            {
+                NewPageId = string.Empty,
+                FailureClass = FailureClass.Validation,
+                UnderlyingException = ex
+            };
+        }
 
         var allBatches = AppendBatcher.BatchTopLevel(document.Body);
         var firstBatch = allBatches.Count > 0 ? allBatches[0] : null;
@@ -96,60 +146,79 @@ public sealed class PageCreator : IPageCreator
             };
         }
 
-        var itemsWithChildren = AppendBatcher.GetItemsWithChildren(document.Body);
+        var idMap = new Dictionary<BlockSubtreeWrite, string>();
 
-        var totalAppendBatches = remainingBatches.Length + itemsWithChildren.Count;
+        var firstChunkSubtrees = document.Body.Take(firstBatch?.Count ?? 0).ToList();
+        if (firstBatch is { Count: > 0 } && firstChunkSubtrees.Any(s => s.Children.Count > 0))
+        {
+            var resp = await _client.GetBlockChildrenAsync(page.Id, null, cancellationToken);
+            for (int i = 0; i < firstChunkSubtrees.Count && i < resp.Results.Count; i++)
+                idMap[firstChunkSubtrees[i]] = resp.Results[i].Id;
+        }
+
         var batchesAppended = 0;
+        var totalAppendBatches = remainingBatches.Length + document.Body.Count(s => s.Children.Count > 0);
 
         try
         {
+            int offset = firstBatch?.Count ?? 0;
             foreach (var batch in remainingBatches)
             {
-                await _client.AppendBlockChildrenAsync(page.Id, new AppendBlockChildrenRequest { Children = batch }, cancellationToken);
+                var batchSubtrees = document.Body.Skip(offset).Take(batch.Count).ToList();
+                var appendResult = await _client.AppendBlockChildrenAsync(page.Id,
+                    new AppendBlockChildrenRequest { Children = batch }, cancellationToken);
+                for (int i = 0; i < batchSubtrees.Count && i < appendResult.Results.Count; i++)
+                    idMap[batchSubtrees[i]] = appendResult.Results[i].Id;
+                offset += batch.Count;
                 batchesAppended++;
             }
 
-            foreach (var subtree in itemsWithChildren)
+            foreach (var subtree in document.Body.Where(s => s.Children.Count > 0))
             {
-                await AppendNestedRecursive(page.Id, subtree, cancellationToken);
+                if (!idMap.TryGetValue(subtree, out var blockId))
+                    continue;
+                await AppendNestedRecursive(blockId, subtree.Children, idMap, cancellationToken);
                 batchesAppended++;
             }
         }
+        // Fix A: return outcome instead of throwing PartialCreationException
         catch (Exception ex) when (ex is BuildinApiException or OperationCanceledException)
         {
-            throw new PartialCreationException(page.Id, batchesAppended, totalAppendBatches, ex);
+            return new CreatePageOutcome
+            {
+                NewPageId = page.Id,
+                PartialPageId = page.Id,
+                FailureClass = FailureClass.Partial,
+                UnderlyingException = ex
+            };
         }
 
         return new CreatePageOutcome { NewPageId = page.Id, ResolvedTitle = title };
     }
 
-    private async Task AppendNestedRecursive(string parentId, BlockSubtreeWrite subtree, CancellationToken cancellationToken)
+    // Fix G: updated AppendNestedRecursive with idMap
+    private async Task AppendNestedRecursive(string parentBlockId, IReadOnlyList<BlockSubtreeWrite> children, Dictionary<BlockSubtreeWrite, string> idMap, CancellationToken cancellationToken)
     {
-        if (subtree.Children.Count == 0) return;
-
-        var blockId = subtree.Block.Id;
-
-        if (string.IsNullOrEmpty(blockId))
+        for (int i = 0; i < children.Count; i += 100)
         {
-            var result = await _client.AppendBlockChildrenAsync(parentId,
-                new AppendBlockChildrenRequest { Children = [subtree.Block] }, cancellationToken);
-            blockId = result.Results.Count > 0 ? result.Results[0].Id : subtree.Block.Id;
+            var chunk = children.Skip(i).Take(100).ToList();
+            var result = await _client.AppendBlockChildrenAsync(parentBlockId,
+                new AppendBlockChildrenRequest { Children = chunk.Select(s => s.Block).ToArray() },
+                cancellationToken);
+            for (int j = 0; j < chunk.Count && j < result.Results.Count; j++)
+                idMap[chunk[j]] = result.Results[j].Id;
         }
 
-        var childBatches = AppendBatcher.BatchTopLevel(subtree.Children);
-        foreach (var batch in childBatches)
+        foreach (var child in children.Where(c => c.Children.Count > 0))
         {
-            await _client.AppendBlockChildrenAsync(blockId, new AppendBlockChildrenRequest { Children = batch }, cancellationToken);
-        }
-
-        var nested = AppendBatcher.GetItemsWithChildren(subtree.Children);
-        foreach (var child in nested)
-        {
-            await AppendNestedRecursive(blockId, child, cancellationToken);
+            if (!idMap.TryGetValue(child, out var childId))
+                continue;
+            await AppendNestedRecursive(childId, child.Children, idMap, cancellationToken);
         }
     }
 
-    private static Dictionary<string, PropertyValue> BuildProperties(ParentKind parentKind, string? title, CreatePageInput input)
+    // Fix F: non-static, uses _propertyParser, delete MapPropertyValue
+    private Dictionary<string, PropertyValue> BuildProperties(ParentKind parentKind, string? title, CreatePageInput input)
     {
         var properties = new Dictionary<string, PropertyValue>();
 
@@ -175,7 +244,7 @@ public sealed class PageCreator : IPageCreator
                 {
                     if (db.Schema.Properties is not null && db.Schema.Properties.TryGetValue(key, out var schema))
                     {
-                        properties[key] = MapPropertyValue(schema, value);
+                        properties[key] = _propertyParser.Parse(key, value, schema);
                     }
                     else
                     {
@@ -193,40 +262,5 @@ public sealed class PageCreator : IPageCreator
         }
 
         return properties;
-    }
-
-    private static PropertyValue MapPropertyValue(PropertySchema schema, string value)
-    {
-        return schema switch
-        {
-            RichTextPropertySchema => new RichTextPropertyValue
-            {
-                RichText = [new RichText { Type = "text", Content = value }]
-            },
-            NumberPropertySchema => new NumberPropertyValue { Number = double.Parse(value, CultureInfo.InvariantCulture) },
-            UrlPropertySchema => new UrlPropertyValue { Url = value },
-            EmailPropertySchema => new UrlPropertyValue { Url = value },
-            CheckboxPropertySchema => new CheckboxPropertyValue { Checkbox = bool.Parse(value) },
-            SelectPropertySchema => new SelectPropertyValue
-            {
-                Select = new SelectOption { Id = value, Name = value }
-            },
-            MultiSelectPropertySchema => new MultiSelectPropertyValue
-            {
-                MultiSelect = value.Split(',').Select(s => s.Trim()).Select(s => new SelectOption { Id = s, Name = s }).ToArray()
-            },
-            DatePropertySchema => new DatePropertyValue
-            {
-                Date = new DateRange { Start = value }
-            },
-            TitlePropertySchema => new TitlePropertyValue
-            {
-                Title = [new RichText { Type = "text", Content = value }]
-            },
-            _ => new RichTextPropertyValue
-            {
-                RichText = [new RichText { Type = "text", Content = value }]
-            }
-        };
     }
 }
