@@ -12,11 +12,8 @@ public sealed class MarkdownToBlocksParser : IMarkdownToBlocksParser
     private readonly ToDoBlockParser _toDoParser = new();
     private readonly BulletedListItemBlockParser _bulletParser = new();
     private readonly NumberedListItemBlockParser _numberedParser = new();
-    private readonly HeadingBlockParser _headingParser = new();
     private readonly ParagraphBlockParser _paragraphParser = new();
-    private readonly CodeBlockParser _codeParser = new();
-    private readonly QuoteBlockParser _quoteParser = new();
-    private readonly DividerBlockParser _dividerParser = new();
+    private readonly IReadOnlyList<IMarkdownBlockParser> _blockParsers;
 
     public MarkdownToBlocksParser()
     {
@@ -24,6 +21,15 @@ public sealed class MarkdownToBlocksParser : IMarkdownToBlocksParser
             .UseTaskLists()
             .Build();
         _inlineParser = new InlineMarkdownParser();
+        _blockParsers =
+        [
+            new HeadingBlockParser(),
+            new CodeBlockParser(),
+            new QuoteBlockParser(),
+            new DividerBlockParser(),
+            new UnsupportedBlockPlaceholderPassThrough(),
+            _paragraphParser,
+        ];
     }
 
     public AuthoredDocument Parse(string markdown)
@@ -45,32 +51,16 @@ public sealed class MarkdownToBlocksParser : IMarkdownToBlocksParser
 
     private List<BlockSubtreeWrite> DispatchBlock(Markdig.Syntax.Block block)
     {
-        switch (block)
+        if (block is ListBlock list)
+            return DispatchList(list);
+
+        foreach (var parser in _blockParsers)
         {
-            case Markdig.Syntax.ParagraphBlock:
-                return [_paragraphParser.Parse(block, _inlineParser)];
-
-            case Markdig.Syntax.HeadingBlock:
-                return [_headingParser.Parse(block, _inlineParser)];
-
-            case ListBlock list:
-                return DispatchList(list);
-
-            case FencedCodeBlock:
-                return [_codeParser.Parse(block, _inlineParser)];
-
-            case QuoteBlock:
-                return [_quoteParser.Parse(block, _inlineParser)];
-
-            case ThematicBreakBlock:
-                return [_dividerParser.Parse(block, _inlineParser)];
-
-            case HtmlBlock:
-                return [DispatchHtmlBlock(block)];
-
-            default:
-                return [_paragraphParser.Parse(block, _inlineParser)];
+            if (parser.CanParse(block))
+                return [parser.Parse(block, _inlineParser)];
         }
+
+        return [_paragraphParser.Parse(block, _inlineParser)];
     }
 
     private List<BlockSubtreeWrite> DispatchList(ListBlock list)
@@ -95,14 +85,5 @@ public sealed class MarkdownToBlocksParser : IMarkdownToBlocksParser
             }
         }
         return items;
-    }
-
-    private BlockSubtreeWrite DispatchHtmlBlock(Markdig.Syntax.Block block)
-    {
-        var placeholder = UnsupportedBlockPlaceholderPassThrough.TryParse(block, _inlineParser);
-        if (placeholder is not null)
-            return placeholder;
-
-        return _paragraphParser.Parse(block, _inlineParser);
     }
 }

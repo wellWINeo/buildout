@@ -4,9 +4,9 @@ using Markdig.Syntax;
 
 namespace Buildout.Core.Markdown.Authoring.Blocks;
 
-public sealed class UnsupportedBlockPlaceholderPassThrough
+public sealed class UnsupportedBlockPlaceholderPassThrough : IMarkdownBlockParser
 {
-    public static bool IsPlaceholder(Markdig.Syntax.Block block)
+    public bool CanParse(Markdig.Syntax.Block block)
     {
         if (block is HtmlBlock html)
         {
@@ -16,9 +16,8 @@ public sealed class UnsupportedBlockPlaceholderPassThrough
         return false;
     }
 
-    public static BlockSubtreeWrite? TryParse(Markdig.Syntax.Block block, IInlineMarkdownParser inlineParser)
+    public BlockSubtreeWrite Parse(Markdig.Syntax.Block block, IInlineMarkdownParser inlineParser)
     {
-        if (!IsPlaceholder(block)) return null;
         var html = (HtmlBlock)block;
         var text = html.Lines.ToString();
         return new BlockSubtreeWrite
