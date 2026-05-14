@@ -288,9 +288,10 @@ block type in isolation and in nested combinations.
   after the title-line), but the explicit value is sent.
 - **FR-006**: The unsupported-block placeholder format feature 002 FR-003
   emits MUST round-trip cleanly: a document containing such placeholders
-  MUST NOT cause a creation failure, and the placeholder lines MUST NOT
-  be materialised as real buildin blocks. They are preserved as text /
-  comments in the resulting page exactly as authored.
+  MUST NOT cause a creation failure. The placeholder text is preserved as
+  a paragraph block whose content is the HTML comment (e.g.,
+  `<!-- unsupported block: image -->`). This paragraph block is lossless
+  across read→write→read round-trips, surviving each cycle intact.
 - **FR-007**: Block types not enumerated in FR-003 (image, file,
   bookmark, embed, callout, equation, link_to_page, template,
   synced_block, column_list, column, table, table_row, child_page,
