@@ -85,3 +85,13 @@ public sealed record CreatedTimePropertySchema : PropertySchema
 {
     public CreatedTimePropertySchema() : base("created_time") { }
 }
+
+public sealed record EmailPropertySchema : PropertySchema
+{
+    public EmailPropertySchema() : base("email") { }
+}
+
+public sealed record PhonePropertySchema : PropertySchema
+{
+    public PhonePropertySchema() : base("phone_number") { }
+}

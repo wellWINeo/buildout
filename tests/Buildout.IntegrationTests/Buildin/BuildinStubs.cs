@@ -2,6 +2,8 @@ using WireMock.Matchers;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
+using WireMock.Types;
+using WireMock.Util;
 
 namespace Buildout.IntegrationTests.Buildin;
 
@@ -117,5 +119,92 @@ public static class BuildinStubs
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
                 .WithBodyAsJson(responseBody));
+    }
+
+    public static void RegisterPageProbe(WireMockServer server, string pageId, object responseBody)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(responseBody));
+    }
+
+    public static void RegisterPageProbeNotFound(WireMockServer server, string pageId)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(404)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { message = "Page not found" }));
+    }
+
+    public static void RegisterDatabaseProbeNotFound(WireMockServer server, string databaseId)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/databases/{databaseId}").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(404)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { message = "Database not found" }));
+    }
+
+    public static void RegisterCreatePage(WireMockServer server, Func<object, object> respond)
+    {
+        server
+            .Given(Request.Create().WithPath("/v1/pages").UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithCallback(request =>
+                {
+                    var json = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(request.Body ?? "{}");
+                    var result = respond(json);
+                    return new WireMock.ResponseMessage
+                    {
+                        StatusCode = 200,
+                        BodyData = new BodyData
+                        {
+                            BodyAsString = System.Text.Json.JsonSerializer.Serialize(result),
+                            DetectedBodyType = BodyType.String
+                        }
+                    };
+                }));
+    }
+
+    public static void RegisterCreatePage(WireMockServer server, object responseBody)
+    {
+        server
+            .Given(Request.Create().WithPath("/v1/pages").UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(responseBody));
+    }
+
+    public static void RegisterAppendBlockChildren(WireMockServer server, string parentBlockId, object responseBody)
+    {
+        server
+            .Given(Request.Create()
+                .WithPath($"/v1/blocks/{parentBlockId}/children")
+                .UsingPatch())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(responseBody));
+    }
+
+    public static void RegisterAppendBlockChildrenFailure(WireMockServer server, string parentBlockId, int statusCode)
+    {
+        server
+            .Given(Request.Create()
+                .WithPath($"/v1/blocks/{parentBlockId}/children")
+                .UsingPatch())
+            .RespondWith(Response.Create()
+                .WithStatusCode(statusCode)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { message = "Internal server error" }));
     }
 }

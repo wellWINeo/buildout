@@ -14,6 +14,7 @@ builder.Services.AddMcpServer()
     .WithStdioServerTransport()
     .WithResources<PageResourceHandler>()
     .WithTools<SearchToolHandler>()
-    .WithTools<DatabaseViewToolHandler>();
+    .WithTools<DatabaseViewToolHandler>()
+    .WithTools<CreatePageToolHandler>();
 
 await builder.Build().RunAsync();

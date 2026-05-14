@@ -5,6 +5,8 @@ using Buildout.Core.DatabaseViews.Properties;
 using Buildout.Core.DatabaseViews.Rendering;
 using Buildout.Core.DatabaseViews.Styles;
 using Buildout.Core.Markdown;
+using Buildout.Core.Markdown.Authoring;
+using Buildout.Core.Markdown.Authoring.Properties;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
 using Buildout.Core.Markdown.Conversion.Mentions;
@@ -95,6 +97,11 @@ public static class ServiceCollectionExtensions
             var styles = sp.GetServices<IDatabaseViewStyle>();
             return styles.ToDictionary(s => s.Key);
         });
+
+        services.AddSingleton<IMarkdownToBlocksParser, MarkdownToBlocksParser>();
+        services.AddSingleton<IDatabasePropertyValueParser, DatabasePropertyValueParser>();
+        services.AddSingleton<ParentKindProbe>();
+        services.AddSingleton<IPageCreator, PageCreator>();
 
         return services;
     }
