@@ -22,13 +22,13 @@ description: "Task list for feature 006: page creation from Markdown"
 
 **Purpose**: Package changes and in-memory data types used across all phases. No behavior yet — just structures and the WireMock stub helpers the integration tests will need.
 
-- [ ] T001 Add `<PackageReference Include="Markdig" Version="0.38.0" />` to `src/Buildout.Core/Buildout.Core.csproj` (lift from Buildout.Cli; CLI keeps its reference for terminal rendering)
-- [ ] T002 [P] Define `CreatePageInput` record and `CreatePagePrintMode` enum in `src/Buildout.Core/Markdown/Authoring/CreatePageInput.cs` (fields: ParentId, Markdown, Title?, Icon?, CoverUrl?, Properties?, Print? — see data-model.md)
-- [ ] T003 [P] Define `CreatePageOutcome` record, `FailureClass` enum, and `PartialCreationException` class in `src/Buildout.Core/Markdown/Authoring/CreatePageOutcome.cs` (fields: NewPageId, PartialPageId?, FailureClass?, UnderlyingException? — see data-model.md)
-- [ ] T004 [P] Define `AuthoredDocument` record in `src/Buildout.Core/Markdown/Authoring/AuthoredDocument.cs` (fields: Title?, Body IReadOnlyList\<BlockSubtreeWrite\>)
-- [ ] T005 [P] Define `BlockSubtreeWrite` record in `src/Buildout.Core/Markdown/Authoring/BlockSubtreeWrite.cs` (fields: Block, Children IReadOnlyList\<BlockSubtreeWrite\>)
-- [ ] T006 [P] Define `ParentKind` abstract record with `Page(string PageId)`, `Database(Database Schema)`, and `NotFound` cases in `src/Buildout.Core/Markdown/Authoring/ParentKind.cs`
-- [ ] T007 [P] Add WireMock stub helpers to `tests/Buildout.IntegrationTests/Buildin/BuildinStubs.cs`: `RegisterPageProbe`, `RegisterPageProbeNotFound`, `RegisterDatabaseProbe`, `RegisterDatabaseProbeNotFound`, `RegisterCreatePage`, `RegisterAppendBlockChildren`, `RegisterAppendBlockChildrenFailure` (see contracts/buildin-endpoints.md)
+- [x] T001 Add `<PackageReference Include="Markdig" Version="0.38.0" />` to `src/Buildout.Core/Buildout.Core.csproj` (lift from Buildout.Cli; CLI keeps its reference for terminal rendering)
+- [x] T002 [P] Define `CreatePageInput` record and `CreatePagePrintMode` enum in `src/Buildout.Core/Markdown/Authoring/CreatePageInput.cs` (fields: ParentId, Markdown, Title?, Icon?, CoverUrl?, Properties?, Print? — see data-model.md)
+- [x] T003 [P] Define `CreatePageOutcome` record, `FailureClass` enum, and `PartialCreationException` class in `src/Buildout.Core/Markdown/Authoring/CreatePageOutcome.cs` (fields: NewPageId, PartialPageId?, FailureClass?, UnderlyingException? — see data-model.md)
+- [x] T004 [P] Define `AuthoredDocument` record in `src/Buildout.Core/Markdown/Authoring/AuthoredDocument.cs` (fields: Title?, Body IReadOnlyList\<BlockSubtreeWrite\>)
+- [x] T005 [P] Define `BlockSubtreeWrite` record in `src/Buildout.Core/Markdown/Authoring/BlockSubtreeWrite.cs` (fields: Block, Children IReadOnlyList\<BlockSubtreeWrite\>)
+- [x] T006 [P] Define `ParentKind` abstract record with `Page(string PageId)`, `Database(Database Schema)`, and `NotFound` cases in `src/Buildout.Core/Markdown/Authoring/ParentKind.cs`
+- [x] T007 [P] Add WireMock stub helpers to `tests/Buildout.IntegrationTests/Buildin/BuildinStubs.cs`: `RegisterPageProbe`, `RegisterPageProbeNotFound`, `RegisterDatabaseProbe`, `RegisterDatabaseProbeNotFound`, `RegisterCreatePage`, `RegisterAppendBlockChildren`, `RegisterAppendBlockChildrenFailure` (see contracts/buildin-endpoints.md)
 
 **Checkpoint**: Types and stub helpers compile. No implementation logic yet.
 
@@ -40,11 +40,11 @@ description: "Task list for feature 006: page creation from Markdown"
 
 **⚠️ CRITICAL**: No user story work can begin until these interfaces are defined.
 
-- [ ] T008 [P] Define `IMarkdownBlockParser` interface (per-block-type single-dispatch) in `src/Buildout.Core/Markdown/Authoring/IMarkdownBlockParser.cs`
-- [ ] T009 [P] Define `IInlineMarkdownParser` interface (`ParseInlines(ContainerInline, ...) → IReadOnlyList<RichText>`) in `src/Buildout.Core/Markdown/Authoring/Inline/IInlineMarkdownParser.cs`
-- [ ] T010 [P] Define `IDatabasePropertyValueParser` interface (`Parse(string name, string raw, PropertyItem schema) → PropertyValue`) in `src/Buildout.Core/Markdown/Authoring/Properties/IDatabasePropertyValueParser.cs`
-- [ ] T011 [P] Define `IMarkdownToBlocksParser` interface (`Parse(string markdown) → AuthoredDocument`) in `src/Buildout.Core/Markdown/Authoring/IMarkdownToBlocksParser.cs`
-- [ ] T012 [P] Define `IPageCreator` interface (`CreateAsync(CreatePageInput, CancellationToken) → Task<CreatePageOutcome>`) in `src/Buildout.Core/Markdown/Authoring/IPageCreator.cs`
+- [x] T008 [P] Define `IMarkdownBlockParser` interface (per-block-type single-dispatch) in `src/Buildout.Core/Markdown/Authoring/IMarkdownBlockParser.cs`
+- [x] T009 [P] Define `IInlineMarkdownParser` interface (`ParseInlines(ContainerInline, ...) → IReadOnlyList<RichText>`) in `src/Buildout.Core/Markdown/Authoring/Inline/IInlineMarkdownParser.cs`
+- [x] T010 [P] Define `IDatabasePropertyValueParser` interface (`Parse(string name, string raw, PropertyItem schema) → PropertyValue`) in `src/Buildout.Core/Markdown/Authoring/Properties/IDatabasePropertyValueParser.cs`
+- [x] T011 [P] Define `IMarkdownToBlocksParser` interface (`Parse(string markdown) → AuthoredDocument`) in `src/Buildout.Core/Markdown/Authoring/IMarkdownToBlocksParser.cs`
+- [x] T012 [P] Define `IPageCreator` interface (`CreateAsync(CreatePageInput, CancellationToken) → Task<CreatePageOutcome>`) in `src/Buildout.Core/Markdown/Authoring/IPageCreator.cs`
 
 **Checkpoint**: Solution compiles cleanly. All interfaces defined; no implementations yet.
 
@@ -58,46 +58,41 @@ description: "Task list for feature 006: page creation from Markdown"
 
 ### Unit Tests — write first, confirm failing (all [P])
 
-- [ ] T013 [P] [US1] Write `InlineMarkdownParserTests` covering bold, italic, inline code, plain http link, buildin:// link promotion to mention, hard line break in `tests/Buildout.UnitTests/Markdown/Authoring/Inline/InlineMarkdownParserTests.cs`
-- [ ] T014 [P] [US1] Write `MentionLinkRecoveryTests` covering buildin:// → page mention, http link unchanged, db-vs-page disambiguation deferred to server-side in `tests/Buildout.UnitTests/Markdown/Authoring/Inline/MentionLinkRecoveryTests.cs`
-- [ ] T015 [P] [US1] Write `TitleExtractorTests` covering 6 cases: H1 first, H1 not first (stays as body block), no H1 (returns null title), H1-only document (empty body), multiple H1s (only first consumed), empty document in `tests/Buildout.UnitTests/Markdown/Authoring/TitleExtractorTests.cs`
-- [ ] T016 [P] [US1] Write `ParagraphBlockParserTests` covering plain text, bold, italic, inline code, mixed formatting, buildin:// link in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/ParagraphBlockParserTests.cs`
-- [ ] T017 [P] [US1] Write `HeadingBlockParserTests` covering H1→heading_1, H2→heading_2, H3→heading_3, H4+→paragraph with `#…` text preserved in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/HeadingBlockParserTests.cs`
-- [ ] T018 [P] [US1] Write `BulletedListItemBlockParserTests` covering simple items, nested sub-bullets, inline formatting inside items in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/BulletedListItemBlockParserTests.cs`
-- [ ] T019 [P] [US1] Write `NumberedListItemBlockParserTests` covering ordered lists, nested numbered items in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/NumberedListItemBlockParserTests.cs`
-- [ ] T020 [P] [US1] Write `ToDoBlockParserTests` covering `- [ ]` unchecked, `- [x]` checked, GFM task-list toggle in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/ToDoBlockParserTests.cs`
-- [ ] T021 [P] [US1] Write `CodeBlockParserTests` covering fenced code with language tag, fenced code without tag, indented code (if Markdig emits it) in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/CodeBlockParserTests.cs`
-- [ ] T022 [P] [US1] Write `QuoteBlockParserTests` covering single-line blockquote, multi-line blockquote, nested formatting inside quote in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/QuoteBlockParserTests.cs`
-- [ ] T023 [P] [US1] Write `DividerBlockParserTests` covering `---`, `***`, `___` thematic breaks in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/DividerBlockParserTests.cs`
-- [ ] T024 [P] [US1] Write `AppendBatcherTests` covering ≤100 top-level blocks (no follow-up call), >100 blocks (batched in order), nested children fanout (post-create appendBlockChildren per parent), empty body (no append calls) in `tests/Buildout.UnitTests/Markdown/Authoring/AppendBatcherTests.cs`
-- [ ] T025 [P] [US1] Write `DatabasePropertyValueParserTests` for all 10 property kinds (title, rich_text, number, select, multi_select comma-split, checkbox true/false/yes/no, date ISO 8601, url, email, phone_number) × valid + invalid input in `tests/Buildout.UnitTests/Markdown/Authoring/Properties/DatabasePropertyValueParserTests.cs`
-- [ ] T026 [P] [US1] Write `ParentKindProbeTests` covering page found (returns Page), 404 page then db found (returns Database with schema), 404 page and 404 db (returns NotFound), probe call order (page-first, then db) in `tests/Buildout.UnitTests/Markdown/Authoring/ParentKindProbeTests.cs`
-- [ ] T027 [US1] Write `MarkdownToBlocksParserTests` covering full-document AST walk, title extraction, each block type in sequence, unsupported-block placeholder pass-through, mention recovery in `tests/Buildout.UnitTests/Markdown/Authoring/MarkdownToBlocksParserTests.cs`
-- [ ] T028 [US1] Write `CreateCommandTests` (WireMock integration): happy path — page parent, title from H1, body batches, stdout id, exit 0; database parent with `--property`; `--print json` shape; stdin (`-`) source; missing title → exit 2; parent not found → exit 3; auth fail → exit 4; transport fail → exit 5; partial failure → exit 6 with partial id in stderr in `tests/Buildout.IntegrationTests/Cli/CreateCommandTests.cs`
-
-### Implementations
-
-- [ ] T029 [P] [US1] Implement `InlineMarkdownParser` in `src/Buildout.Core/Markdown/Authoring/Inline/InlineMarkdownParser.cs`
-- [ ] T030 [P] [US1] Implement `MentionLinkRecovery` in `src/Buildout.Core/Markdown/Authoring/Inline/MentionLinkRecovery.cs`
-- [ ] T031 [P] [US1] Implement `TitleExtractor` in `src/Buildout.Core/Markdown/Authoring/TitleExtractor.cs`
-- [ ] T032 [P] [US1] Implement `ParagraphBlockParser` in `src/Buildout.Core/Markdown/Authoring/Blocks/ParagraphBlockParser.cs`
-- [ ] T033 [P] [US1] Implement `HeadingBlockParser` (heading_1/2/3; H4+ falls through to ParagraphBlockParser) in `src/Buildout.Core/Markdown/Authoring/Blocks/HeadingBlockParser.cs`
-- [ ] T034 [P] [US1] Implement `BulletedListItemBlockParser` (with recursive children) in `src/Buildout.Core/Markdown/Authoring/Blocks/BulletedListItemBlockParser.cs`
-- [ ] T035 [P] [US1] Implement `NumberedListItemBlockParser` (with recursive children) in `src/Buildout.Core/Markdown/Authoring/Blocks/NumberedListItemBlockParser.cs`
-- [ ] T036 [P] [US1] Implement `ToDoBlockParser` (GFM TaskList extension; `Checked` from `[ ]`/`[x]`) in `src/Buildout.Core/Markdown/Authoring/Blocks/ToDoBlockParser.cs`
-- [ ] T037 [P] [US1] Implement `CodeBlockParser` (`Language` from Info string) in `src/Buildout.Core/Markdown/Authoring/Blocks/CodeBlockParser.cs`
-- [ ] T038 [P] [US1] Implement `QuoteBlockParser` in `src/Buildout.Core/Markdown/Authoring/Blocks/QuoteBlockParser.cs`
-- [ ] T039 [P] [US1] Implement `DividerBlockParser` in `src/Buildout.Core/Markdown/Authoring/Blocks/DividerBlockParser.cs`
-- [ ] T040 [P] [US1] Implement `UnsupportedBlockPlaceholderPassThrough` (detects `<!-- unsupported block: … -->` raw HTML; emits no Block) in `src/Buildout.Core/Markdown/Authoring/Blocks/UnsupportedBlockPlaceholderPassThrough.cs`
-- [ ] T041 [P] [US1] Implement `AppendBatcher` (sequential ≤100-element top-level batching + nested-level fanout via post-create `appendBlockChildren` per parent block id) in `src/Buildout.Core/Markdown/Authoring/AppendBatcher.cs`
-- [ ] T042 [P] [US1] Implement `DatabasePropertyValueParser` (per-kind dispatch for 10 property kinds; validation errors for unsupported kinds) in `src/Buildout.Core/Markdown/Authoring/Properties/DatabasePropertyValueParser.cs`
-- [ ] T043 [P] [US1] Implement `ParentKindProbe` (sequential `GetPageAsync` → 404 → `GetDatabaseAsync` → 404 → `NotFound`; carries Database schema when found) in `src/Buildout.Core/Markdown/Authoring/ParentKindProbe.cs`
-- [ ] T044 [US1] Implement `MarkdownToBlocksParser` (Markdig pipeline with CommonMark + GFM TaskList; per-block-type parser registry; title extraction; inline parser pass; mention recovery) in `src/Buildout.Core/Markdown/Authoring/MarkdownToBlocksParser.cs`
-- [ ] T045 [US1] Implement `PageCreator` (probe → validate → parse → POST /v1/pages with first 100 children → batcher for remainder and nested levels → return outcome; `PartialCreationException` on mid-append failure) in `src/Buildout.Core/Markdown/Authoring/PageCreator.cs`
-- [ ] T046 [P] [US1] Define `CreateSettings` (positional `markdown_source`, `--parent`, `--title`, `--icon`, `--cover`, `--property` repeatable, `--print`) in `src/Buildout.Cli/Commands/CreateSettings.cs`
-- [ ] T047 [US1] Implement `CreateCommand` (resolve file/stdin source; call `IPageCreator`; map `CreatePageOutcome` to exit codes per contracts/cli-create.md; print per `--print` mode; stderr for partial failure with partial id) in `src/Buildout.Cli/Commands/CreateCommand.cs`
-- [ ] T048 [US1] Register `IPageCreator` → `PageCreator`, `IMarkdownToBlocksParser` → `MarkdownToBlocksParser`, all block parsers, inline parser, property parser, `AppendBatcher` in `src/Buildout.Core/DependencyInjection/ServiceCollectionExtensions.cs`
-- [ ] T049 [US1] Register `CreateCommand` with `config.AddCommand<CreateCommand>("create")` in `src/Buildout.Cli/Program.cs`
+- [x] T013 [P] [US1] Write `InlineMarkdownParserTests` covering bold, italic, inline code, plain http link, buildin:// link promotion to mention, hard line break in `tests/Buildout.UnitTests/Markdown/Authoring/Inline/InlineMarkdownParserTests.cs`
+- [x] T014 [P] [US1] Write `MentionLinkRecoveryTests` covering buildin:// → page mention, http link unchanged, db-vs-page disambiguation deferred to server-side in `tests/Buildout.UnitTests/Markdown/Authoring/Inline/MentionLinkRecoveryTests.cs`
+- [x] T015 [P] [US1] Write `TitleExtractorTests` covering 6 cases: H1 first, H1 not first (stays as body block), no H1 (returns null title), H1-only document (empty body), multiple H1s (only first consumed), empty document in `tests/Buildout.UnitTests/Markdown/Authoring/TitleExtractorTests.cs`
+- [x] T016 [P] [US1] Write `ParagraphBlockParserTests` covering plain text, bold, italic, inline code, mixed formatting, buildin:// link in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/ParagraphBlockParserTests.cs`
+- [x] T017 [P] [US1] Write `HeadingBlockParserTests` covering H1→heading_1, H2→heading_2, H3→heading_3, H4+→paragraph with `#…` text preserved in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/HeadingBlockParserTests.cs`
+- [x] T018 [P] [US1] Write `BulletedListItemBlockParserTests` covering simple items, nested sub-bullets, inline formatting inside items in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/BulletedListItemBlockParserTests.cs`
+- [x] T019 [P] [US1] Write `NumberedListItemBlockParserTests` covering ordered lists, nested numbered items in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/NumberedListItemBlockParserTests.cs`
+- [x] T020 [P] [US1] Write `ToDoBlockParserTests` covering `- [ ]` unchecked, `- [x]` checked, GFM task-list toggle in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/ToDoBlockParserTests.cs`
+- [x] T021 [P] [US1] Write `CodeBlockParserTests` covering fenced code with language tag, fenced code without tag, indented code (if Markdig emits it) in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/CodeBlockParserTests.cs`
+- [x] T022 [P] [US1] Write `QuoteBlockParserTests` covering single-line blockquote, multi-line blockquote, nested formatting inside quote in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/QuoteBlockParserTests.cs`
+- [x] T023 [P] [US1] Write `DividerBlockParserTests` covering `---`, `***`, `___` thematic breaks in `tests/Buildout.UnitTests/Markdown/Authoring/Blocks/DividerBlockParserTests.cs`
+- [x] T024 [P] [US1] Write `AppendBatcherTests` covering ≤100 top-level blocks (no follow-up call), >100 blocks (batched in order), nested children fanout (post-create appendBlockChildren per parent), empty body (no append calls) in `tests/Buildout.UnitTests/Markdown/Authoring/AppendBatcherTests.cs`
+- [x] T025 [P] [US1] Write `DatabasePropertyValueParserTests` for all 10 property kinds (title, rich_text, number, select, multi_select comma-split, checkbox true/false/yes/no, date ISO 8601, url, email, phone_number) × valid + invalid input in `tests/Buildout.UnitTests/Markdown/Authoring/Properties/DatabasePropertyValueParserTests.cs`
+- [x] T026 [P] [US1] Write `ParentKindProbeTests` covering page found (returns Page), 404 page then db found (returns Database with schema), 404 page and 404 db (returns NotFound), probe call order (page-first, then db) in `tests/Buildout.UnitTests/Markdown/Authoring/ParentKindProbeTests.cs`
+- [x] T029 [P] [US1] Implement `InlineMarkdownParser` in `src/Buildout.Core/Markdown/Authoring/Inline/InlineMarkdownParser.cs`
+- [x] T030 [P] [US1] Implement `MentionLinkRecovery` in `src/Buildout.Core/Markdown/Authoring/Inline/MentionLinkRecovery.cs`
+- [x] T031 [P] [US1] Implement `TitleExtractor` in `src/Buildout.Core/Markdown/Authoring/TitleExtractor.cs`
+- [x] T032 [P] [US1] Implement `ParagraphBlockParser` in `src/Buildout.Core/Markdown/Authoring/Blocks/ParagraphBlockParser.cs`
+- [x] T033 [P] [US1] Implement `HeadingBlockParser` (heading_1/2/3; H4+ falls through to ParagraphBlockParser) in `src/Buildout.Core/Markdown/Authoring/Blocks/HeadingBlockParser.cs`
+- [x] T034 [P] [US1] Implement `BulletedListItemBlockParser` (with recursive children) in `src/Buildout.Core/Markdown/Authoring/Blocks/BulletedListItemBlockParser.cs`
+- [x] T035 [P] [US1] Implement `NumberedListItemBlockParser` (with recursive children) in `src/Buildout.Core/Markdown/Authoring/Blocks/NumberedListItemBlockParser.cs`
+- [x] T036 [P] [US1] Implement `ToDoBlockParser` (GFM TaskList extension; `Checked` from `[ ]`/`[x]`) in `src/Buildout.Core/Markdown/Authoring/Blocks/ToDoBlockParser.cs`
+- [x] T037 [P] [US1] Implement `CodeBlockParser` (`Language` from Info string) in `src/Buildout.Core/Markdown/Authoring/Blocks/CodeBlockParser.cs`
+- [x] T038 [P] [US1] Implement `QuoteBlockParser` in `src/Buildout.Core/Markdown/Authoring/Blocks/QuoteBlockParser.cs`
+- [x] T039 [P] [US1] Implement `DividerBlockParser` in `src/Buildout.Core/Markdown/Authoring/Blocks/DividerBlockParser.cs`
+- [x] T040 [P] [US1] Implement `UnsupportedBlockPlaceholderPassThrough` (detects `<!-- unsupported block: … -->` raw HTML; emits no Block) in `src/Buildout.Core/Markdown/Authoring/Blocks/UnsupportedBlockPlaceholderPassThrough.cs`
+- [x] T041 [P] [US1] Implement `AppendBatcher` (sequential ≤100-element top-level batching + nested-level fanout via post-create `appendBlockChildren` per parent block id) in `src/Buildout.Core/Markdown/Authoring/AppendBatcher.cs`
+- [x] T042 [P] [US1] Implement `DatabasePropertyValueParser` (per-kind dispatch for 10 property kinds; validation errors for unsupported kinds) in `src/Buildout.Core/Markdown/Authoring/Properties/DatabasePropertyValueParser.cs`
+- [x] T043 [P] [US1] Implement `ParentKindProbe` (sequential `GetPageAsync` → 404 → `GetDatabaseAsync` → 404 → `NotFound`; carries Database schema when found) in `src/Buildout.Core/Markdown/Authoring/ParentKindProbe.cs`
+- [x] T044 [US1] Implement `MarkdownToBlocksParser` (Markdig pipeline with CommonMark + GFM TaskList; per-block-type parser registry; title extraction; inline parser pass; mention recovery) in `src/Buildout.Core/Markdown/Authoring/MarkdownToBlocksParser.cs`
+- [x] T045 [US1] Implement `PageCreator` (probe → validate → parse → POST /v1/pages with first 100 children → batcher for remainder and nested levels → return outcome; `PartialCreationException` on mid-append failure) in `src/Buildout.Core/Markdown/Authoring/PageCreator.cs`
+- [x] T046 [P] [US1] Define `CreateSettings` (positional `markdown_source`, `--parent`, `--title`, `--icon`, `--cover`, `--property` repeatable, `--print`) in `src/Buildout.Cli/Commands/CreateSettings.cs`
+- [x] T047 [US1] Implement `CreateCommand` (resolve file/stdin source; call `IPageCreator`; map `CreatePageOutcome` to exit codes per contracts/cli-create.md; print per `--print` mode; stderr for partial failure with partial id) in `src/Buildout.Cli/Commands/CreateCommand.cs`
+- [x] T048 [US1] Register `IPageCreator` → `PageCreator`, `IMarkdownToBlocksParser` → `MarkdownToBlocksParser`, all block parsers, inline parser, property parser, `AppendBatcher` in `src/Buildout.Core/DependencyInjection/ServiceCollectionExtensions.cs`
+- [x] T049 [US1] Register `CreateCommand` with `config.AddCommand<CreateCommand>("create")` in `src/Buildout.Cli/Program.cs`
 
 **Checkpoint**: `dotnet test tests/Buildout.UnitTests` and `dotnet test tests/Buildout.IntegrationTests --filter Category=Cli` pass. US1 fully functional and testable.
 
@@ -111,13 +106,13 @@ description: "Task list for feature 006: page creation from Markdown"
 
 ### Tests — write first, confirm failing
 
-- [ ] T050 [P] [US2] Write `CreatePageToolTests` (WireMock integration): happy path returns `CallToolResult` with one `ResourceLinkBlock` whose Uri is `buildin://<id>` and Name equals page title; validation error → `InvalidParams`; not-found → `ResourceNotFound`; auth/transport → `InternalError`; partial failure → `InternalError` containing partial page id in `tests/Buildout.IntegrationTests/Mcp/CreatePageToolTests.cs`
-- [ ] T051 [P] [US2] Write `CreatePageIdEquivalenceTests` (SC-004): for the same WireMock fixture, run CLI `--print id` and extract stdout id; run MCP `create_page` and extract id from `resource_link` URI; assert equal in `tests/Buildout.IntegrationTests/Cross/CreatePageIdEquivalenceTests.cs`
+- [x] T050 [P] [US2] Write `CreatePageToolTests` (WireMock integration): happy path returns `CallToolResult` with one `ResourceLinkBlock` whose Uri is `buildin://<id>` and Name equals page title; validation error → `InvalidParams`; not-found → `ResourceNotFound`; auth/transport → `InternalError`; partial failure → `InternalError` containing partial page id in `tests/Buildout.IntegrationTests/Mcp/CreatePageToolTests.cs`
+- [x] T051 [P] [US2] Write `CreatePageIdEquivalenceTests` (SC-004): for the same WireMock fixture, run CLI `--print id` and extract stdout id; run MCP `create_page` and extract id from `resource_link` URI; assert equal in `tests/Buildout.IntegrationTests/Cross/CreatePageIdEquivalenceTests.cs`
 
 ### Implementations
 
-- [ ] T052 [US2] Implement `CreatePageToolHandler` (class with `[McpServerToolType]`; method `CreatePageAsync` with `[McpServerTool(Name = "create_page")]` returning `Task<CallToolResult>`; builds `CreatePageInput` from parameters; maps `CreatePageOutcome` to `ResourceLinkBlock` or throws `McpProtocolException`) in `src/Buildout.Mcp/Tools/CreatePageToolHandler.cs`
-- [ ] T053 [US2] Register `CreatePageToolHandler` with `.WithTools<CreatePageToolHandler>()` in `src/Buildout.Mcp/Program.cs`
+- [x] T052 [US2] Implement `CreatePageToolHandler` (class with `[McpServerToolType]`; method `CreatePageAsync` with `[McpServerTool(Name = "create_page")]` returning `Task<CallToolResult>`; builds `CreatePageInput` from parameters; maps `CreatePageOutcome` to `ResourceLinkBlock` or throws `McpProtocolException`) in `src/Buildout.Mcp/Tools/CreatePageToolHandler.cs`
+- [x] T053 [US2] Register `CreatePageToolHandler` with `.WithTools<CreatePageToolHandler>()` in `src/Buildout.Mcp/Program.cs`
 
 **Checkpoint**: `dotnet test tests/Buildout.IntegrationTests --filter "Category=Mcp|Category=Cross"` passes for US2 tests. CLI and MCP surfaces both functional; id equivalence confirmed.
 
@@ -131,9 +126,9 @@ description: "Task list for feature 006: page creation from Markdown"
 
 ### Tests — write first, confirm failing
 
-- [ ] T054 [P] [US3] Write `ReadCreateReadRoundTripTests`: for each feature-002 golden fixture, `RenderAsync(blocks) → markdown → ParseBlocks → RenderAsync` and assert second rendering equals first under compatibility-matrix equivalence (lossless rows are byte-equal; lossy rows match documented loss); test for every block type in isolation and nested in `tests/Buildout.UnitTests/RoundTrip/ReadCreateReadRoundTripTests.cs`
-- [ ] T055 [P] [US3] Write `WriteReadRoundTripTests`: for each authored-md fixture (paragraph, heading 1–3, bulleted/numbered/todo list, code, quote, divider, mention, inline formatting), `Parse(markdown) → blocks → Render → compare`; assert under compatibility-matrix equivalence; mention links recover correctly; unsupported-block placeholder survives without materialising a block in `tests/Buildout.UnitTests/RoundTrip/WriteReadRoundTripTests.cs`
-- [ ] T056 [US3] Write `CreatePageRoundTripWithCheapLlmTests` extending the cheap-LLM MCP harness: call `create_page` with a Markdown body; extract `buildin://` URI from response; read back via `buildin://{id}` MCP resource; assert rendered Markdown matches input under compatibility matrix (FR-017) in `tests/Buildout.IntegrationTests/Mcp/CreatePageRoundTripWithCheapLlmTests.cs`
+- [x] T054 [P] [US3] Write `ReadCreateReadRoundTripTests`: for each feature-002 golden fixture, `RenderAsync(blocks) → markdown → ParseBlocks → RenderAsync` and assert second rendering equals first under compatibility-matrix equivalence (lossless rows are byte-equal; lossy rows match documented loss); test for every block type in isolation and nested in `tests/Buildout.UnitTests/RoundTrip/ReadCreateReadRoundTripTests.cs`
+- [x] T055 [P] [US3] Write `WriteReadRoundTripTests`: for each authored-md fixture (paragraph, heading 1–3, bulleted/numbered/todo list, code, quote, divider, mention, inline formatting), `Parse(markdown) → blocks → Render → compare`; assert under compatibility-matrix equivalence; mention links recover correctly; unsupported-block placeholder survives without materialising a block in `tests/Buildout.UnitTests/RoundTrip/WriteReadRoundTripTests.cs`
+- [x] T056 [US3] Write `CreatePageRoundTripWithCheapLlmTests` extending the cheap-LLM MCP harness: call `create_page` with a Markdown body; extract `buildin://` URI from response; read back via `buildin://{id}` MCP resource; assert rendered Markdown matches input under compatibility matrix (FR-017) in `tests/Buildout.IntegrationTests/Mcp/CreatePageRoundTripWithCheapLlmTests.cs`
 
 **Checkpoint**: `dotnet test tests/Buildout.UnitTests --filter "Category=RoundTrip"` passes. LLM chain test passes. Principle III fully satisfied in both directions.
 
@@ -143,9 +138,9 @@ description: "Task list for feature 006: page creation from Markdown"
 
 **Purpose**: Contract test for non-destructive behaviour (SC-008), performance baseline, and spec drift fix flagged in R5.
 
-- [ ] T057 [P] Write `CreatePageReadOnlyOnExistingDataTests` (SC-008): across every integration test in this feature's suite, assert WireMock recorded no `PATCH /v1/pages/{id}`, `PATCH /v1/blocks/{id}`, `DELETE /v1/blocks/{id}`, `PATCH /v1/databases/{id}`, `POST /v1/databases`, `POST /v1/databases/{id}/query`, `POST /v1/search`, `POST /v1/pages/search` requests in `tests/Buildout.IntegrationTests/Cross/CreatePageReadOnlyOnExistingDataTests.cs`
-- [ ] T058 [P] Add performance integration test to `tests/Buildout.IntegrationTests/Cli/CreateCommandTests.cs`: generate a 1000-line Markdown fixture (~300 top-level blocks); time the create operation against zero-latency WireMock; assert completion under 4 seconds (plan.md performance goal)
-- [ ] T059 Tighten `specs/006-page-creation/spec.md` FR-009: remove "or workspace identifier" from the `--parent` description; add a note that workspace parents are deferred per R5; ensure FR-009 text is consistent with the page-first/database-fallback probe in FR-010
+- [x] T057 [P] Write `CreatePageReadOnlyOnExistingDataTests` (SC-008): across every integration test in this feature's suite, assert WireMock recorded no `PATCH /v1/pages/{id}`, `PATCH /v1/blocks/{id}`, `DELETE /v1/blocks/{id}`, `PATCH /v1/databases/{id}`, `POST /v1/databases`, `POST /v1/databases/{id}/query`, `POST /v1/search`, `POST /v1/pages/search` requests in `tests/Buildout.IntegrationTests/Cross/CreatePageReadOnlyOnExistingDataTests.cs`
+- [x] T058 [P] Add performance integration test to `tests/Buildout.IntegrationTests/Cli/CreateCommandTests.cs`: generate a 1000-line Markdown fixture (~300 top-level blocks); time the create operation against zero-latency WireMock; assert completion under 4 seconds (plan.md performance goal)
+- [x] T059 Tighten `specs/006-page-creation/spec.md` FR-009: remove "or workspace identifier" from the `--parent` description; add a note that workspace parents are deferred per R5; ensure FR-009 text is consistent with the page-first/database-fallback probe in FR-010
 
 **Final checkpoint**: Full suite passes — `dotnet test tests/Buildout.UnitTests && dotnet test tests/Buildout.IntegrationTests`. No real buildin network calls. All constitution principles PASS. Run the quickstart scenarios from `quickstart.md`.
 
