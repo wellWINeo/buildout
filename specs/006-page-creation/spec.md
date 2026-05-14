@@ -315,8 +315,10 @@ block type in isolation and in nested combinations.
   - one positional argument `<markdown_source>`: a filesystem path to a
     Markdown file, or the literal `-` to read Markdown from stdin.
     Required.
-  - `--parent <id>` (string, required): the buildin page id, database id,
-    or workspace identifier under which the new page is created.
+  - `--parent <id>` (string, required): the buildin page id or database id
+    under which the new page is created. Workspace / space identifiers are
+    deferred from v1 (see R5): the probe sequence has no `GET /v1/spaces/{id}`
+    endpoint, so a workspace-shaped id is treated as parent-not-found.
   - `--title <text>` (string, optional): overrides the leading-H1 title
     rule (FR-005).
   - `--icon <value>` (string, optional): a single emoji, or a URL
@@ -339,9 +341,9 @@ block type in isolation and in nested combinations.
     nothing.
 - **FR-010**: When `--parent` resolves to a database id, the converter
   MUST set the title property from FR-005 and accept the property values
-  given by `--property` flags; when `--parent` resolves to a page id or
-  workspace identifier, only the title is set and `--property` flags
-  produce a validation error (no properties exist outside a database).
+  given by `--property` flags; when `--parent` resolves to a page id,
+  only the title is set and `--property` flags produce a validation error
+  (no properties exist outside a database).
   The tool MUST auto-probe the parent kind from the supplied id (single
   GET — page-by-id first, falling back to database-by-id) before issuing
   `createPage`; no `--parent-kind` / `parent_kind` parameter is exposed
@@ -426,8 +428,8 @@ block type in isolation and in nested combinations.
   `Buildout.Core` alongside the existing converters.
 - **Create-page parameters** (the answer to the user's "identify which
   params" question; full normative list in FR-009/FR-011):
-  - `parent` — required; one of page id, database id, or workspace
-    identifier
+  - `parent` — required; page id or database id (workspace identifiers
+    deferred to v2; treated as parent-not-found in v1)
   - `markdown_source` — required; positional path or `-` (CLI) /
     `markdown` string (MCP)
   - `title` — optional override; default is leading-H1 consumption
@@ -515,7 +517,8 @@ block type in isolation and in nested combinations.
   the property level.** v1 accepts a database parent and supports the
   plain-text property kinds enumerated in FR-009. People / files /
   relation / rollup / formula property writes are deferred to a future
-  feature. A page or workspace parent never accepts property values.
+  feature. A page parent never accepts property values; workspace parents
+  are deferred from v1 (see R5).
 - **Parent-kind probing is part of the create operation, not a separate
   user-facing step.** Per the 2026-05-13 clarification, the tool always
   probes the supplied id (page-by-id first, database-by-id fallback)
