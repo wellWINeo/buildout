@@ -304,4 +304,52 @@ public sealed class ReadCreateReadRoundTripTests
         Assert.Contains("### ", markdown1);
         Assert.Contains("#### ", markdown2);
     }
+
+    // -------------------------------------------------------------------------
+    // Inline content: formatting and mention links
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Paragraph_BoldInline_IsLossless()
+    {
+        var block = new ParagraphBlock
+        {
+            RichTextContent = [new RichText { Type = "text", Content = "bold text", Annotations = new Annotations { Bold = true } }]
+        };
+        var markdown1 = await RenderBlockAsync(block, "page-1");
+
+        var parser = CreateParser();
+        var parsed = parser.Parse(markdown1).Body[0].Block;
+
+        var markdown2 = await RenderBlockAsync(parsed, "page-2");
+
+        Assert.Equal(markdown1, markdown2);
+    }
+
+    [Fact]
+    public async Task Paragraph_PageMentionLink_IsLossless()
+    {
+        // "[My Page](buildin://page-abc)" renders and parses back as a page mention RichText.
+        var block = new ParagraphBlock
+        {
+            RichTextContent =
+            [
+                new RichText
+                {
+                    Type = "mention",
+                    Content = "My Page",
+                    Mention = new PageMention { PageId = "page-abc" }
+                }
+            ]
+        };
+        var markdown1 = await RenderBlockAsync(block, "page-1");
+
+        var parser = CreateParser();
+        var parsed = parser.Parse(markdown1).Body[0].Block;
+
+        var markdown2 = await RenderBlockAsync(parsed, "page-2");
+
+        Assert.Equal(markdown1, markdown2);
+        Assert.Contains("buildin://page-abc", markdown1);
+    }
 }

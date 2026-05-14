@@ -252,4 +252,48 @@ public class WriteReadRoundTripTests
 
         Assert.Contains("<!-- unsupported block: image -->", rendered);
     }
+
+    [Fact]
+    public async Task BoldInline_IsLossless()
+    {
+        var parser = new MarkdownToBlocksParser();
+        var doc = parser.Parse("**bold text**");
+        var blocks = doc.Body.Select(s => s.Block).ToList();
+
+        var client = MakeClient(blocks);
+        var renderer = CreateRenderer(client);
+        var rendered = await renderer.RenderAsync("page-id");
+
+        Assert.Equal("**bold text**" + Environment.NewLine + Environment.NewLine, rendered);
+    }
+
+    [Fact]
+    public async Task ItalicInline_IsLossless()
+    {
+        var parser = new MarkdownToBlocksParser();
+        var doc = parser.Parse("*italic text*");
+        var blocks = doc.Body.Select(s => s.Block).ToList();
+
+        var client = MakeClient(blocks);
+        var renderer = CreateRenderer(client);
+        var rendered = await renderer.RenderAsync("page-id");
+
+        Assert.Equal("*italic text*" + Environment.NewLine + Environment.NewLine, rendered);
+    }
+
+    [Fact]
+    public async Task PageMentionLink_RecoveredAsBuildinMention()
+    {
+        // "[My Page](buildin://page-abc)" is parsed as a PageMention RichText
+        // and renders back as the same "[My Page](buildin://page-abc)" link.
+        var parser = new MarkdownToBlocksParser();
+        var doc = parser.Parse("[My Page](buildin://page-abc)");
+        var blocks = doc.Body.Select(s => s.Block).ToList();
+
+        var client = MakeClient(blocks);
+        var renderer = CreateRenderer(client);
+        var rendered = await renderer.RenderAsync("page-id");
+
+        Assert.Contains("[My Page](buildin://page-abc)", rendered);
+    }
 }
