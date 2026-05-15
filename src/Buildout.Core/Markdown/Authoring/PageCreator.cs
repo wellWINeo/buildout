@@ -1,7 +1,12 @@
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown.Authoring.Properties;
+using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Markdown.Authoring;
 
@@ -11,17 +16,23 @@ public sealed class PageCreator : IPageCreator
     private readonly IMarkdownToBlocksParser _parser;
     private readonly IBuildinClient _client;
     private readonly IDatabasePropertyValueParser _propertyParser;
+    private readonly ILogger<PageCreator> _logger;
 
-    public PageCreator(ParentKindProbe probe, IMarkdownToBlocksParser parser, IBuildinClient client, IDatabasePropertyValueParser propertyParser)
+    public PageCreator(ParentKindProbe probe, IMarkdownToBlocksParser parser, IBuildinClient client,
+        IDatabasePropertyValueParser propertyParser, ILogger<PageCreator> logger)
     {
         _probe = probe;
         _parser = parser;
         _client = client;
         _propertyParser = propertyParser;
+        _logger = logger;
     }
 
+    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
     public async Task<CreatePageOutcome> CreateAsync(CreatePageInput input, CancellationToken cancellationToken = default)
     {
+        using var recorder = OperationRecorder.Start(_logger, "page_create");
+
         ParentKind parentKind;
         try
         {
@@ -29,23 +40,41 @@ public sealed class PageCreator : IPageCreator
         }
         catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
         {
+            recorder.Fail("auth");
             return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Auth, UnderlyingException = ex };
         }
         catch (BuildinApiException ex) when (ex.Error is TransportError)
         {
+            recorder.Fail("transport");
             return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Transport, UnderlyingException = ex };
         }
         catch (BuildinApiException ex)
         {
+            recorder.Fail("unknown");
             return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Unexpected, UnderlyingException = ex };
         }
 
+        var parentKindStr = parentKind switch
+        {
+            ParentKind.Page => "page",
+            ParentKind.DatabaseParent => "database",
+            ParentKind.NotFound => "not_found",
+            _ => "unknown"
+        };
+        recorder.SetTag("parent_kind", parentKindStr);
+
         var document = _parser.Parse(input.Markdown);
+        var blockCount = document.Body.Count;
+        recorder.SetTag("block_count", blockCount);
+
         var title = input.Title ?? document.Title;
 
         var validationOutcome = ValidateRequest(input, parentKind, title);
         if (validationOutcome is not null)
+        {
+            recorder.Succeed();
             return validationOutcome;
+        }
 
         Dictionary<string, PropertyValue> properties;
         try
@@ -54,6 +83,7 @@ public sealed class PageCreator : IPageCreator
         }
         catch (ArgumentException ex)
         {
+            recorder.Succeed();
             return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Validation, UnderlyingException = ex };
         }
 
@@ -81,25 +111,35 @@ public sealed class PageCreator : IPageCreator
         }
         catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 400 })
         {
+            recorder.Fail("validation");
             return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Validation, UnderlyingException = ex };
         }
         catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
         {
+            recorder.Fail("auth");
             return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Auth, UnderlyingException = ex };
         }
         catch (BuildinApiException ex) when (ex.Error is TransportError)
         {
+            recorder.Fail("transport");
             return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Transport, UnderlyingException = ex };
         }
         catch (BuildinApiException ex)
         {
+            recorder.Fail("unknown");
             return new CreatePageOutcome { NewPageId = string.Empty, FailureClass = FailureClass.Unexpected, UnderlyingException = ex };
         }
 
         var partialOutcome = await AppendBlocksAsync(page, document, allBatches, cancellationToken);
         if (partialOutcome is not null)
+        {
+            recorder.Fail("partial");
             return partialOutcome;
+        }
 
+        BuildoutMeter.PagesCreatedTotal.Add(1, new TagList { { "parent_kind", parentKindStr } });
+        BuildoutMeter.BlocksProcessedTotal.Add(blockCount, new TagList { { "operation", "page_create" } });
+        recorder.Succeed();
         return new CreatePageOutcome { NewPageId = page.Id, ResolvedTitle = title };
     }
 

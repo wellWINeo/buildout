@@ -1,5 +1,9 @@
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Diagnostics;
 using Buildout.Core.Search.Internal;
 using Microsoft.Extensions.Logging;
 
@@ -24,6 +28,8 @@ internal sealed class SearchService : ISearchService
         _logger = logger;
     }
 
+    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
+    [SuppressMessage("Performance", "CA1873:Evaluate log message arguments eagerly", Justification = "All arguments are cheap string variables")]
     public async Task<IReadOnlyList<SearchMatch>> SearchAsync(
         string query,
         string? pageId,
@@ -32,45 +38,64 @@ internal sealed class SearchService : ISearchService
         if (string.IsNullOrWhiteSpace(query))
             throw new ArgumentException("Query must be non-empty.", nameof(query));
 
-        var allPages = new List<Page>();
-        string? cursor = null;
-
-        do
+        using var recorder = OperationRecorder.Start(_logger, "search");
+        try
         {
-            var request = new PageSearchRequest { Query = query, StartCursor = cursor };
-            var response = await _client.SearchPagesAsync(request, cancellationToken);
+            var allPages = new List<Page>();
+            string? cursor = null;
+            int pageNumber = 1;
 
-            if (response.Results is not null)
-                allPages.AddRange(response.Results);
-
-            cursor = response.HasMore ? response.NextCursor : null;
-        } while (cursor is not null);
-
-        var matches = allPages
-            .Where(p => !p.Archived)
-            .Select(p => new SearchMatch
+            do
             {
-                PageId = p.Id,
-                ObjectType = MapObjectType(p.ObjectType),
-                DisplayTitle = _titleRenderer.RenderPlain(p.Title),
-                Parent = p.Parent,
-                Archived = p.Archived
-            })
-            .ToList();
+                var request = new PageSearchRequest { Query = query, StartCursor = cursor };
+                var response = await _client.SearchPagesAsync(request, cancellationToken);
 
-        if (pageId is not null)
-        {
-            var parentLookup = matches.ToDictionary(m => m.PageId, m => m.Parent);
-            var filtered = new List<SearchMatch>();
-            foreach (var match in matches)
+                if (response.Results is not null)
+                    allPages.AddRange(response.Results);
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                    _logger.LogDebug("SearchAsync pagination_page={PageNumber} pagination_items={ItemCount}",
+                        pageNumber, response.Results?.Count ?? 0);
+                pageNumber++;
+
+                cursor = response.HasMore ? response.NextCursor : null;
+            } while (cursor is not null);
+
+            var matches = allPages
+                .Where(p => !p.Archived)
+                .Select(p => new SearchMatch
+                {
+                    PageId = p.Id,
+                    ObjectType = MapObjectType(p.ObjectType),
+                    DisplayTitle = _titleRenderer.RenderPlain(p.Title),
+                    Parent = p.Parent,
+                    Archived = p.Archived
+                })
+                .ToList();
+
+            if (pageId is not null)
             {
-                if (await _scopeFilter.IsInScopeAsync(match, pageId, parentLookup, cancellationToken))
-                    filtered.Add(match);
+                var parentLookup = matches.ToDictionary(m => m.PageId, m => m.Parent);
+                var filtered = new List<SearchMatch>();
+                foreach (var match in matches)
+                {
+                    if (await _scopeFilter.IsInScopeAsync(match, pageId, parentLookup, cancellationToken))
+                        filtered.Add(match);
+                }
+                matches = filtered;
             }
-            matches = filtered;
-        }
 
-        return matches;
+            recorder.SetTag("query", query.Length > 100 ? query[..100] + "…" : query);
+            recorder.SetTag("result_count", matches.Count);
+            BuildoutMeter.SearchResultsTotal.Add(matches.Count, new TagList { { "operation", "search" } });
+            recorder.Succeed();
+            return matches;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            recorder.Fail("unknown");
+            throw;
+        }
     }
 
     private static SearchObjectType MapObjectType(string? objectType) => objectType switch

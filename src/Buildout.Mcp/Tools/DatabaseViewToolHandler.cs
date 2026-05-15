@@ -1,6 +1,9 @@
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.DatabaseViews;
+using Buildout.Core.Diagnostics;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -26,35 +29,50 @@ public sealed class DatabaseViewToolHandler
         CancellationToken cancellationToken = default)
 #pragma warning restore CA1707
     {
+        var sw = Stopwatch.StartNew();
         try
         {
-            var request = new DatabaseViewRequest(
-                database_id,
-                ParseStyle(style),
-                group_by,
-                date_property);
+            string result;
+            try
+            {
+                var request = new DatabaseViewRequest(
+                    database_id,
+                    ParseStyle(style),
+                    group_by,
+                    date_property);
 
-            return await _renderer.RenderAsync(request, cancellationToken);
+                result = await _renderer.RenderAsync(request, cancellationToken);
+            }
+            catch (DatabaseViewValidationException ex)
+            {
+                throw new McpProtocolException(ex.Message, McpErrorCode.InvalidParams);
+            }
+            catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 404 })
+            {
+                throw new McpProtocolException($"Database not found: {database_id}", McpErrorCode.ResourceNotFound);
+            }
+            catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
+            {
+                throw new McpProtocolException($"Authentication error: {ex.Message}", McpErrorCode.InternalError);
+            }
+            catch (BuildinApiException ex) when (ex.Error is TransportError)
+            {
+                throw new McpProtocolException($"Transport error: {ex.Message}", McpErrorCode.InternalError);
+            }
+            catch (BuildinApiException ex)
+            {
+                throw new McpProtocolException($"Unexpected buildin error: {ex.Message}", McpErrorCode.InternalError);
+            }
+
+            BuildoutMeter.McpToolInvocationsTotal.Add(1, new TagList { { "tool", "database_view" }, { "outcome", "success" } });
+            BuildoutMeter.McpToolDuration.Record(sw.Elapsed.TotalSeconds, new TagList { { "tool", "database_view" }, { "outcome", "success" } });
+            return result;
         }
-        catch (DatabaseViewValidationException ex)
+        catch (Exception)
         {
-            throw new McpProtocolException(ex.Message, McpErrorCode.InvalidParams);
-        }
-        catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 404 })
-        {
-            throw new McpProtocolException($"Database not found: {database_id}", McpErrorCode.ResourceNotFound);
-        }
-        catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
-        {
-            throw new McpProtocolException($"Authentication error: {ex.Message}", McpErrorCode.InternalError);
-        }
-        catch (BuildinApiException ex) when (ex.Error is TransportError)
-        {
-            throw new McpProtocolException($"Transport error: {ex.Message}", McpErrorCode.InternalError);
-        }
-        catch (BuildinApiException ex)
-        {
-            throw new McpProtocolException($"Unexpected buildin error: {ex.Message}", McpErrorCode.InternalError);
+            BuildoutMeter.McpToolInvocationsTotal.Add(1, new TagList { { "tool", "database_view" }, { "outcome", "failure" } });
+            BuildoutMeter.McpToolDuration.Record(sw.Elapsed.TotalSeconds, new TagList { { "tool", "database_view" }, { "outcome", "failure" } });
+            throw;
         }
     }
 

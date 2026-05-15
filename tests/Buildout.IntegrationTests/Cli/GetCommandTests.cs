@@ -10,6 +10,7 @@ using Buildout.Core.Markdown.Internal;
 using Buildout.IntegrationTests.Buildin;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
@@ -34,6 +35,7 @@ public sealed class GetCommandTests
         IBuildinClient client, bool styledStdout = false)
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new ParagraphConverter());
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new Heading1Converter());
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new Heading2Converter());
@@ -162,7 +164,8 @@ public sealed class GetCommandTests
             {
                 new PageMentionConverter(), new DatabaseMentionConverter(),
                 new UserMentionConverter(), new DateMentionConverter()
-            })));
+            })),
+            NullLogger<PageMarkdownRenderer>.Instance);
 
         var markdown = await coreRenderer.RenderAsync("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         renderer.Render(markdown);

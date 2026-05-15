@@ -3,6 +3,7 @@ using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Authoring.Properties;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -14,6 +15,7 @@ public class PageCreatorTests
     private readonly IBuildinClient _client = Substitute.For<IBuildinClient>();
     private readonly IMarkdownToBlocksParser _parser = Substitute.For<IMarkdownToBlocksParser>();
     private readonly IDatabasePropertyValueParser _propertyParser = Substitute.For<IDatabasePropertyValueParser>();
+    private readonly ILogger<PageCreator> _logger = Substitute.For<ILogger<PageCreator>>();
     private readonly ParentKindProbe _probe;
     private readonly PageCreator _sut;
 
@@ -22,7 +24,7 @@ public class PageCreatorTests
     public PageCreatorTests()
     {
         _probe = new ParentKindProbe(_client);
-        _sut = new PageCreator(_probe, _parser, _client, _propertyParser);
+        _sut = new PageCreator(_probe, _parser, _client, _propertyParser, _logger);
 
         // Default: parent resolves to a page
         _client.GetPageAsync(ParentPageId, Arg.Any<CancellationToken>())

@@ -1,5 +1,8 @@
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin.Errors;
+using Buildout.Core.Diagnostics;
 using Buildout.Core.Search;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
@@ -31,29 +34,44 @@ public sealed class SearchToolHandler
         CancellationToken cancellationToken = default)
 #pragma warning restore CA1707
     {
-        if (string.IsNullOrWhiteSpace(query))
-            throw new McpProtocolException("Query must be non-empty.", McpErrorCode.InvalidParams);
-
+        var sw = Stopwatch.StartNew();
         try
         {
-            var matches = await _service.SearchAsync(query, page_id, cancellationToken);
-            return _formatter.Format(matches);
+            if (string.IsNullOrWhiteSpace(query))
+                throw new McpProtocolException("Query must be non-empty.", McpErrorCode.InvalidParams);
+
+            string result;
+            try
+            {
+                var matches = await _service.SearchAsync(query, page_id, cancellationToken);
+                result = _formatter.Format(matches);
+            }
+            catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 404 })
+            {
+                throw new McpProtocolException($"Page not found: {page_id}", McpErrorCode.ResourceNotFound);
+            }
+            catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
+            {
+                throw new McpProtocolException($"Authentication error: {ex.Message}", McpErrorCode.InternalError);
+            }
+            catch (BuildinApiException ex) when (ex.Error is TransportError)
+            {
+                throw new McpProtocolException($"Transport error: {ex.Message}", McpErrorCode.InternalError);
+            }
+            catch (BuildinApiException ex)
+            {
+                throw new McpProtocolException($"Unexpected buildin error: {ex.Message}", McpErrorCode.InternalError);
+            }
+
+            BuildoutMeter.McpToolInvocationsTotal.Add(1, new TagList { { "tool", "search" }, { "outcome", "success" } });
+            BuildoutMeter.McpToolDuration.Record(sw.Elapsed.TotalSeconds, new TagList { { "tool", "search" }, { "outcome", "success" } });
+            return result;
         }
-        catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 404 })
+        catch (Exception)
         {
-            throw new McpProtocolException($"Page not found: {page_id}", McpErrorCode.ResourceNotFound);
-        }
-        catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
-        {
-            throw new McpProtocolException($"Authentication error: {ex.Message}", McpErrorCode.InternalError);
-        }
-        catch (BuildinApiException ex) when (ex.Error is TransportError)
-        {
-            throw new McpProtocolException($"Transport error: {ex.Message}", McpErrorCode.InternalError);
-        }
-        catch (BuildinApiException ex)
-        {
-            throw new McpProtocolException($"Unexpected buildin error: {ex.Message}", McpErrorCode.InternalError);
+            BuildoutMeter.McpToolInvocationsTotal.Add(1, new TagList { { "tool", "search" }, { "outcome", "failure" } });
+            BuildoutMeter.McpToolDuration.Record(sw.Elapsed.TotalSeconds, new TagList { { "tool", "search" }, { "outcome", "failure" } });
+            throw;
         }
     }
 }
