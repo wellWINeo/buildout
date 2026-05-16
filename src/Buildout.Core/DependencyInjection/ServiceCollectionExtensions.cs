@@ -10,6 +10,7 @@ using Buildout.Core.Markdown.Authoring.Properties;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
 using Buildout.Core.Markdown.Conversion.Mentions;
+using Buildout.Core.Markdown.Editing;
 using Buildout.Core.Markdown.Internal;
 using Buildout.Core.Search;
 using Buildout.Core.Search.Internal;
@@ -102,6 +103,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDatabasePropertyValueParser, DatabasePropertyValueParser>();
         services.AddSingleton<ParentKindProbe>();
         services.AddSingleton<IPageCreator, PageCreator>();
+
+        services.AddSingleton<IOptions<PageEditorOptions>>(static sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var options = new PageEditorOptions();
+            config.GetSection("PageEditor").Bind(options);
+            return Options.Create(options);
+        });
+        services.AddSingleton<IPageEditor, PageEditor>();
 
         return services;
     }

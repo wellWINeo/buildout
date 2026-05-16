@@ -1,20 +1,18 @@
+using System.Text.Json;
 using Buildout.Cli.Commands;
 using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin;
-using Buildout.Core.DatabaseViews;
-using Buildout.Core.DatabaseViews.Properties;
-using Buildout.Core.DatabaseViews.Rendering;
-using Buildout.Core.DatabaseViews.Styles;
 using Buildout.Core.Markdown;
+using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
-using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion.Mentions;
 using Buildout.Core.Markdown.Editing;
 using Buildout.Core.Markdown.Internal;
 using Buildout.IntegrationTests.Buildin;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 using Xunit;
@@ -22,14 +20,12 @@ using Xunit;
 namespace Buildout.IntegrationTests.Cli;
 
 [Collection("BuildinWireMock")]
-public sealed class GetCommandChildDatabaseTests
+public sealed class GetCommandEditingTests
 {
     private readonly BuildinWireMockFixture _fixture;
+    private const string PageId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
-    private const string PageId = "cccccccc-cccc-cccc-cccc-cccccccccccc";
-    private const string DatabaseId = "dddddddd-dddd-dddd-dddd-dddddddddddd";
-
-    public GetCommandChildDatabaseTests(BuildinWireMockFixture fixture)
+    public GetCommandEditingTests(BuildinWireMockFixture fixture)
     {
         _fixture = fixture;
         _fixture.Reset();
@@ -41,17 +37,6 @@ public sealed class GetCommandChildDatabaseTests
         services.AddLogging();
 
         services.AddSingleton(client);
-        services.AddSingleton<IPropertyValueFormatter, PropertyValueFormatter>();
-        services.AddSingleton<CellBudget>(static _ => new CellBudget(24, "…"));
-        services.AddSingleton<IReadOnlyDictionary<DatabaseViewStyle, IDatabaseViewStyle>>(
-            static _ => new Dictionary<DatabaseViewStyle, IDatabaseViewStyle>
-            {
-                [DatabaseViewStyle.Table] = new TableViewStyle()
-            });
-        services.AddSingleton<IDatabaseViewRenderer, DatabaseViewRenderer>();
-
-        services.AddSingleton<IBlockToMarkdownConverter>(static sp =>
-            new ChildDatabaseConverter(sp.GetRequiredService<IDatabaseViewRenderer>()));
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new ParagraphConverter());
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new Heading1Converter());
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new Heading2Converter());
@@ -72,9 +57,9 @@ public sealed class GetCommandChildDatabaseTests
         services.AddSingleton<MentionToMarkdownRegistry>();
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
-        services.AddSingleton<IPageEditor, PageEditor>();
-        services.AddSingleton<Microsoft.Extensions.Options.IOptions<PageEditorOptions>>(_ => Microsoft.Extensions.Options.Options.Create(new PageEditorOptions()));
         services.AddSingleton<IMarkdownToBlocksParser, MarkdownToBlocksParser>();
+        services.AddSingleton<IOptions<PageEditorOptions>>(static _ => Options.Create(new PageEditorOptions()));
+        services.AddSingleton<IPageEditor, PageEditor>();
 
         var testConsole = new TestConsole();
         services.AddSingleton<Spectre.Console.IAnsiConsole>(testConsole);
@@ -96,7 +81,7 @@ public sealed class GetCommandChildDatabaseTests
         return (app, testConsole);
     }
 
-    private void SetupFixtures()
+    private void SetupPageWithParagraph()
     {
         BuildinStubs.RegisterGetPage(_fixture.Server, new
         {
@@ -110,11 +95,10 @@ public sealed class GetCommandChildDatabaseTests
                 title = new
                 {
                     type = "title",
-                    title = new[] { new { type = "text", plain_text = "My Page" } }
+                    title = new[] { new { type = "text", plain_text = "Test Page" } }
                 }
             }
         });
-
         BuildinStubs.RegisterGetBlockChildren(_fixture.Server, new
         {
             @object = "list",
@@ -122,83 +106,122 @@ public sealed class GetCommandChildDatabaseTests
             {
                 new
                 {
-                    id = DatabaseId,
-                    type = "child_database",
+                    id = "b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1",
+                    type = "paragraph",
                     created_time = "2025-01-01T00:00:00Z",
                     has_children = false,
-                    data = new { title = "Embedded DB" }
+                    data = new { rich_text = new[] { new { type = "text", plain_text = "Hello world" } } }
                 }
             },
             has_more = false
         });
+    }
 
-        BuildinStubs.RegisterGetDatabase(_fixture.Server, DatabaseId, new
+    [Fact]
+    public async Task Editing_PrintJson_ReturnsStructuredTriple()
+    {
+        var client = _fixture.CreateClient();
+        SetupPageWithParagraph();
+        var (app, _) = CreateApp(client);
+
+        var originalOut = Console.Out;
+        using var outWriter = new StringWriter();
+        Console.SetOut(outWriter);
+
+        try
         {
-            id = DatabaseId,
-            created_time = "2025-01-15T10:30:00Z",
-            last_edited_time = "2025-01-16T14:00:00Z",
-            title = new[] { new { type = "text", plain_text = "Embedded DB" } },
-            properties = new
-            {
-                Name = new { type = "title", title = new { } }
-            }
-        });
+            var exitCode = await app.RunAsync(["get", PageId, "--editing", "--print", "json"]);
+            Assert.Equal(0, exitCode);
 
-        BuildinStubs.RegisterQueryDatabase(_fixture.Server, DatabaseId, new
+            var json = JsonDocument.Parse(outWriter.ToString());
+
+            Assert.True(json.RootElement.TryGetProperty("markdown", out _));
+            Assert.True(json.RootElement.TryGetProperty("revision", out var revision));
+            Assert.True(json.RootElement.TryGetProperty("unknown_block_ids", out var unknownIds));
+            Assert.Equal(JsonValueKind.Array, unknownIds.ValueKind);
+
+            var revisionStr = revision.GetString();
+            Assert.NotNull(revisionStr);
+            Assert.Equal(8, revisionStr.Length);
+        }
+        finally
         {
-            results = new object[]
-            {
-                new
-                {
-                    properties = new
-                    {
-                        Name = new { type = "title", title = new[] { new { type = "text", plain_text = "Item One" } } }
-                    }
-                }
-            },
-            has_more = false,
-            next_cursor = (string?)null
-        });
+            Console.SetOut(originalOut);
+        }
     }
 
     [Fact]
-    public async Task ChildDatabase_RenderedInline_ContainsDatabaseHeading()
+    public async Task Editing_DefaultMode_WritesAnchoredMarkdownToStdout()
     {
         var client = _fixture.CreateClient();
-        SetupFixtures();
+        SetupPageWithParagraph();
+        var (app, _) = CreateApp(client);
+
+        var originalOut = Console.Out;
+        using var outWriter = new StringWriter();
+        Console.SetOut(outWriter);
+
+        try
+        {
+            var exitCode = await app.RunAsync(["get", PageId, "--editing"]);
+            Assert.Equal(0, exitCode);
+            Assert.Contains("<!-- buildin:root -->", outWriter.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Fact]
+    public async Task Editing_DefaultMode_WritesRevisionToStderr()
+    {
+        var client = _fixture.CreateClient();
+        SetupPageWithParagraph();
+        var (app, _) = CreateApp(client);
+
+        var originalErr = Console.Error;
+        using var errWriter = new StringWriter();
+        Console.SetError(errWriter);
+
+        try
+        {
+            var exitCode = await app.RunAsync(["get", PageId, "--editing"]);
+            Assert.Equal(0, exitCode);
+
+            Assert.Matches(@"revision:\s+[0-9a-f]{8}", errWriter.ToString());
+        }
+        finally
+        {
+            Console.SetError(originalErr);
+        }
+    }
+
+    [Fact]
+    public async Task WithoutEditing_ProducesUnanchoredMarkdown()
+    {
+        var client = _fixture.CreateClient();
+        SetupPageWithParagraph();
         var (app, console) = CreateApp(client);
 
         var exitCode = await app.RunAsync(["get", PageId]);
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("## Embedded DB", console.Output);
+        Assert.DoesNotContain("<!-- buildin:", console.Output);
+        Assert.Contains("Test Page", console.Output);
+        Assert.Contains("Hello world", console.Output);
     }
 
     [Fact]
-    public async Task ChildDatabase_RenderedInline_ContainsTableContent()
+    public async Task PrintJson_WithoutEditing_Exits2()
     {
         var client = _fixture.CreateClient();
-        SetupFixtures();
+        SetupPageWithParagraph();
         var (app, console) = CreateApp(client);
 
-        var exitCode = await app.RunAsync(["get", PageId]);
+        var exitCode = await app.RunAsync(["get", PageId, "--print", "json"]);
 
-        Assert.Equal(0, exitCode);
-        Assert.Contains("## Embedded DB", console.Output);
-        Assert.Contains("(no rows)", console.Output);
-    }
-
-    [Fact]
-    public async Task ChildDatabase_PageTitle_StillRendered()
-    {
-        var client = _fixture.CreateClient();
-        SetupFixtures();
-        var (app, console) = CreateApp(client);
-
-        var exitCode = await app.RunAsync(["get", PageId]);
-
-        Assert.Equal(0, exitCode);
-        Assert.Contains("# My Page", console.Output);
+        Assert.Equal(2, exitCode);
     }
 
     private sealed class TypeRegistrar : ITypeRegistrar

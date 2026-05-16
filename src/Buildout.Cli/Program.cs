@@ -27,6 +27,7 @@ app.Configure(config =>
     config.AddCommand<CreateCommand>("create");
     config.AddCommand<GetCommand>("get");
     config.AddCommand<SearchCommand>("search");
+    config.AddCommand<UpdateCommand>("update");
     config.AddBranch<DbSettings>("db", db =>
     {
         db.AddCommand<DbViewCommand>("view");

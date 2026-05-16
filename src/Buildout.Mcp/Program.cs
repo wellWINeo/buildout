@@ -35,6 +35,8 @@ builder.Services.AddMcpServer()
     .WithResources<PageResourceHandler>()
     .WithTools<SearchToolHandler>()
     .WithTools<DatabaseViewToolHandler>()
-    .WithTools<CreatePageToolHandler>();
+    .WithTools<CreatePageToolHandler>()
+    .WithTools<GetPageMarkdownToolHandler>()
+    .WithTools<UpdatePageToolHandler>();
 
 await builder.Build().RunAsync();
