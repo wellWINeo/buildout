@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Active feature plan: [specs/007-observability/plan.md](./specs/007-observability/plan.md)
+Active feature plan: [specs/008-markdown-page-update/plan.md](./specs/008-markdown-page-update/plan.md)
 
 For technologies, project structure, shell commands, and other context, read
 that plan and its sibling artifacts (`research.md`, `data-model.md`,
