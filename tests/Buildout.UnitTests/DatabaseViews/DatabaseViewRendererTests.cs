@@ -5,6 +5,7 @@ using Buildout.Core.DatabaseViews;
 using Buildout.Core.DatabaseViews.Properties;
 using Buildout.Core.DatabaseViews.Rendering;
 using Buildout.Core.DatabaseViews.Styles;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -25,7 +26,7 @@ public sealed class DatabaseViewRendererTests
         _budget = new CellBudget(24, "\u2026");
         _styles = [];
 
-        _renderer = new DatabaseViewRenderer(_client, _formatter, _styles, _budget);
+        _renderer = new DatabaseViewRenderer(_client, _formatter, _styles, _budget, NullLogger<DatabaseViewRenderer>.Instance);
     }
 
     private static Database MakeDatabase(

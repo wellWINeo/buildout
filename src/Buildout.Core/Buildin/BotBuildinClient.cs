@@ -1,7 +1,12 @@
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Gen = Buildout.Core.Buildin.Generated.Models;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Kiota.Abstractions;
@@ -204,32 +209,55 @@ public sealed class BotBuildinClient : IBuildinClient
         });
     }
 
-    private static async Task<T> WrapAsync<T>(Func<Task<T>> action)
+    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates",
+        Justification = "Dynamic method names prevent compile-time LoggerMessage definitions")]
+    [SuppressMessage("Performance", "CA1873:Evaluate log message arguments eagerly",
+        Justification = "All arguments are cheap string variables — no actual evaluation cost")]
+    private async Task<T> WrapAsync<T>(Func<Task<T>> action, [CallerMemberName] string methodName = "")
     {
+        var sw = Stopwatch.StartNew();
         try
         {
-            return await action();
+            var result = await action();
+            sw.Stop();
+            _logger.LogDebug("API call {Method} completed with {Outcome}", methodName, "success");
+            BuildoutMeter.ApiCallsTotal.Add(1, new TagList { { "method", methodName }, { "outcome", "success" } });
+            BuildoutMeter.ApiCallDuration.Record(sw.Elapsed.TotalSeconds, new TagList { { "method", methodName }, { "outcome", "success" } });
+            return result;
         }
-        catch (BuildinApiException)
+        catch (BuildinApiException ex)
         {
+            sw.Stop();
+            var errorType = ex.Error switch
+            {
+                ApiError => "api",
+                TransportError => "transport",
+                _ => "unknown"
+            };
+            LogAndRecordApiFailure(methodName, sw, errorType);
             throw;
         }
         catch (HttpRequestException ex)
         {
+            sw.Stop();
+            LogAndRecordApiFailure(methodName, sw, "transport");
             throw new BuildinApiException(new TransportError(ex), ex);
         }
         catch (KiotaApiException ex)
         {
+            sw.Stop();
             var error = ex as Gen.Error;
             var buildinError = new ApiError(
                 error?.Status ?? ex.ResponseStatusCode,
                 error?.Code is not null ? GetEnumValue(error.Code) : null,
                 error?.Message ?? ex.Message,
                 string.Empty);
+            LogAndRecordApiFailure(methodName, sw, "api");
             throw new BuildinApiException(buildinError, ex);
         }
         catch (Exception ex)
         {
+            sw.Stop();
             if (ex.InnerException is KiotaApiException apiEx)
             {
                 var error = apiEx as Gen.Error;
@@ -238,14 +266,28 @@ public sealed class BotBuildinClient : IBuildinClient
                     error?.Code is not null ? GetEnumValue(error.Code) : null,
                     error?.Message ?? apiEx.Message,
                     string.Empty);
+                LogAndRecordApiFailure(methodName, sw, "api");
                 throw new BuildinApiException(buildinError, apiEx);
             }
             if (ex.InnerException is HttpRequestException httpEx)
             {
+                LogAndRecordApiFailure(methodName, sw, "transport");
                 throw new BuildinApiException(new TransportError(httpEx), httpEx);
             }
+            LogAndRecordApiFailure(methodName, sw, "unknown");
             throw new BuildinApiException(new UnknownError(0, string.Empty), ex);
         }
+    }
+
+    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates",
+        Justification = "Dynamic method names prevent compile-time LoggerMessage definitions")]
+    private void LogAndRecordApiFailure(string methodName, Stopwatch sw, string errorType)
+    {
+        _logger.LogError("API call {Method} failed with {Outcome} error_type {ErrorType}",
+            methodName, "failure", errorType);
+        var tags = new TagList { { "method", methodName }, { "outcome", "failure" }, { "error_type", errorType } };
+        BuildoutMeter.ApiCallsTotal.Add(1, tags);
+        BuildoutMeter.ApiCallDuration.Record(sw.Elapsed.TotalSeconds, tags);
     }
 
     private static UserMe MapUserMe(Gen.UserMe gen)

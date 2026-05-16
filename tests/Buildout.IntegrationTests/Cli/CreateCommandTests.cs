@@ -6,6 +6,7 @@ using Buildout.Core.Buildin;
 using Buildout.Core.DependencyInjection;
 using Buildout.IntegrationTests.Buildin;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 using Xunit;
@@ -61,6 +62,7 @@ public sealed class CreateCommandTests
     {
         var services = new ServiceCollection();
         services.AddBuildoutCore();
+        services.AddLogging();
         services.AddSingleton(client);
 
         var testConsole = new TestConsole();

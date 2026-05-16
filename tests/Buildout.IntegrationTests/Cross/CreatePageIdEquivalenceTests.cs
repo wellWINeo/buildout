@@ -59,6 +59,7 @@ public sealed class CreatePageIdEquivalenceTests
     {
         var services = new ServiceCollection();
         services.AddBuildoutCore();
+        services.AddLogging();
         services.AddSingleton(client);
 
         var testConsole = new TestConsole();

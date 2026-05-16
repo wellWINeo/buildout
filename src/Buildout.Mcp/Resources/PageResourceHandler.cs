@@ -1,5 +1,8 @@
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin.Errors;
+using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
@@ -28,25 +31,37 @@ public sealed class PageResourceHandler
     {
         try
         {
-            var markdown = await _renderer.RenderAsync(pageId, cancellationToken).ConfigureAwait(false);
-            return new TextResourceContents
+            TextResourceContents result;
+            try
             {
-                Uri = $"buildin://{pageId}",
-                MimeType = "text/markdown",
-                Text = markdown
-            };
+                var markdown = await _renderer.RenderAsync(pageId, cancellationToken).ConfigureAwait(false);
+                result = new TextResourceContents
+                {
+                    Uri = $"buildin://{pageId}",
+                    MimeType = "text/markdown",
+                    Text = markdown
+                };
+            }
+            catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 404 })
+            {
+                throw new McpProtocolException($"Page not found: {pageId}", McpErrorCode.ResourceNotFound);
+            }
+            catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
+            {
+                throw new McpProtocolException($"Authentication error: {ex.Message}", McpErrorCode.InternalError);
+            }
+            catch (BuildinApiException ex) when (ex.Error is TransportError)
+            {
+                throw new McpProtocolException($"Transport error: {ex.Message}", McpErrorCode.InternalError);
+            }
+
+            BuildoutMeter.McpResourceReadsTotal.Add(1, new TagList { { "outcome", "success" } });
+            return result;
         }
-        catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 404 })
+        catch (Exception)
         {
-            throw new McpProtocolException($"Page not found: {pageId}", McpErrorCode.ResourceNotFound);
-        }
-        catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
-        {
-            throw new McpProtocolException($"Authentication error: {ex.Message}", McpErrorCode.InternalError);
-        }
-        catch (BuildinApiException ex) when (ex.Error is TransportError)
-        {
-            throw new McpProtocolException($"Transport error: {ex.Message}", McpErrorCode.InternalError);
+            BuildoutMeter.McpResourceReadsTotal.Add(1, new TagList { { "outcome", "failure" } });
+            throw;
         }
     }
 }

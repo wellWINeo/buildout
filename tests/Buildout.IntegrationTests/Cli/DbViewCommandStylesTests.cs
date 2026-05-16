@@ -31,6 +31,7 @@ public sealed class DbViewCommandStylesTests
     private static (CommandApp app, TestConsole console) CreateApp(IBuildinClient client)
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(client);
         services.AddSingleton<IPropertyValueFormatter, PropertyValueFormatter>();
         services.AddSingleton<CellBudget>(static _ => new CellBudget(24, "…"));

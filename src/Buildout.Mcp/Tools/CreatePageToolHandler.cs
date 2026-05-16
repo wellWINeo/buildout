@@ -1,4 +1,7 @@
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown.Authoring;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -39,44 +42,58 @@ public sealed class CreatePageToolHandler
             Properties = properties,
         };
 
-        CreatePageOutcome outcome;
+        var sw = Stopwatch.StartNew();
         try
         {
-            outcome = await _creator.CreateAsync(input, cancellationToken);
+            CreatePageOutcome outcome;
+            try
+            {
+                outcome = await _creator.CreateAsync(input, cancellationToken);
+            }
+            catch (PartialCreationException ex)
+            {
+                throw new McpProtocolException(ex.Message, McpErrorCode.InternalError);
+            }
+
+            _ = outcome.FailureClass switch
+            {
+                FailureClass.Validation => throw new McpProtocolException(
+                    outcome.UnderlyingException?.Message ?? "Validation error.", McpErrorCode.InvalidParams),
+                FailureClass.NotFound => throw new McpProtocolException(
+                    $"Parent '{parent_id}' was not found as a page or a database.", McpErrorCode.ResourceNotFound),
+                FailureClass.Auth => throw new McpProtocolException(
+                    $"Authentication error: {outcome.UnderlyingException?.Message}", McpErrorCode.InternalError),
+                FailureClass.Transport => throw new McpProtocolException(
+                    $"Transport error: {outcome.UnderlyingException?.Message}", McpErrorCode.InternalError),
+                FailureClass.Unexpected => throw new McpProtocolException(
+                    $"Unexpected error: {outcome.UnderlyingException?.Message}", McpErrorCode.InternalError),
+                _ => (object?)null,
+            };
+
+            var resolvedTitle = outcome.ResolvedTitle ?? outcome.NewPageId;
+
+            var result = new CallToolResult
+            {
+                IsError = false,
+                Content =
+                [
+                    new ResourceLinkBlock
+                    {
+                        Uri = $"buildin://{outcome.NewPageId}",
+                        Name = resolvedTitle,
+                    },
+                ],
+            };
+
+            BuildoutMeter.McpToolInvocationsTotal.Add(1, new TagList { { "tool", "create_page" }, { "outcome", "success" } });
+            BuildoutMeter.McpToolDuration.Record(sw.Elapsed.TotalSeconds, new TagList { { "tool", "create_page" }, { "outcome", "success" } });
+            return result;
         }
-        catch (PartialCreationException ex)
+        catch (Exception)
         {
-            throw new McpProtocolException(ex.Message, McpErrorCode.InternalError);
+            BuildoutMeter.McpToolInvocationsTotal.Add(1, new TagList { { "tool", "create_page" }, { "outcome", "failure" } });
+            BuildoutMeter.McpToolDuration.Record(sw.Elapsed.TotalSeconds, new TagList { { "tool", "create_page" }, { "outcome", "failure" } });
+            throw;
         }
-
-        _ = outcome.FailureClass switch
-        {
-            FailureClass.Validation => throw new McpProtocolException(
-                outcome.UnderlyingException?.Message ?? "Validation error.", McpErrorCode.InvalidParams),
-            FailureClass.NotFound => throw new McpProtocolException(
-                $"Parent '{parent_id}' was not found as a page or a database.", McpErrorCode.ResourceNotFound),
-            FailureClass.Auth => throw new McpProtocolException(
-                $"Authentication error: {outcome.UnderlyingException?.Message}", McpErrorCode.InternalError),
-            FailureClass.Transport => throw new McpProtocolException(
-                $"Transport error: {outcome.UnderlyingException?.Message}", McpErrorCode.InternalError),
-            FailureClass.Unexpected => throw new McpProtocolException(
-                $"Unexpected error: {outcome.UnderlyingException?.Message}", McpErrorCode.InternalError),
-            _ => (object?)null,
-        };
-
-        var resolvedTitle = outcome.ResolvedTitle ?? outcome.NewPageId;
-
-        return new CallToolResult
-        {
-            IsError = false,
-            Content =
-            [
-                new ResourceLinkBlock
-                {
-                    Uri = $"buildin://{outcome.NewPageId}",
-                    Name = resolvedTitle,
-                },
-            ],
-        };
     }
 }

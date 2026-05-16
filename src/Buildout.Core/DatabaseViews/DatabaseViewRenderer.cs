@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Errors;
@@ -5,6 +8,8 @@ using Buildout.Core.Buildin.Models;
 using Buildout.Core.DatabaseViews.Properties;
 using Buildout.Core.DatabaseViews.Rendering;
 using Buildout.Core.DatabaseViews.Styles;
+using Buildout.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.DatabaseViews;
 
@@ -14,22 +19,28 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
     private readonly IPropertyValueFormatter _formatter;
     private readonly IReadOnlyDictionary<DatabaseViewStyle, IDatabaseViewStyle> _styles;
     private readonly CellBudget _budget;
+    private readonly ILogger<DatabaseViewRenderer> _logger;
 
     public DatabaseViewRenderer(
         IBuildinClient client,
         IPropertyValueFormatter formatter,
         IReadOnlyDictionary<DatabaseViewStyle, IDatabaseViewStyle> styles,
-        CellBudget budget)
+        CellBudget budget,
+        ILogger<DatabaseViewRenderer> logger)
     {
         _client = client;
         _formatter = formatter;
         _styles = styles;
         _budget = budget;
+        _logger = logger;
     }
 
+    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
     public async Task<string> RenderAsync(DatabaseViewRequest request, CancellationToken cancellationToken = default)
     {
         ValidateStatic(request);
+
+        using var recorder = OperationRecorder.Start(_logger, "database_view");
 
         var database = await _client.GetDatabaseAsync(request.DatabaseId, cancellationToken).ConfigureAwait(false);
 
@@ -43,7 +54,16 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
                 nameof(request.Style),
                 Enum.GetNames<DatabaseViewStyle>());
 
+        recorder.SetTag("database_id", request.DatabaseId);
+        recorder.SetTag("style", request.Style.ToString().ToLowerInvariant());
+        recorder.SetTag("row_count", rows.Count);
+
         var rendered = style.Render(database, rows, request, _formatter, _budget);
+
+        var styleStr = request.Style.ToString().ToLowerInvariant();
+        BuildoutMeter.DatabaseViewRendersTotal.Add(1, new TagList { { "style", styleStr } });
+
+        recorder.Succeed();
 
         var title = ExtractTitle(database);
         var header = DatabaseViewMetadataHeader.Build(title, request.Style, request.GroupByProperty, request.DateProperty, isInline: false);
@@ -132,10 +152,12 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
         }
     }
 
+    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
     private async Task<List<DatabaseRow>> PaginateRowsAsync(string databaseId, CancellationToken ct)
     {
         var rows = new List<DatabaseRow>();
         string? cursor = null;
+        var pageNumber = 1;
 
         do
         {
@@ -145,7 +167,11 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
             foreach (var props in result.Results)
                 rows.Add(new DatabaseRow(string.Empty, props));
 
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug("PaginateRows pagination_page={PageNumber} pagination_items={ItemCount}", pageNumber, result.Results.Count);
+
             cursor = result.HasMore ? result.NextCursor : null;
+            pageNumber++;
         }
         while (cursor is not null);
 

@@ -1,7 +1,10 @@
 using Buildout.Core.Buildin;
+using Buildout.Core.DatabaseViews;
 using Buildout.Core.DependencyInjection;
 using Buildout.Core.Markdown;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -14,6 +17,8 @@ public class DependencyInjectionTests
     {
         var services = new ServiceCollection();
         services.AddBuildoutCore();
+        services.AddSingleton<ILogger<PageMarkdownRenderer>>(NullLogger<PageMarkdownRenderer>.Instance);
+        services.AddSingleton<ILogger<DatabaseViewRenderer>>(NullLogger<DatabaseViewRenderer>.Instance);
         services.AddSingleton<IBuildinClient>(Substitute.For<IBuildinClient>());
 
         using var sp = services.BuildServiceProvider();

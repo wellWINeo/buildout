@@ -34,6 +34,7 @@ public sealed class DbViewCommandTests
         IBuildinClient client, bool styledStdout = false)
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(client);
         services.AddSingleton<IPropertyValueFormatter, PropertyValueFormatter>();
         services.AddSingleton<CellBudget>(static _ => new CellBudget(24, "…"));

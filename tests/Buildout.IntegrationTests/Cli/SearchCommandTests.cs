@@ -3,6 +3,7 @@ using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Search;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
@@ -19,6 +20,7 @@ public sealed class SearchCommandTests
         var formatter = new SearchResultFormatter();
 
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(service);
         services.AddSingleton<ISearchResultFormatter>(formatter);
 

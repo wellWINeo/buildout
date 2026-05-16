@@ -12,6 +12,7 @@ using Buildout.Core.Markdown.Conversion.Mentions;
 using Buildout.Core.Markdown.Internal;
 using Buildout.IntegrationTests.Buildin;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 using Xunit;
@@ -35,6 +36,7 @@ public sealed class GetCommandChildDatabaseTests
     private static (CommandApp app, TestConsole console) CreateApp(IBuildinClient client)
     {
         var services = new ServiceCollection();
+        services.AddLogging();
 
         services.AddSingleton(client);
         services.AddSingleton<IPropertyValueFormatter, PropertyValueFormatter>();

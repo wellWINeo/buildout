@@ -241,6 +241,7 @@ public sealed class SearchToolTests : IAsyncLifetime
         var formatter = new SearchResultFormatter();
 
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(service);
         services.AddSingleton<ISearchResultFormatter>(formatter);
 

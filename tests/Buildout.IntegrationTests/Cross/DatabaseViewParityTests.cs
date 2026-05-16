@@ -125,6 +125,7 @@ public sealed class DatabaseViewParityTests : IAsyncLifetime
     private (CommandApp app, TestConsole console) CreateCliApp()
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(_fixture.CreateClient());
         services.AddSingleton<CellBudget>(static _ => new CellBudget(24, "…"));
         services.AddSingleton<IPropertyValueFormatter, PropertyValueFormatter>();

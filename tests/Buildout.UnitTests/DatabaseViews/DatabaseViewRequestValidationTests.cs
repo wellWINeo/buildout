@@ -4,6 +4,7 @@ using Buildout.Core.DatabaseViews;
 using Buildout.Core.DatabaseViews.Properties;
 using Buildout.Core.DatabaseViews.Rendering;
 using Buildout.Core.DatabaseViews.Styles;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -22,7 +23,7 @@ public sealed class DatabaseViewRequestValidationTests
         {
             [DatabaseViewStyle.Table] = _tableStyle,
         };
-        return new DatabaseViewRenderer(_client, _formatter, styles, _budget);
+        return new DatabaseViewRenderer(_client, _formatter, styles, _budget, NullLogger<DatabaseViewRenderer>.Instance);
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public sealed class DatabaseViewRequestValidationTests
         {
             [DatabaseViewStyle.Board] = varStyle,
         };
-        var renderer = new DatabaseViewRenderer(_client, _formatter, styles, _budget);
+        var renderer = new DatabaseViewRenderer(_client, _formatter, styles, _budget, NullLogger<DatabaseViewRenderer>.Instance);
         var request = new DatabaseViewRequest("db-1", DatabaseViewStyle.Board, "Status", null);
 
         _client.GetDatabaseAsync(default!, default).ReturnsForAnyArgs(new Database

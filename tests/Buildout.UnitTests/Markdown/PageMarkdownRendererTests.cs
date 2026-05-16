@@ -5,6 +5,7 @@ using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
 using Buildout.Core.Markdown.Conversion.Mentions;
 using Buildout.Core.Markdown.Internal;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -37,7 +38,7 @@ public class PageMarkdownRendererTests
         var blockRegistry = new BlockToMarkdownRegistry(blockConverters);
         var mentionRegistry = new MentionToMarkdownRegistry(mentionConverters);
         var inlineRenderer = new InlineRenderer(mentionRegistry);
-        return new PageMarkdownRenderer(client, blockRegistry, inlineRenderer);
+        return new PageMarkdownRenderer(client, blockRegistry, inlineRenderer, Substitute.For<ILogger<PageMarkdownRenderer>>());
     }
 
     [Fact]
