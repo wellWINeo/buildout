@@ -81,7 +81,7 @@ public sealed class PatchApplicator
         BlockSubtreeWithAnchor[] tree,
         SearchReplaceOperation op)
     {
-        var md = SerializeTree(tree);
+        var md = AnchoredTreeSerializer.SerializeTree(tree);
         var idx = md.IndexOf(op.OldStr, StringComparison.Ordinal);
 
         if (idx < 0)
@@ -324,74 +324,5 @@ public sealed class PatchApplicator
     private static bool IsContainer(BlockSubtreeWithAnchor node)
     {
         return node.AnchorKind == AnchorKind.Root || node.Children.Count > 0;
-    }
-
-    private static string SerializeTree(IReadOnlyList<BlockSubtreeWithAnchor> nodes)
-    {
-        var sb = new StringBuilder();
-        foreach (var node in nodes)
-            SerializeNode(sb, node);
-        return sb.ToString();
-    }
-
-    private static void SerializeNode(StringBuilder sb, BlockSubtreeWithAnchor node)
-    {
-        if (node.AnchorKind == AnchorKind.Root)
-        {
-            sb.AppendLine("<!-- buildin:root -->");
-            sb.AppendLine();
-            foreach (var child in node.Children)
-                SerializeNode(sb, child);
-            return;
-        }
-
-        var block = node.Block?.Block;
-
-        if (node.AnchorKind == AnchorKind.Opaque && node.AnchorId is not null)
-            sb.Append("<!-- buildin:opaque:").Append(node.AnchorId).AppendLine(" -->");
-        else if (node.AnchorId is not null)
-            sb.Append("<!-- buildin:block:").Append(node.AnchorId).AppendLine(" -->");
-
-        switch (block)
-        {
-            case Heading1Block h:
-                sb.Append("# ").AppendLine(RenderInline(h.RichTextContent));
-                break;
-            case Heading2Block h:
-                sb.Append("## ").AppendLine(RenderInline(h.RichTextContent));
-                break;
-            case Heading3Block h:
-                sb.Append("### ").AppendLine(RenderInline(h.RichTextContent));
-                break;
-            case ParagraphBlock p:
-                sb.AppendLine(RenderInline(p.RichTextContent));
-                break;
-            case CodeBlock c:
-                sb.Append("```").AppendLine(c.Language ?? string.Empty);
-                sb.AppendLine(RenderInline(c.RichTextContent));
-                sb.AppendLine("```");
-                break;
-            case QuoteBlock q:
-                sb.Append("> ").AppendLine(RenderInline(q.RichTextContent));
-                break;
-            case DividerBlock:
-                sb.AppendLine("---");
-                break;
-        }
-
-        sb.AppendLine();
-
-        foreach (var child in node.Children)
-            SerializeNode(sb, child);
-    }
-
-    private static string RenderInline(IReadOnlyList<RichText>? items)
-    {
-        if (items is null or { Count: 0 })
-            return string.Empty;
-        var sb = new StringBuilder();
-        foreach (var item in items)
-            sb.Append(item.Content);
-        return sb.ToString();
     }
 }

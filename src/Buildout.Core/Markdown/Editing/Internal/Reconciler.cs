@@ -5,7 +5,7 @@ namespace Buildout.Core.Markdown.Editing.Internal;
 
 public abstract record WriteOp
 {
-    public sealed record Update(string AnchorId, BlockSubtreeWrite Block) : WriteOp;
+    public sealed record Update(string AnchorId, BlockSubtreeWrite Block, string? OriginalApiBlockType = null) : WriteOp;
     public sealed record Delete(string AnchorId) : WriteOp;
     public sealed record Append(string ParentId, BlockSubtreeWrite Block) : WriteOp;
 }
@@ -87,7 +87,7 @@ public static class Reconciler
                 lastOriginalIndex = original.SiblingIndex;
 
                 if (!ContentEquals(original.Node.Block, node.Block))
-                    ops.Add(new WriteOp.Update(node.AnchorId, node.Block!));
+                    ops.Add(new WriteOp.Update(node.AnchorId, node.Block!, original.Node.OriginalApiBlockType));
             }
 
             WalkPatched(node.Children, node.AnchorId, originalMap, seenAnchors, ops);

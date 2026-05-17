@@ -98,6 +98,7 @@ Write-direction sibling of feature 002's `BlockSubtree` (read) and feature 006's
 | `AnchorId` | `string?` | Block ID extracted from the preceding anchor comment; null for new blocks |
 | `AnchorKind` | `AnchorKind` | `Root`, `Block`, or `Opaque` |
 | `Block` | `BlockSubtreeWrite` | Block payload + children (reuses feature 006's write-direction type) |
+| `OriginalApiBlockType` | `string?` | Raw API type string from the block fetch (e.g. `"heading_1"`); null for new blocks. Used by `ToUpdateBlockRequest` to restore the canonical API type when the round-trip Markdown representation differs (e.g. `heading_1` renders as `## ` so the parser produces `Heading2Block`). |
 
 `AnchorKind.Root` is only used for the page-root sentinel at the top of the list (no
 `BlockSubtreeWrite` payload; children are the page's top-level blocks).

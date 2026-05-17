@@ -455,6 +455,72 @@ public sealed class PageEditorTests
             .DeleteBlockAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
+    private async Task<(AnchoredPageSnapshot snapshot, string pageId)> SetupHeading1PageAsync(
+        string headingId = "h1", string headingText = "Section")
+    {
+        var pageId = $"page-heading1-{headingId}";
+        var block = new Heading1Block
+        {
+            Id = headingId,
+            RichTextContent = [new RichText { Type = "text", Content = headingText }]
+        };
+
+        _client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new Page { Id = pageId });
+        _client.GetBlockChildrenAsync(pageId, Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
+            .Returns(new PaginatedList<Block> { Results = [block], HasMore = false });
+
+        return (await _sut.FetchForEditAsync(pageId), pageId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Heading1ContentEdit_SendsHeading1ApiType()
+    {
+        var (snapshot, pageId) = await SetupHeading1PageAsync("h1", "Section");
+
+        _client.UpdateBlockAsync(Arg.Any<string>(), Arg.Any<UpdateBlockRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new Heading2Block { Id = "h1" });
+
+        var input = new UpdatePageInput
+        {
+            PageId = pageId,
+            Revision = snapshot.Revision,
+            Operations = [new SearchReplaceOperation { OldStr = "Section", NewStr = "New Section" }]
+        };
+
+        await _sut.UpdateAsync(input);
+
+        await _client.Received(1)
+            .UpdateBlockAsync(
+                "h1",
+                Arg.Is<UpdateBlockRequest>(r => r.Type == "heading_1"),
+                Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReplaceBlock_Heading1WithParagraph_SendsParagraphType()
+    {
+        var (snapshot, pageId) = await SetupHeading1PageAsync("h1", "Section");
+
+        _client.UpdateBlockAsync(Arg.Any<string>(), Arg.Any<UpdateBlockRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ParagraphBlock { Id = "h1" });
+
+        var input = new UpdatePageInput
+        {
+            PageId = pageId,
+            Revision = snapshot.Revision,
+            Operations = [new ReplaceBlockOperation { Anchor = "h1", Markdown = "Normal paragraph text." }]
+        };
+
+        await _sut.UpdateAsync(input);
+
+        await _client.Received(1)
+            .UpdateBlockAsync(
+                "h1",
+                Arg.Is<UpdateBlockRequest>(r => r.Type == "paragraph"),
+                Arg.Any<CancellationToken>());
+    }
+
     private sealed class TestLogger : ILogger<PageEditor>
     {
         public List<LogEntry> Entries { get; } = [];

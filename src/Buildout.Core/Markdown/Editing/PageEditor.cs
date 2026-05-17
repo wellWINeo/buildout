@@ -109,10 +109,33 @@ public sealed class PageEditor : IPageEditor
                 throw new StaleRevisionException(currentRevision);
 
             var originalTree = AnchoredMarkdownParser.Parse(currentMarkdown).ToArray();
+
+            var apiTypes = new Dictionary<string, string>();
+            void CollectApiTypes(IReadOnlyList<BlockSubtree> nodes)
+            {
+                foreach (var n in nodes)
+                {
+                    if (n.Block.Id is not null)
+                        apiTypes[n.Block.Id] = n.Block.Type;
+                    CollectApiTypes(n.Children);
+                }
+            }
+            CollectApiTypes(roots);
+
+            BlockSubtreeWithAnchor PopulateType(BlockSubtreeWithAnchor node)
+            {
+                return node with
+                {
+                    OriginalApiBlockType = node.AnchorId is not null && apiTypes.TryGetValue(node.AnchorId, out var type) ? type : null,
+                    Children = node.Children.Select(PopulateType).ToArray()
+                };
+            }
+            originalTree = originalTree.Select(PopulateType).ToArray();
+
             var applicator = new PatchApplicator();
             var patchedTree = applicator.Apply(originalTree, input.Operations);
 
-            var patchedMarkdown = SerializeAnchoredTree(patchedTree);
+            var patchedMarkdown = AnchoredTreeSerializer.SerializeTree(patchedTree);
 
             CheckLargeDelete(originalTree, patchedTree, input);
 
@@ -230,7 +253,7 @@ public sealed class PageEditor : IPageEditor
                     case WriteOp.Update u:
                         await _client.UpdateBlockAsync(
                             u.AnchorId,
-                            ToUpdateBlockRequest(u.Block.Block),
+                            ToUpdateBlockRequest(u.Block.Block, u.OriginalApiBlockType),
                             cancellationToken).ConfigureAwait(false);
                         updatedBlocks++;
                         break;
@@ -267,26 +290,28 @@ public sealed class PageEditor : IPageEditor
         };
     }
 
-    // Known limitation: heading_1 blocks render as "## " (H2 in Markdig) in anchored Markdown,
-    // so AnchoredMarkdownParser produces Heading2Block for them. When a heading_1 block's content
-    // is edited, ToUpdateBlockRequest sends type "heading_2" to the API, silently demoting the block.
-    // Full fix: carry the original API block type through BlockSubtreeWithAnchor so it can be used here.
-    private static UpdateBlockRequest ToUpdateBlockRequest(Block block) => block switch
+    // heading_1 renders as "## " via Heading1Converter, so AnchoredMarkdownParser produces Heading2Block.
+    // Only restore "heading_1" when the updated block is still a Heading2Block (content-only edit);
+    // if replace_block changed it to a different type, honour the new type.
+    private static UpdateBlockRequest ToUpdateBlockRequest(Block block, string? originalApiBlockType)
     {
-        ParagraphBlock p => new UpdateBlockRequest { Type = p.Type, RichTextContent = p.RichTextContent },
-        Heading1Block h => new UpdateBlockRequest { Type = h.Type, RichTextContent = h.RichTextContent },
-        Heading2Block h => new UpdateBlockRequest { Type = h.Type, RichTextContent = h.RichTextContent },
-        Heading3Block h => new UpdateBlockRequest { Type = h.Type, RichTextContent = h.RichTextContent },
-        BulletedListItemBlock b => new UpdateBlockRequest { Type = b.Type, RichTextContent = b.RichTextContent },
-        NumberedListItemBlock n => new UpdateBlockRequest { Type = n.Type, RichTextContent = n.RichTextContent },
-        ToDoBlock t => new UpdateBlockRequest { Type = t.Type, RichTextContent = t.RichTextContent, Checked = t.Checked },
-        ToggleBlock t => new UpdateBlockRequest { Type = t.Type, RichTextContent = t.RichTextContent },
-        CodeBlock c => new UpdateBlockRequest { Type = c.Type, RichTextContent = c.RichTextContent, Language = c.Language },
-        QuoteBlock q => new UpdateBlockRequest { Type = q.Type, RichTextContent = q.RichTextContent },
-        ImageBlock i => new UpdateBlockRequest { Type = i.Type, Url = i.Url },
-        EmbedBlock e => new UpdateBlockRequest { Type = e.Type, Url = e.Url },
-        _ => new UpdateBlockRequest { Type = block.Type }
-    };
+        return block switch
+        {
+            ParagraphBlock p => new UpdateBlockRequest { Type = p.Type, RichTextContent = p.RichTextContent },
+            Heading1Block h => new UpdateBlockRequest { Type = h.Type, RichTextContent = h.RichTextContent },
+            Heading2Block h => new UpdateBlockRequest { Type = originalApiBlockType == "heading_1" ? "heading_1" : h.Type, RichTextContent = h.RichTextContent },
+            Heading3Block h => new UpdateBlockRequest { Type = h.Type, RichTextContent = h.RichTextContent },
+            BulletedListItemBlock b => new UpdateBlockRequest { Type = b.Type, RichTextContent = b.RichTextContent },
+            NumberedListItemBlock n => new UpdateBlockRequest { Type = n.Type, RichTextContent = n.RichTextContent },
+            ToDoBlock t => new UpdateBlockRequest { Type = t.Type, RichTextContent = t.RichTextContent, Checked = t.Checked },
+            ToggleBlock t => new UpdateBlockRequest { Type = t.Type, RichTextContent = t.RichTextContent },
+            CodeBlock c => new UpdateBlockRequest { Type = c.Type, RichTextContent = c.RichTextContent, Language = c.Language },
+            QuoteBlock q => new UpdateBlockRequest { Type = q.Type, RichTextContent = q.RichTextContent },
+            ImageBlock i => new UpdateBlockRequest { Type = i.Type, Url = i.Url },
+            EmbedBlock e => new UpdateBlockRequest { Type = e.Type, Url = e.Url },
+            _ => new UpdateBlockRequest { Type = block.Type }
+        };
+    }
 
     private static List<Block> FlattenSubtreeWrite(BlockSubtreeWrite write)
     {
@@ -294,73 +319,5 @@ public sealed class PageEditor : IPageEditor
         foreach (var child in write.Children)
             result.AddRange(FlattenSubtreeWrite(child));
         return result;
-    }
-
-    private static string SerializeAnchoredTree(IReadOnlyList<BlockSubtreeWithAnchor> nodes)
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var node in nodes)
-            SerializeAnchoredNode(sb, node);
-        return sb.ToString();
-    }
-
-    private static void SerializeAnchoredNode(System.Text.StringBuilder sb, BlockSubtreeWithAnchor node)
-    {
-        if (node.AnchorKind == AnchorKind.Root)
-        {
-            sb.AppendLine("<!-- buildin:root -->");
-            sb.AppendLine();
-            foreach (var child in node.Children)
-                SerializeAnchoredNode(sb, child);
-            return;
-        }
-
-        if (node.AnchorKind == AnchorKind.Opaque && node.AnchorId is not null)
-            sb.Append("<!-- buildin:opaque:").Append(node.AnchorId).AppendLine(" -->");
-        else if (node.AnchorId is not null)
-            sb.Append("<!-- buildin:block:").Append(node.AnchorId).AppendLine(" -->");
-
-        var block = node.Block?.Block;
-        switch (block)
-        {
-            case Heading1Block h:
-                sb.Append("# ").AppendLine(RenderInlineText(h.RichTextContent));
-                break;
-            case Heading2Block h:
-                sb.Append("## ").AppendLine(RenderInlineText(h.RichTextContent));
-                break;
-            case Heading3Block h:
-                sb.Append("### ").AppendLine(RenderInlineText(h.RichTextContent));
-                break;
-            case ParagraphBlock p:
-                sb.AppendLine(RenderInlineText(p.RichTextContent));
-                break;
-            case CodeBlock c:
-                sb.Append("```").AppendLine(c.Language ?? string.Empty);
-                sb.AppendLine(RenderInlineText(c.RichTextContent));
-                sb.AppendLine("```");
-                break;
-            case QuoteBlock q:
-                sb.Append("> ").AppendLine(RenderInlineText(q.RichTextContent));
-                break;
-            case DividerBlock:
-                sb.AppendLine("---");
-                break;
-        }
-
-        sb.AppendLine();
-
-        foreach (var child in node.Children)
-            SerializeAnchoredNode(sb, child);
-    }
-
-    private static string RenderInlineText(IReadOnlyList<RichText>? items)
-    {
-        if (items is null or { Count: 0 })
-            return string.Empty;
-        var sb = new System.Text.StringBuilder();
-        foreach (var item in items)
-            sb.Append(item.Content);
-        return sb.ToString();
     }
 }

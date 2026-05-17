@@ -7,5 +7,6 @@ public sealed record BlockSubtreeWithAnchor
     public string? AnchorId { get; init; }
     public required AnchorKind AnchorKind { get; init; }
     public BlockSubtreeWrite? Block { get; init; }
+    public string? OriginalApiBlockType { get; init; }
     public required IReadOnlyList<BlockSubtreeWithAnchor> Children { get; init; }
 }
