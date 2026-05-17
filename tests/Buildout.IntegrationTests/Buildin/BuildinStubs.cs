@@ -207,4 +207,34 @@ public static class BuildinStubs
                 .WithHeader("Content-Type", "application/json")
                 .WithBodyAsJson(new { message = "Internal server error" }));
     }
+
+    public static void RegisterUpdateBlock(WireMockServer server, string blockId, object updatedBlock)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/blocks/{blockId}").UsingPatch())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(updatedBlock));
+    }
+
+    public static void RegisterDeleteBlock(WireMockServer server, string blockId)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/blocks/{blockId}").UsingDelete())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { id = blockId }));
+    }
+
+    public static void RegisterUpdateBlockFailure(WireMockServer server, string blockId, int statusCode)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/blocks/{blockId}").UsingPatch())
+            .RespondWith(Response.Create()
+                .WithStatusCode(statusCode)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { object_value = "error", message = "Update failed" }));
+    }
 }

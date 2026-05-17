@@ -1,7 +1,7 @@
 # Metrics Registry: Observability — Logs & Metrics
 
 **Feature**: 007-observability
-**Date**: 2026-05-14
+**Date**: 2026-05-16
 
 This document is the single source of truth for all metric names, types, labels, and units. Any code emitting or consuming these metrics MUST reference this registry.
 
@@ -25,8 +25,9 @@ This document is the single source of truth for all metric names, types, labels,
 
 | Label | Type | Values |
 |-------|------|--------|
-| `operation` | `string` | `page_read`, `search`, `page_create`, `database_view` |
+| `operation` | `string` | `page_read`, `search`, `page_create`, `database_view`, `page_read_editing`, `page_update` |
 | `outcome` | `string` | `success`, `failure` |
+| `error_type` | `string` | `transport`, `api`, `unknown`, `patch.stale_revision`, `patch.ambiguous_match`, `patch.no_match`, `patch.unknown_anchor`, `patch.section_anchor_not_heading`, `patch.anchor_not_container`, `patch.reorder_not_supported`, `patch.unsupported_block_touched`, `patch.large_delete`, `patch.partial`, `` (empty for success) |
 
 ### buildout.operation.duration
 
@@ -40,8 +41,9 @@ This document is the single source of truth for all metric names, types, labels,
 
 | Label | Type | Values |
 |-------|------|--------|
-| `operation` | `string` | `page_read`, `search`, `page_create`, `database_view` |
+| `operation` | `string` | `page_read`, `search`, `page_create`, `database_view`, `page_read_editing`, `page_update` |
 | `outcome` | `string` | `success`, `failure` |
+| `error_type` | `string` | `transport`, `api`, `unknown`, `patch.stale_revision`, `patch.ambiguous_match`, `patch.no_match`, `patch.unknown_anchor`, `patch.section_anchor_not_heading`, `patch.anchor_not_container`, `patch.reorder_not_supported`, `patch.unsupported_block_touched`, `patch.large_delete`, `patch.partial`, `` (empty for success) |
 
 ### buildout.blocks.processed.total
 
@@ -54,7 +56,7 @@ This document is the single source of truth for all metric names, types, labels,
 
 | Label | Type | Values |
 |-------|------|--------|
-| `operation` | `string` | `page_read`, `page_create` |
+| `operation` | `string` | `page_read`, `page_create`, `page_read_editing` |
 
 ### buildout.search.results.total
 
@@ -138,7 +140,7 @@ This document is the single source of truth for all metric names, types, labels,
 
 | Label | Type | Values |
 |-------|------|--------|
-| `tool` | `string` | `search`, `database_view`, `create_page` |
+| `tool` | `string` | `search`, `database_view`, `create_page`, `get_page_markdown`, `update_page` |
 | `outcome` | `string` | `success`, `failure` |
 
 ### buildout.mcp.tool.duration
@@ -152,7 +154,7 @@ This document is the single source of truth for all metric names, types, labels,
 
 | Label | Type | Values |
 |-------|------|--------|
-| `tool` | `string` | `search`, `database_view`, `create_page` |
+| `tool` | `string` | `search`, `database_view`, `create_page`, `get_page_markdown`, `update_page` |
 | `outcome` | `string` | `success`, `failure` |
 
 ### buildout.mcp.resource.reads.total

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
@@ -35,7 +34,7 @@ public sealed class PageMarkdownRenderer : IPageMarkdownRenderer
         try
         {
             var page = await _client.GetPageAsync(pageId, cancellationToken).ConfigureAwait(false);
-            var roots = await FetchChildrenAsync(pageId, cancellationToken).ConfigureAwait(false);
+            var roots = await BlockTreeFetcher.FetchAsync(_client, _registry, pageId, _logger, cancellationToken).ConfigureAwait(false);
 
             var totalBlockCount = CountBlocks(roots);
             recorder.SetTag("page_id", pageId);
@@ -64,52 +63,6 @@ public sealed class PageMarkdownRenderer : IPageMarkdownRenderer
             recorder.Fail("unknown");
             throw;
         }
-    }
-
-    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
-    private async Task<List<BlockSubtree>> FetchChildrenAsync(string parentId, CancellationToken ct)
-    {
-        var result = new List<BlockSubtree>();
-        string? cursor = null;
-        var pageNumber = 1;
-
-        do
-        {
-            var query = cursor is not null
-                ? new BlockChildrenQuery { StartCursor = cursor }
-                : null;
-
-            var page = await _client
-                .GetBlockChildrenAsync(parentId, query, ct)
-                .ConfigureAwait(false);
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-                _logger.LogDebug("FetchChildren pagination_page={PageNumber} pagination_items={ItemsCount}", pageNumber, page.Results.Count);
-
-            foreach (var block in page.Results)
-            {
-                List<BlockSubtree>? children = null;
-
-                if (block.HasChildren)
-                {
-                    var converter = _registry.Resolve(block);
-                    if (converter is { RecurseChildren: true })
-                        children = await FetchChildrenAsync(block.Id, ct).ConfigureAwait(false);
-                }
-
-                result.Add(new BlockSubtree
-                {
-                    Block = block,
-                    Children = children ?? []
-                });
-            }
-
-            cursor = page.HasMore ? page.NextCursor : null;
-            pageNumber++;
-        }
-        while (cursor is not null);
-
-        return result;
     }
 
     private static int CountBlocks(IReadOnlyList<BlockSubtree> subtrees)

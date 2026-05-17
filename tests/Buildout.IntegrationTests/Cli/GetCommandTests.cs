@@ -6,6 +6,8 @@ using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
 using Buildout.Core.Markdown.Conversion.Mentions;
+using Buildout.Core.Markdown.Authoring;
+using Buildout.Core.Markdown.Editing;
 using Buildout.Core.Markdown.Internal;
 using Buildout.IntegrationTests.Buildin;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,6 +56,9 @@ public sealed class GetCommandTests
         services.AddSingleton<MentionToMarkdownRegistry>();
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
+        services.AddSingleton<IPageEditor, PageEditor>();
+        services.AddSingleton<IOptions<PageEditorOptions>>(_ => Options.Create(new PageEditorOptions()));
+        services.AddSingleton<IMarkdownToBlocksParser, MarkdownToBlocksParser>();
         services.AddSingleton(client);
 
         var testConsole = new TestConsole();

@@ -8,7 +8,9 @@ using Buildout.Core.DatabaseViews.Styles;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
+using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion.Mentions;
+using Buildout.Core.Markdown.Editing;
 using Buildout.Core.Markdown.Internal;
 using Buildout.IntegrationTests.Buildin;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,6 +70,9 @@ public sealed class GetCommandNoRegressionTests
         services.AddSingleton<MentionToMarkdownRegistry>();
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
+        services.AddSingleton<IPageEditor, PageEditor>();
+        services.AddSingleton<Microsoft.Extensions.Options.IOptions<PageEditorOptions>>(_ => Microsoft.Extensions.Options.Options.Create(new PageEditorOptions()));
+        services.AddSingleton<IMarkdownToBlocksParser, MarkdownToBlocksParser>();
 
         var testConsole = new TestConsole();
         services.AddSingleton<Spectre.Console.IAnsiConsole>(testConsole);
