@@ -93,7 +93,7 @@ internal static class McpSkBridge
 
         return Kernel.CreateBuilder()
             .AddOpenAIChatCompletion(
-                modelId: "google/gemma-4-31b-it:free",
+                modelId: "meta-llama/llama-4-scout",
                 apiKey: apiKey,
                 httpClient: httpClient)
             .Build();
