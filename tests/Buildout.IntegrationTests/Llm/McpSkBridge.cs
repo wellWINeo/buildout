@@ -93,7 +93,7 @@ internal static class McpSkBridge
 
         return Kernel.CreateBuilder()
             .AddOpenAIChatCompletion(
-                modelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                modelId: "google/gemma-4-31b-it:free",
                 apiKey: apiKey,
                 httpClient: httpClient)
             .Build();
