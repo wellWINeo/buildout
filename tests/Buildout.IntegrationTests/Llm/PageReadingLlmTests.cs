@@ -164,7 +164,7 @@ public sealed class PageReadingLlmTests
         };
 
         var result = await kernel.InvokePromptAsync(
-            "Which page describes Q3 revenue, and what was the total?",
+            "Use the search tool to find pages about Q3 revenue. Then use the read_buildin_page tool to read the matching page. Tell me the total revenue amount mentioned.",
             new KernelArguments(settings));
 
         _output.WriteLine($"LLM response: {result}");
@@ -191,7 +191,7 @@ public sealed class PageReadingLlmTests
         };
 
         var result = await kernel.InvokePromptAsync(
-            $"How many employees are in the Employee Directory database (id: {DbId}), and what are their names and departments?",
+            $"Use the database_view tool with database_id '{DbId}' to look up employees in the Employee Directory. Tell me their names and departments.",
             new KernelArguments(settings));
 
         _output.WriteLine($"LLM response: {result}");
