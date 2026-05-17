@@ -185,7 +185,7 @@ public sealed class PageEditor : IPageEditor
             recorder.SetTag("new_blocks", summary.NewBlocks);
             recorder.Succeed();
 
-            return summary with { NewRevision = newRevision, PostEditMarkdown = patchedMarkdown, PreservedBlocks = preservedBlocks };
+            return summary with { NewRevision = newRevision, PostEditMarkdown = input.DryRun ? patchedMarkdown : null, PreservedBlocks = preservedBlocks };
         }
         catch (PatchRejectedException ex)
         {
@@ -262,20 +262,14 @@ public sealed class PageEditor : IPageEditor
                         deletedBlocks++;
                         break;
                     case WriteOp.Append a:
-                        await _client.AppendBlockChildrenAsync(
-                            a.ParentId,
-                            new AppendBlockChildrenRequest
-                            {
-                                Children = FlattenSubtreeWrite(a.Block)
-                            },
-                            cancellationToken).ConfigureAwait(false);
+                        await AppendSubtreeAsync(a.ParentId, a.Block, cancellationToken).ConfigureAwait(false);
                         newBlocks++;
                         break;
                 }
             }
             catch (Exception ex) when (ex is not PatchRejectedException)
             {
-                throw new PartialPatchException("partial", i, ex);
+                throw new PartialPatchException("", i, ex);
             }
         }
 
@@ -313,11 +307,18 @@ public sealed class PageEditor : IPageEditor
         };
     }
 
-    private static List<Block> FlattenSubtreeWrite(BlockSubtreeWrite write)
+    private async Task AppendSubtreeAsync(string parentId, BlockSubtreeWrite subtree, CancellationToken ct)
     {
-        var result = new List<Block> { write.Block };
-        foreach (var child in write.Children)
-            result.AddRange(FlattenSubtreeWrite(child));
-        return result;
+        var result = await _client.AppendBlockChildrenAsync(
+            parentId,
+            new AppendBlockChildrenRequest { Children = [subtree.Block] },
+            ct).ConfigureAwait(false);
+
+        if (subtree.Children.Count > 0 && result.Results.Count > 0)
+        {
+            var newBlockId = result.Results[0].Id;
+            foreach (var child in subtree.Children)
+                await AppendSubtreeAsync(newBlockId, child, ct);
+        }
     }
 }

@@ -93,6 +93,7 @@ public sealed class PageEditorTests
         {
             PageId = pageId,
             Revision = snapshot.Revision,
+            DryRun = true,
             Operations =
             [
                 new SearchReplaceOperation { OldStr = "Hello", NewStr = "Hello World" },

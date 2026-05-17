@@ -45,6 +45,15 @@ internal static class AnchoredTreeSerializer
             case ParagraphBlock p:
                 sb.AppendLine(RenderInlineText(p.RichTextContent));
                 break;
+            case BulletedListItemBlock b:
+                sb.Append("- ").AppendLine(RenderInlineText(b.RichTextContent));
+                break;
+            case NumberedListItemBlock n:
+                sb.Append("1. ").AppendLine(RenderInlineText(n.RichTextContent));
+                break;
+            case ToDoBlock t:
+                sb.Append("- [").Append(t.Checked == true ? "x" : " ").Append("] ").AppendLine(RenderInlineText(t.RichTextContent));
+                break;
             case CodeBlock c:
                 sb.Append("```").AppendLine(c.Language ?? string.Empty);
                 sb.AppendLine(RenderInlineText(c.RichTextContent));

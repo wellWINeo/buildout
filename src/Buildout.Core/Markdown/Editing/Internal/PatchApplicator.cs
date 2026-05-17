@@ -323,6 +323,15 @@ public sealed class PatchApplicator
 
     private static bool IsContainer(BlockSubtreeWithAnchor node)
     {
-        return node.AnchorKind == AnchorKind.Root || node.Children.Count > 0;
+        if (node.AnchorKind == AnchorKind.Root)
+            return true;
+
+        if (node.Block?.Block is BulletedListItemBlock
+            or NumberedListItemBlock
+            or ToDoBlock
+            or QuoteBlock)
+            return true;
+
+        return node.Children.Count > 0;
     }
 }
