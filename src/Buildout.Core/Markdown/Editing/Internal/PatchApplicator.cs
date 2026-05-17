@@ -89,7 +89,16 @@ public sealed class PatchApplicator
 
         var second = md.IndexOf(op.OldStr, idx + op.OldStr.Length, StringComparison.Ordinal);
         if (second >= 0)
-            throw new AmbiguousMatchException(op.OldStr, 2);
+        {
+            var count = 2;
+            var pos = second + op.OldStr.Length;
+            while (md.IndexOf(op.OldStr, pos, StringComparison.Ordinal) is >= 0 and var next)
+            {
+                count++;
+                pos = next + op.OldStr.Length;
+            }
+            throw new AmbiguousMatchException(op.OldStr, count);
+        }
 
         var replaced = string.Concat(
             md.AsSpan(0, idx),

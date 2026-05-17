@@ -148,3 +148,18 @@ input: { "page_id": "<id>" }
 The anchor `<!-- buildin:block:abc -->` is still present in the new snapshot (the block ID
 was preserved because only its payload changed, not its position). The new revision
 (`2b3c4d5e`) replaces the old one for the next edit cycle.
+
+---
+
+## Known Limitations
+
+**`heading_1` block type demotion on content edit**
+
+buildin `heading_1` blocks render as `## ` (two hashes) in anchored Markdown because the
+renderer treats them as page-level section headings at H2 depth. When you edit the *content*
+of a `heading_1` block via any patch operation, the block is silently updated to `heading_2`
+type in the API. This does not affect `heading_2` or `heading_3` blocks.
+
+Workaround: avoid editing the text of `heading_1` blocks via patch operations until this
+limitation is resolved. Appending new content after a `heading_1` block is safe; only
+operations that trigger an `UpdateBlock` call on the heading itself are affected.

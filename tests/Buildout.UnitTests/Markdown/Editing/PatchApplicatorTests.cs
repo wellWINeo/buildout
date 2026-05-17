@@ -174,6 +174,22 @@ public class PatchApplicatorTests
     }
 
     [Fact]
+    public void SearchReplace_ThreeOccurrences_AmbiguousMatchExceptionMatchCountIsThree()
+    {
+        var tree = SingleRoot(
+            Block("a", MakeParagraph("foo bar")),
+            Block("b", MakeParagraph("foo baz")),
+            Block("c", MakeParagraph("foo qux")));
+
+        var op = new SearchReplaceOperation { OldStr = "foo", NewStr = "replacement" };
+
+        var ex = Assert.Throws<AmbiguousMatchException>(() => _sut.Apply(tree, [op]));
+
+        Assert.True((int)ex.Details!["match_count"] > 2,
+            $"Expected match_count > 2 but was {ex.Details!["match_count"]}");
+    }
+
+    [Fact]
     public void AppendSection_HappyPath_AppendsToContainer()
     {
         var tree = SingleRoot(

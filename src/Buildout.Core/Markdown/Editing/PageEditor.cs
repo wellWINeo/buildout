@@ -5,6 +5,7 @@ using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Editing.Internal;
 using Buildout.Core.Markdown.Internal;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -49,7 +50,8 @@ public sealed class PageEditor : IPageEditor
         using var recorder = OperationRecorder.Start(_logger, "page_read_editing");
         try
         {
-            var page = await _client.GetPageAsync(pageId, cancellationToken).ConfigureAwait(false);
+            // Validates page exists and is accessible (triggers 404/403 before the expensive tree fetch).
+            _ = await _client.GetPageAsync(pageId, cancellationToken).ConfigureAwait(false);
             var roots = await FetchChildrenAsync(pageId, cancellationToken).ConfigureAwait(false);
 
             var (markdown, unknownBlockIds) = _anchoredRenderer.Render(roots);
@@ -73,50 +75,8 @@ public sealed class PageEditor : IPageEditor
         }
     }
 
-    private async Task<List<BlockSubtree>> FetchChildrenAsync(string parentId, CancellationToken ct)
-    {
-        var result = new List<BlockSubtree>();
-        string? cursor = null;
-        var pageNumber = 1;
-
-        do
-        {
-            var query = cursor is not null
-                ? new BlockChildrenQuery { StartCursor = cursor }
-                : null;
-
-            var page = await _client
-                .GetBlockChildrenAsync(parentId, query, ct)
-                .ConfigureAwait(false);
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-                _logger.LogDebug("FetchChildren pagination_page={PageNumber} pagination_items={ItemsCount}", pageNumber, page.Results.Count);
-
-            foreach (var block in page.Results)
-            {
-                List<BlockSubtree>? children = null;
-
-                if (block.HasChildren)
-                {
-                    var converter = _registry.Resolve(block);
-                    if (converter is { RecurseChildren: true })
-                        children = await FetchChildrenAsync(block.Id, ct).ConfigureAwait(false);
-                }
-
-                result.Add(new BlockSubtree
-                {
-                    Block = block,
-                    Children = children ?? []
-                });
-            }
-
-            cursor = page.HasMore ? page.NextCursor : null;
-            pageNumber++;
-        }
-        while (cursor is not null);
-
-        return result;
-    }
+    private Task<List<BlockSubtree>> FetchChildrenAsync(string parentId, CancellationToken ct)
+        => BlockTreeFetcher.FetchAsync(_client, _registry, parentId, _logger, ct);
 
     private static int CountBlocks(IReadOnlyList<BlockSubtree> subtrees)
     {
@@ -138,7 +98,8 @@ public sealed class PageEditor : IPageEditor
         {
             ValidateInput(input);
 
-            var page = await _client.GetPageAsync(input.PageId, cancellationToken).ConfigureAwait(false);
+            // Validates page exists and is accessible (triggers 404/403 before the expensive tree fetch).
+            _ = await _client.GetPageAsync(input.PageId, cancellationToken).ConfigureAwait(false);
             var roots = await FetchChildrenAsync(input.PageId, cancellationToken).ConfigureAwait(false);
 
             var (currentMarkdown, _) = _anchoredRenderer.Render(roots);
@@ -163,6 +124,11 @@ public sealed class PageEditor : IPageEditor
                 var dryUpdated = dryWriteOps.OfType<WriteOp.Update>().Count();
                 var dryDeleted = dryWriteOps.OfType<WriteOp.Delete>().Count();
                 var dryNew = dryWriteOps.OfType<WriteOp.Append>().Count();
+                var dryPreserved = CollectBlockAnchorIds(originalTree).Count - dryUpdated - dryDeleted;
+
+                BuildoutMeter.BlocksProcessedTotal.Add(
+                    dryPreserved + dryUpdated + dryDeleted + dryNew,
+                    new TagList { { "operation", "page_update" } });
 
                 recorder.SetTag("page_id", input.PageId);
                 recorder.SetTag("dry_run", true);
@@ -170,7 +136,7 @@ public sealed class PageEditor : IPageEditor
 
                 return new ReconciliationSummary
                 {
-                    PreservedBlocks = 0,
+                    PreservedBlocks = dryPreserved,
                     UpdatedBlocks = dryUpdated,
                     NewBlocks = dryNew,
                     DeletedBlocks = dryDeleted,
@@ -184,13 +150,19 @@ public sealed class PageEditor : IPageEditor
 
             var summary = await ExecuteWriteOpsAsync(writeOps, input.PageId, cancellationToken).ConfigureAwait(false);
 
+            var preservedBlocks = CollectBlockAnchorIds(originalTree).Count - summary.UpdatedBlocks - summary.DeletedBlocks;
+
+            BuildoutMeter.BlocksProcessedTotal.Add(
+                preservedBlocks + summary.UpdatedBlocks + summary.DeletedBlocks + summary.NewBlocks,
+                new TagList { { "operation", "page_update" } });
+
             recorder.SetTag("page_id", input.PageId);
             recorder.SetTag("updated_blocks", summary.UpdatedBlocks);
             recorder.SetTag("deleted_blocks", summary.DeletedBlocks);
             recorder.SetTag("new_blocks", summary.NewBlocks);
             recorder.Succeed();
 
-            return summary with { NewRevision = newRevision, PostEditMarkdown = patchedMarkdown };
+            return summary with { NewRevision = newRevision, PostEditMarkdown = patchedMarkdown, PreservedBlocks = preservedBlocks };
         }
         catch (PatchRejectedException ex)
         {
@@ -295,6 +267,10 @@ public sealed class PageEditor : IPageEditor
         };
     }
 
+    // Known limitation: heading_1 blocks render as "## " (H2 in Markdig) in anchored Markdown,
+    // so AnchoredMarkdownParser produces Heading2Block for them. When a heading_1 block's content
+    // is edited, ToUpdateBlockRequest sends type "heading_2" to the API, silently demoting the block.
+    // Full fix: carry the original API block type through BlockSubtreeWithAnchor so it can be used here.
     private static UpdateBlockRequest ToUpdateBlockRequest(Block block) => block switch
     {
         ParagraphBlock p => new UpdateBlockRequest { Type = p.Type, RichTextContent = p.RichTextContent },

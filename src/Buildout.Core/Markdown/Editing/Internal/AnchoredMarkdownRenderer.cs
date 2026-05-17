@@ -1,11 +1,9 @@
-using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Internal;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Buildout.Core.Markdown.Editing.Internal;
 
-public sealed class AnchoredMarkdownRenderer
+internal sealed class AnchoredMarkdownRenderer
 {
     private readonly IInlineRenderer _inlineRenderer;
     private readonly BlockToMarkdownRegistry _registry;
@@ -18,8 +16,6 @@ public sealed class AnchoredMarkdownRenderer
 
     public (string Markdown, IReadOnlyList<string> UnknownBlockIds) Render(IReadOnlyList<BlockSubtree> tree)
     {
-        using var recorder = OperationRecorder.Start(NullLogger.Instance, "page_read_editing");
-
         var writer = new MarkdownWriter();
         var unknownIds = new List<string>();
 
@@ -29,8 +25,6 @@ public sealed class AnchoredMarkdownRenderer
         var ctx = new AnchoredRenderContext(writer, _inlineRenderer, _registry, 0, 0, unknownIds);
         foreach (var subtree in tree)
             ctx.WriteBlockSubtree(subtree);
-
-        recorder.Succeed();
 
         return (writer.ToString(), unknownIds);
     }

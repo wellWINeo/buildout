@@ -50,7 +50,7 @@ public sealed class GetCommand : AsyncCommand<GetCommand.Settings>
         {
             if (settings.PrintMode == "json" && !settings.Editing)
             {
-                await Console.Error.WriteLineAsync("—print json requires --editing");
+                await Console.Error.WriteLineAsync("--print json requires --editing");
                 return 2;
             }
 

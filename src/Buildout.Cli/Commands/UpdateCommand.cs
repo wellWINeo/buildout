@@ -166,6 +166,9 @@ public sealed class UpdateCommand : AsyncCommand<UpdateSettings>
                 sb.Append(buffer, 0, read);
             }
 
+            if (total >= limit)
+                throw new InvalidOperationException($"Stdin input exceeded the {limit / (1024 * 1024)} MB limit and was truncated; pipe a smaller ops JSON document.");
+
             return sb.ToString();
         }
 
