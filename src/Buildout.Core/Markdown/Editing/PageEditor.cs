@@ -185,7 +185,7 @@ public sealed class PageEditor : IPageEditor
             recorder.SetTag("new_blocks", summary.NewBlocks);
             recorder.Succeed();
 
-            return summary with { NewRevision = newRevision, PostEditMarkdown = input.DryRun ? patchedMarkdown : null, PreservedBlocks = preservedBlocks };
+            return summary with { NewRevision = newRevision, PostEditMarkdown = null, PreservedBlocks = preservedBlocks };
         }
         catch (PatchRejectedException ex)
         {
@@ -262,7 +262,8 @@ public sealed class PageEditor : IPageEditor
                         deletedBlocks++;
                         break;
                     case WriteOp.Append a:
-                        await AppendSubtreeAsync(a.ParentId, a.Block, cancellationToken).ConfigureAwait(false);
+                        var parentId = a.ParentId == "root" ? pageId : a.ParentId;
+                        await AppendSubtreeAsync(parentId, a.Block, cancellationToken).ConfigureAwait(false);
                         newBlocks++;
                         break;
                 }
