@@ -194,10 +194,9 @@ public sealed class CreatePageRoundTripWithCheapLlmTests : IAsyncLifetime
     public async Task LlmCanCreatePageAndReadItBack()
     {
         var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
-        if (string.IsNullOrWhiteSpace(apiKey))
-            return;
+        Assert.False(string.IsNullOrWhiteSpace(apiKey), "OPENROUTER_API_KEY environment variable is not set.");
 
-        var kernel = McpSkBridge.CreateOpenRouterKernel(apiKey);
+        var kernel = McpSkBridge.CreateOpenRouterKernel(apiKey!);
         var plugin = await McpSkBridge.CreatePluginFromMcpToolsAsync(_mcpClient);
         kernel.Plugins.Add(plugin);
 

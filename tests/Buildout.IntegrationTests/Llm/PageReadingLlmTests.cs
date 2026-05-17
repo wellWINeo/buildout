@@ -21,8 +21,12 @@ public sealed class PageReadingLlmTests
         _fixture.Reset();
     }
 
-    private static string? GetApiKey()
-        => Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
+    private static string GetApiKey()
+    {
+        var key = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
+        Assert.False(string.IsNullOrWhiteSpace(key), "OPENROUTER_API_KEY environment variable is not set.");
+        return key!;
+    }
 
     private void SetupSearchAndPageStubs()
     {
@@ -145,8 +149,6 @@ public sealed class PageReadingLlmTests
     public async Task LlmCanSearchAndReadPage()
     {
         var apiKey = GetApiKey();
-        if (string.IsNullOrWhiteSpace(apiKey))
-            return;
 
         SetupSearchAndPageStubs();
 
@@ -174,8 +176,6 @@ public sealed class PageReadingLlmTests
     public async Task LlmCanQueryDatabaseView()
     {
         var apiKey = GetApiKey();
-        if (string.IsNullOrWhiteSpace(apiKey))
-            return;
 
         SetupDatabaseStubs();
 
@@ -207,8 +207,6 @@ public sealed class PageReadingLlmTests
     public async Task LlmCanHandleToolError()
     {
         var apiKey = GetApiKey();
-        if (string.IsNullOrWhiteSpace(apiKey))
-            return;
 
         BuildinStubs.RegisterSearchPages(_fixture.Server, new
         {
