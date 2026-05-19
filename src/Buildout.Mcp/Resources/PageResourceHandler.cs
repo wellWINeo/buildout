@@ -54,6 +54,10 @@ public sealed class PageResourceHandler
             {
                 throw new McpProtocolException($"Transport error: {ex.Message}", McpErrorCode.InternalError);
             }
+            catch (BuildinApiException ex)
+            {
+                throw new McpProtocolException($"Buildin error: {ex.Message}", McpErrorCode.InternalError);
+            }
 
             BuildoutMeter.McpResourceReadsTotal.Add(1, new TagList { { "outcome", "success" } });
             return result;

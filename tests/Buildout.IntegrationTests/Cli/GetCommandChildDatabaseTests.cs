@@ -185,7 +185,7 @@ public sealed class GetCommandChildDatabaseTests
 
         Assert.Equal(0, exitCode);
         Assert.Contains("## Embedded DB", console.Output);
-        Assert.Contains("(no rows)", console.Output);
+        Assert.Contains("Item One", console.Output);
     }
 
     [Fact]
