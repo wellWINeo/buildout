@@ -50,6 +50,8 @@ public static class ServiceCollectionExtensions
             };
         });
 
+        services.AddSingleton<IBuildinClient, BotBuildinClient>();
+
         return services;
     }
 
