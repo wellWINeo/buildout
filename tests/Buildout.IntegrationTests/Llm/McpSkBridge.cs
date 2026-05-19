@@ -1,60 +1,34 @@
-using System.IO.Pipelines;
-using Buildout.Core.Buildin;
-using Buildout.Core.DependencyInjection;
 using Buildout.IntegrationTests.Buildin;
-using Buildout.Mcp.Resources;
-using Buildout.Mcp.Tools;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 
 namespace Buildout.IntegrationTests.Llm;
 
 internal static class McpSkBridge
 {
-    public static async Task<McpTestHarness> CreateHarnessAsync(
-        BuildinWireMockFixture fixture,
-        bool includeDatabaseView = false)
+    public static async Task<McpTestHarness> CreateHarnessAsync(BuildinWireMockFixture fixture)
     {
-        var buildinClient = fixture.CreateClient();
-        var services = new ServiceCollection();
-        services.AddSingleton<IBuildinClient>(buildinClient);
-        services.AddBuildoutCore();
-        services.AddLogging(b => b.SetMinimumLevel(LogLevel.Debug));
+        var mcpExe = FindMcpServerExecutable();
 
-        var mcpBuilder = services.AddMcpServer()
-            .WithResources<PageResourceHandler>()
-            .WithTools<SearchToolHandler>();
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Command = mcpExe,
+            Arguments = [],
+            EnvironmentVariables = new Dictionary<string, string?>
+            {
+                ["Buildin__BaseUrl"] = fixture.BaseUrl,
+                ["Buildin__BotToken"] = "test-token",
+                ["Buildin__UnsafeAllowInsecure"] = "true",
+            },
+            ShutdownTimeout = TimeSpan.FromSeconds(5),
+        });
 
-        if (includeDatabaseView)
-            mcpBuilder.WithTools<DatabaseViewToolHandler>();
+        var lf = LoggerFactory.Create(b => b.SetMinimumLevel(LogLevel.Debug));
+        var client = await McpClient.CreateAsync(transport, new McpClientOptions(), lf);
 
-        var sp = services.BuildServiceProvider();
-
-        var options = sp.GetRequiredService<IOptions<McpServerOptions>>().Value;
-        var lf = sp.GetRequiredService<ILoggerFactory>();
-
-        var c2s = new Pipe();
-        var s2c = new Pipe();
-
-        var server = McpServer.Create(
-            new StreamServerTransport(c2s.Reader.AsStream(), s2c.Writer.AsStream()),
-            options,
-            lf,
-            sp);
-
-        _ = server.RunAsync();
-
-        var mcpClient = await McpClient.CreateAsync(
-            new StreamClientTransport(c2s.Writer.AsStream(), s2c.Reader.AsStream()),
-            new McpClientOptions(),
-            lf);
-
-        return new McpTestHarness(sp, server, mcpClient, c2s, s2c);
+        return new McpTestHarness(client);
     }
 
     public static async Task<KernelPlugin> CreatePluginFromMcpToolsAsync(
@@ -98,34 +72,40 @@ internal static class McpSkBridge
                 httpClient: httpClient)
             .Build();
     }
+
+    private static string FindMcpServerExecutable()
+    {
+        var assemblyDir = AppContext.BaseDirectory;
+        var repoRoot = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", "..", "..", ".."));
+        var candidates = new[]
+        {
+            Path.Combine(repoRoot, "src", "Buildout.Mcp", "bin", "Release", "net10.0", "Buildout.Mcp"),
+            Path.Combine(repoRoot, "src", "Buildout.Mcp", "bin", "Debug", "net10.0", "Buildout.Mcp"),
+        };
+
+        foreach (var path in candidates)
+        {
+            if (File.Exists(path))
+                return path;
+        }
+
+        throw new FileNotFoundException(
+            $"MCP server executable not found. Searched:\n{string.Join("\n", candidates)}\n" +
+            "Build the MCP project first: dotnet build src/Buildout.Mcp -c Release");
+    }
 }
 
 internal sealed class McpTestHarness : IAsyncDisposable
 {
-    public ServiceProvider ServiceProvider { get; }
-    public McpServer Server { get; }
     public McpClient Client { get; }
 
-    private readonly Pipe _c2s;
-    private readonly Pipe _s2c;
-
-    public McpTestHarness(ServiceProvider sp, McpServer server, McpClient client, Pipe c2s, Pipe s2c)
+    public McpTestHarness(McpClient client)
     {
-        ServiceProvider = sp;
-        Server = server;
         Client = client;
-        _c2s = c2s;
-        _s2c = s2c;
     }
 
     public async ValueTask DisposeAsync()
     {
         await Client.DisposeAsync();
-        await Server.DisposeAsync();
-        _c2s.Writer.Complete();
-        _c2s.Reader.Complete();
-        _s2c.Writer.Complete();
-        _s2c.Reader.Complete();
-        await ServiceProvider.DisposeAsync();
     }
 }

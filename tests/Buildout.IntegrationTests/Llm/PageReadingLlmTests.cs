@@ -179,7 +179,7 @@ public sealed class PageReadingLlmTests
 
         SetupDatabaseStubs();
 
-        await using var harness = await McpSkBridge.CreateHarnessAsync(_fixture, includeDatabaseView: true);
+        await using var harness = await McpSkBridge.CreateHarnessAsync(_fixture);
         var kernel = McpSkBridge.CreateOpenRouterKernel(apiKey);
 
         var plugin = await McpSkBridge.CreatePluginFromMcpToolsAsync(harness.Client);
