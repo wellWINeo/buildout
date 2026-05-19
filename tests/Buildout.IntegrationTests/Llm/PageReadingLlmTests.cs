@@ -1,5 +1,6 @@
 using Buildout.IntegrationTests.Buildin;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Xunit;
 
@@ -19,6 +20,15 @@ public sealed class PageReadingLlmTests
         _output = output;
         _fixture = fixture;
         _fixture.Reset();
+    }
+
+    private static ChatHistory BuildHistory(McpTestHarness harness, string userMessage)
+    {
+        var history = new ChatHistory();
+        if (!string.IsNullOrWhiteSpace(harness.Client.ServerInstructions))
+            history.AddSystemMessage(harness.Client.ServerInstructions);
+        history.AddUserMessage(userMessage);
+        return history;
     }
 
     private static string GetApiKey()
@@ -163,13 +173,16 @@ public sealed class PageReadingLlmTests
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
         };
 
-        var result = await kernel.InvokePromptAsync(
-            "Use the search tool to find pages about Q3 revenue. Then use the read_buildin_page tool to read the matching page. Tell me the total revenue amount mentioned.",
-            new KernelArguments(settings));
+        var chatService = kernel.GetRequiredService<IChatCompletionService>();
+        var history = BuildHistory(harness,
+            "Use the search tool to find pages about Q3 revenue. Then use the read_buildin_page tool to read the matching page. Tell me the total revenue amount mentioned.");
+
+        var response = await chatService.GetChatMessageContentAsync(history, settings, kernel);
+        var result = response.Content ?? "";
 
         _output.WriteLine($"LLM response: {result}");
 
-        Assert.Contains("4.2", result.ToString());
+        Assert.Contains("4.2", result);
     }
 
     [Fact]
@@ -190,16 +203,18 @@ public sealed class PageReadingLlmTests
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
         };
 
-        var result = await kernel.InvokePromptAsync(
-            $"Use the database_view tool with database_id '{DbId}' to look up employees in the Employee Directory. Tell me their names and departments.",
-            new KernelArguments(settings));
+        var chatService = kernel.GetRequiredService<IChatCompletionService>();
+        var history = BuildHistory(harness,
+            $"Use the database_view tool with database_id '{DbId}' to look up employees in the Employee Directory. Tell me their names and departments.");
+
+        var response = await chatService.GetChatMessageContentAsync(history, settings, kernel);
+        var result = response.Content ?? "";
 
         _output.WriteLine($"LLM response: {result}");
 
-        var response = result.ToString();
         Assert.True(
-            response.Contains("Alice", StringComparison.OrdinalIgnoreCase) ||
-            response.Contains("Bob", StringComparison.OrdinalIgnoreCase),
+            result.Contains("Alice", StringComparison.OrdinalIgnoreCase) ||
+            result.Contains("Bob", StringComparison.OrdinalIgnoreCase),
             "Expected the LLM to mention at least one employee from the database.");
     }
 
@@ -226,21 +241,23 @@ public sealed class PageReadingLlmTests
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
         };
 
-        var result = await kernel.InvokePromptAsync(
-            "Search for pages about 'nonexistent topic xyz123' and tell me what you find.",
-            new KernelArguments(settings));
+        var chatService = kernel.GetRequiredService<IChatCompletionService>();
+        var history = BuildHistory(harness,
+            "Search for pages about 'nonexistent topic xyz123' and tell me what you find.");
+
+        var response = await chatService.GetChatMessageContentAsync(history, settings, kernel);
+        var result = response.Content ?? "";
 
         _output.WriteLine($"LLM response: {result}");
 
-        var response = result.ToString();
         Assert.True(
-            response.Contains("no", StringComparison.OrdinalIgnoreCase) ||
-            response.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
-            response.Contains("empty", StringComparison.OrdinalIgnoreCase) ||
-            response.Contains("0 result", StringComparison.OrdinalIgnoreCase) ||
-            response.Contains("zero", StringComparison.OrdinalIgnoreCase) ||
-            response.Contains("couldn't find", StringComparison.OrdinalIgnoreCase) ||
-            response.Contains("none", StringComparison.OrdinalIgnoreCase),
+            result.Contains("no", StringComparison.OrdinalIgnoreCase) ||
+            result.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+            result.Contains("empty", StringComparison.OrdinalIgnoreCase) ||
+            result.Contains("0 result", StringComparison.OrdinalIgnoreCase) ||
+            result.Contains("zero", StringComparison.OrdinalIgnoreCase) ||
+            result.Contains("couldn't find", StringComparison.OrdinalIgnoreCase) ||
+            result.Contains("none", StringComparison.OrdinalIgnoreCase),
             "Expected the LLM to acknowledge the empty search results.");
     }
 }
