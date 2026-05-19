@@ -237,4 +237,128 @@ public static class BuildinStubs
                 .WithHeader("Content-Type", "application/json")
                 .WithBodyAsJson(new { object_value = "error", message = "Update failed" }));
     }
+
+    public static void RegisterGetPageArchived(WireMockServer server, string pageId, bool archived)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new
+                {
+                    id = pageId,
+                    created_time = "2025-01-15T10:30:00Z",
+                    last_edited_time = "2025-01-16T14:00:00Z",
+                    archived,
+                    url = $"https://api.buildin.ai/pages/{pageId}",
+                    properties = new
+                    {
+                        title = new
+                        {
+                            type = "title",
+                            title = Array.Empty<object>()
+                        }
+                    }
+                }));
+    }
+
+    public static void RegisterUpdatePageToggleArchived(WireMockServer server, string pageId)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingPatch())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithCallback(request =>
+                {
+                    var json = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(request.Body ?? "{}");
+                    var archived = json.TryGetProperty("archived", out var archProp) && archProp.GetBoolean();
+                    var result = new
+                    {
+                        id = pageId,
+                        created_time = "2025-01-15T10:30:00Z",
+                        last_edited_time = "2025-01-16T14:00:00Z",
+                        archived,
+                        url = $"https://api.buildin.ai/pages/{pageId}",
+                        properties = new
+                        {
+                            title = new
+                            {
+                                type = "title",
+                                title = Array.Empty<object>()
+                            }
+                        }
+                    };
+                    return new WireMock.ResponseMessage
+                    {
+                        StatusCode = 200,
+                        BodyData = new BodyData
+                        {
+                            BodyAsString = System.Text.Json.JsonSerializer.Serialize(result),
+                            DetectedBodyType = BodyType.String
+                        }
+                    };
+                }));
+    }
+
+    public static void RegisterGetPageNotFound(WireMockServer server, string pageId)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(404)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { message = "Page not found" }));
+    }
+
+    public static void RegisterPatchPageNotFound(WireMockServer server, string pageId)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingPatch())
+            .RespondWith(Response.Create()
+                .WithStatusCode(404)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { message = "Page not found" }));
+    }
+
+    public static void RegisterPatchPageAuthFailure(WireMockServer server, string pageId, int statusCode = 401)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingPatch())
+            .RespondWith(Response.Create()
+                .WithStatusCode(statusCode)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { message = "Unauthorized" }));
+    }
+
+    public static void RegisterPatchPageServerError(WireMockServer server, string pageId, int statusCode = 500)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingPatch())
+            .RespondWith(Response.Create()
+                .WithStatusCode(statusCode)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { message = "Internal server error" }));
+    }
+
+    public static void RegisterGetPageAuthFailure(WireMockServer server, string pageId, int statusCode = 401)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(statusCode)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { message = "Unauthorized" }));
+    }
+
+    public static void RegisterGetPageServerError(WireMockServer server, string pageId, int statusCode = 500)
+    {
+        server
+            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(statusCode)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyAsJson(new { message = "Internal server error" }));
+    }
 }

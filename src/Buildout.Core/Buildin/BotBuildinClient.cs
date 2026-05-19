@@ -68,7 +68,10 @@ public sealed class BotBuildinClient : IBuildinClient
         return await WrapAsync(async () =>
         {
             var guid = Guid.Parse(pageId);
-            var body = new Gen.UpdatePageRequest();
+            var body = new Gen.UpdatePageRequest
+            {
+                Archived = request.Archived,
+            };
             var result = await _apiClient.V1.Pages[guid].PatchAsync(body, cancellationToken: cancellationToken);
             return PageMapper.Map(result ?? throw new InvalidOperationException("UpdatePage returned null"));
         });

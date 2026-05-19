@@ -52,6 +52,8 @@ builder.Services
     .WithTools<DatabaseViewToolHandler>()
     .WithTools<CreatePageToolHandler>()
     .WithTools<GetPageMarkdownToolHandler>()
-    .WithTools<UpdatePageToolHandler>();
+    .WithTools<UpdatePageToolHandler>()
+    .WithTools<DeletePageToolHandler>()
+    .WithTools<RestorePageToolHandler>();
 
 await builder.Build().RunAsync();
