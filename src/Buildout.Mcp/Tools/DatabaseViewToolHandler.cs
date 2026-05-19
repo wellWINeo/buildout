@@ -19,7 +19,7 @@ public sealed class DatabaseViewToolHandler
         => _renderer = renderer;
 
     [McpServerTool(Name = "database_view")]
-    [Description("Render a buildin database as plain text in a chosen view style. Read-only. Follows pagination to exhaustion.")]
+    [Description("Render a Buildin database as plain text by calling this function with the database UUID. Read-only; follows all pages automatically. Defaults to table style.")]
 #pragma warning disable CA1707
     public async Task<string> RenderAsync(
         [Description("The buildin database id.")] string database_id,

@@ -49,10 +49,10 @@ internal static class McpSkBridge
                     return result.Contents.OfType<TextResourceContents>().First().Text;
                 },
                 "read_buildin_page",
-                "Read a buildin page and return its rendered Markdown content.",
+                "Fetch the full Markdown content of a Buildin page by its UUID. Given a URL like https://buildin.ai/abc123-..., extract the UUID and pass it here. Call this after search to read a page.",
                 [new KernelParameterMetadata("pageId")
                 {
-                    Description = "Buildin page UUID",
+                    Description = "Page UUID. From a Buildin URL https://buildin.ai/<uuid>, pass the <uuid> part.",
                     IsRequired = true
                 }]));
         }
