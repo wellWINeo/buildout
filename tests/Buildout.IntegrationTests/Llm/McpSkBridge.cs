@@ -67,7 +67,7 @@ internal static class McpSkBridge
 
         return Kernel.CreateBuilder()
             .AddOpenAIChatCompletion(
-                modelId: "meta-llama/llama-4-scout",
+                modelId: "mistralai/mistral-small-3.2-24b-instruct",
                 apiKey: apiKey,
                 httpClient: httpClient)
             .Build();
