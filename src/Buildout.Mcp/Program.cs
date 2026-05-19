@@ -30,7 +30,22 @@ if (telemetryEnabled)
             .AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint + "/v1/logs")));
 }
 
-builder.Services.AddMcpServer()
+builder.Services
+    .AddMcpServer(options =>
+    {
+        options.ServerInstructions =
+            """
+            You are connected to a Buildin workspace via MCP. Always call the available tools
+            and resources when asked to search, read, or query pages and databases — never
+            answer from prior knowledge or claim you lack access.
+
+            Buildin page URLs follow the format https://buildin.ai/<uuid>. To read a page
+            from a URL, extract the UUID segment and pass it to read_buildin_page.
+
+            Typical workflow: call search to find pages by keyword, then call
+            read_buildin_page with a returned page_id to fetch full content.
+            """;
+    })
     .WithStdioServerTransport()
     .WithResources<PageResourceHandler>()
     .WithTools<SearchToolHandler>()
