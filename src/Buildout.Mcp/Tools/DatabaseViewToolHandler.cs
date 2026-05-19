@@ -19,13 +19,13 @@ public sealed class DatabaseViewToolHandler
         => _renderer = renderer;
 
     [McpServerTool(Name = "database_view")]
-    [Description("Render a Buildin database as plain text by calling this function with the database UUID. Read-only; follows all pages automatically. Defaults to table style.")]
+    [Description("Retrieve all records from a Buildin database and return them as plain text. Call this function with the database UUID to fetch its contents. Follows pagination automatically.")]
 #pragma warning disable CA1707
     public async Task<string> RenderAsync(
-        [Description("The buildin database id.")] string database_id,
-        [Description("View style: table, board, gallery, list, calendar, timeline. Defaults to table.")] string? style = null,
-        [Description("Property name to group by. Required when style is board.")] string? group_by = null,
-        [Description("Property name carrying a date. Required when style is calendar or timeline.")] string? date_property = null,
+        [Description("UUID of the Buildin database to retrieve.")] string database_id,
+        [Description("Output format: table, board, gallery, list, calendar, or timeline. Defaults to table.")] string? style = null,
+        [Description("Property name to group records by. Required when format is board.")] string? group_by = null,
+        [Description("Name of the date property. Required when format is calendar or timeline.")] string? date_property = null,
         CancellationToken cancellationToken = default)
 #pragma warning restore CA1707
     {
