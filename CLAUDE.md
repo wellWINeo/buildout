@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Active feature plan: [specs/008-markdown-page-update/plan.md](./specs/008-markdown-page-update/plan.md)
+Active feature plan: [specs/009-delete-restore-page/plan.md](./specs/009-delete-restore-page/plan.md)
 
 For technologies, project structure, shell commands, and other context, read
 that plan and its sibling artifacts (`research.md`, `data-model.md`,

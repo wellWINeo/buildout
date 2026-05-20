@@ -15,7 +15,7 @@ namespace Buildout.IntegrationTests.Mcp;
 
 // FR-025 / SC-010: Simulate an LLM doing get_page_markdown -> update_page -> get_page_markdown
 // and verify anchor IDs are preserved for unchanged blocks.
-public sealed class UpdatePageRoundTripWithCheapLlmTests : IAsyncLifetime
+public sealed class UpdatePageRoundTripLlmTests : IAsyncLifetime
 {
     private readonly IPageEditor _editor = Substitute.For<IPageEditor>();
     private ServiceProvider _sp = null!;

@@ -28,6 +28,8 @@ app.Configure(config =>
     config.AddCommand<GetCommand>("get");
     config.AddCommand<SearchCommand>("search");
     config.AddCommand<UpdateCommand>("update");
+    config.AddCommand<DeleteCommand>("delete");
+    config.AddCommand<RestoreCommand>("restore");
     config.AddBranch<DbSettings>("db", db =>
     {
         db.AddCommand<DbViewCommand>("view");

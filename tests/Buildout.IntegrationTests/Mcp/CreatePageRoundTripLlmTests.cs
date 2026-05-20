@@ -18,7 +18,7 @@ using Xunit;
 namespace Buildout.IntegrationTests.Mcp;
 
 [Collection("BuildinWireMock")]
-public sealed class CreatePageRoundTripWithCheapLlmTests : IAsyncLifetime
+public sealed class CreatePageRoundTripLlmTests : IAsyncLifetime
 {
     private readonly BuildinWireMockFixture _fixture;
     private readonly ITestOutputHelper _output;
@@ -32,7 +32,7 @@ public sealed class CreatePageRoundTripWithCheapLlmTests : IAsyncLifetime
     private Pipe _c2s = null!;
     private Pipe _s2c = null!;
 
-    public CreatePageRoundTripWithCheapLlmTests(ITestOutputHelper output, BuildinWireMockFixture fixture)
+    public CreatePageRoundTripLlmTests(ITestOutputHelper output, BuildinWireMockFixture fixture)
     {
         _output = output;
         _fixture = fixture;
