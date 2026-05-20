@@ -26,7 +26,7 @@ public sealed class SearchToolHandler
     }
 
     [McpServerTool(Name = "search")]
-    [Description("Search buildin pages by query. Returns one match per line, tab-separated: <page_id>\\t<object_type>\\t<title>. Use buildin://<page_id> to read a match.")]
+    [Description("Search Buildin workspace pages by keyword. Returns one result per line, tab-separated: <page_id>\\t<object_type>\\t<title>. Call this function to find pages, then call read_buildin_page with the returned page_id to read content.")]
 #pragma warning disable CA1707
     public async Task<string> SearchAsync(
         [Description("Non-empty search query.")] string query,
