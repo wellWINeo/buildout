@@ -1,0 +1,79 @@
+using Buildout.Core.Buildin.Models;
+using Gen = Buildout.Core.Buildin.Generated.Models;
+using Microsoft.Kiota.Abstractions.Serialization;
+using Microsoft.Kiota.Serialization.Json;
+
+namespace Buildout.Core.Buildin.Mapping;
+
+internal static class BlockMapper
+{
+    public static Block Map(Gen.Block gen)
+    {
+        var data = gen.Data;
+        var richText = data?.RichText?.Select(RichTextMapper.Map).ToList();
+
+        var typeStr = MappingHelpers.GetEnumValue(gen.Type);
+
+        Block block = typeStr switch
+        {
+            "paragraph" => new ParagraphBlock { RichTextContent = richText },
+            "heading_1" => new Heading1Block { RichTextContent = richText },
+            "heading_2" => new Heading2Block { RichTextContent = richText },
+            "heading_3" => new Heading3Block { RichTextContent = richText },
+            "bulleted_list_item" => new BulletedListItemBlock { RichTextContent = richText },
+            "numbered_list_item" => new NumberedListItemBlock { RichTextContent = richText },
+            "to_do" => new ToDoBlock { RichTextContent = richText, Checked = data?.Checked },
+            "toggle" => new ToggleBlock { RichTextContent = richText },
+            "code" => new CodeBlock { RichTextContent = richText, Language = data?.Language },
+            "quote" => new QuoteBlock { RichTextContent = richText },
+            "divider" => new DividerBlock(),
+            "image" => new ImageBlock { Url = data?.Url, Caption = data?.Caption?.Select(RichTextMapper.Map).ToList() },
+            "embed" => new EmbedBlock { Url = data?.Url },
+            "table" => new TableBlock { TableWidth = data?.TableWidth, HasColumnHeader = data?.HasColumnHeader, HasRowHeader = data?.HasRowHeader },
+            "table_row" => new TableRowBlock(),
+            "column_list" => new ColumnListBlock(),
+            "column" => new ColumnBlock(),
+            "child_page" => new ChildPageBlock { Title = data?.Title },
+            "child_database" => new ChildDatabaseBlock { Title = data?.Title },
+            "synced_block" => new SyncedBlock { SyncedFromId = data?.SyncedFrom?.BlockId?.ToString() },
+            "link_preview" => new LinkPreviewBlock { Url = data?.Url },
+            _ => new UnsupportedBlock()
+        };
+
+        return block with
+        {
+            Id = gen.Id?.ToString() ?? string.Empty,
+            CreatedAt = gen.CreatedTime,
+            LastEditedAt = gen.LastEditedTime,
+            HasChildren = gen.HasChildren ?? false,
+            Parent = ParentIconMapper.MapParent(gen.Parent)
+        };
+    }
+
+    public static PaginatedList<Block> MapChildrenResponse(Gen.GetBlockChildrenResponse? gen)
+    {
+        if (gen is null) return new PaginatedList<Block>();
+
+        var blocks = new List<Block>();
+        if (gen.Results is UntypedArray array)
+        {
+            foreach (var item in array.GetValue())
+            {
+                if (item is null) continue;
+
+                var element = MappingHelpers.SerializeToElement(item);
+                var node = new JsonParseNode(element);
+                var genBlock = node.GetObjectValue(Gen.Block.CreateFromDiscriminatorValue);
+                if (genBlock is not null)
+                    blocks.Add(Map(genBlock));
+            }
+        }
+
+        return new PaginatedList<Block>
+        {
+            Results = blocks,
+            HasMore = gen.HasMore ?? false,
+            NextCursor = gen.NextCursor
+        };
+    }
+}
