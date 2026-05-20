@@ -8,7 +8,7 @@ using Xunit;
 namespace Buildout.IntegrationTests.Mcp;
 
 [Collection("BuildinWireMock")]
-public sealed class ToolSelectionWithCheapLlmTests
+public sealed class DeleteAndRestoreLlmTests
 {
     private const string PageId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
@@ -29,7 +29,7 @@ public sealed class ToolSelectionWithCheapLlmTests
     private readonly ITestOutputHelper _output;
     private readonly BuildinWireMockFixture _fixture;
 
-    public ToolSelectionWithCheapLlmTests(ITestOutputHelper output, BuildinWireMockFixture fixture)
+    public DeleteAndRestoreLlmTests(ITestOutputHelper output, BuildinWireMockFixture fixture)
     {
         _output = output;
         _fixture = fixture;
