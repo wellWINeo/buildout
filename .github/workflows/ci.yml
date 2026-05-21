@@ -26,30 +26,40 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+          restore-keys: ${{ runner.os }}-nuget-
       - uses: actions/cache@v4
         with:
           path: |
+            src/*/bin
             src/*/obj
+          key: ${{ matrix.rid }}-build-${{ github.sha }}
+      - run: dotnet build -c Release -r ${{ matrix.rid }}
+
+  build-fdd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+      - uses: actions/cache@v4
+        with:
+          path: |
+            src/*/bin
+            src/*/obj
+            tests/*/bin
             tests/*/obj
-          key: ${{ matrix.rid }}-build-obj-${{ github.sha }}
-          restore-keys: |
-            ${{ matrix.rid }}-build-obj-
-      - run: dotnet build --configuration Release
+          key: fdd-build-${{ github.sha }}
+      - run: dotnet build -c Release
 
   test-unit:
-    needs: build
-    strategy:
-      matrix:
-        include:
-          - runner: ubuntu-latest
-            rid: linux-x64
-          - runner: ubuntu-latest
-            rid: linux-arm64
-          - runner: macos-latest
-            rid: osx-arm64
-    runs-on: ${{ matrix.runner }}
+    needs: build-fdd
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -58,15 +68,16 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: |
+            src/*/bin
             src/*/obj
+            tests/*/bin
             tests/*/obj
-          key: ${{ matrix.rid }}-build-obj-${{ github.sha }}
-          restore-keys: |
-            ${{ matrix.rid }}-build-obj-
-      - run: dotnet test tests/Buildout.UnitTests --configuration Release
+          key: fdd-build-${{ github.sha }}
+          fail-on-cache-miss: true
+      - run: dotnet test tests/Buildout.UnitTests -c Release --no-build
 
   test-integration:
-    needs: [build, test-unit]
+    needs: test-unit
     runs-on: ubuntu-latest
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -78,15 +89,16 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: |
+            src/*/bin
             src/*/obj
+            tests/*/bin
             tests/*/obj
-          key: linux-x64-build-obj-${{ github.sha }}
-          restore-keys: |
-            linux-x64-build-obj-
-      - run: dotnet test tests/Buildout.IntegrationTests --configuration Release
+          key: fdd-build-${{ github.sha }}
+          fail-on-cache-miss: true
+      - run: dotnet test tests/Buildout.IntegrationTests -c Release --no-build
 
   publish-singlefile:
-    needs: [build, test-unit]
+    needs: [build, test-integration]
     strategy:
       matrix:
         include:
@@ -104,14 +116,18 @@ jobs:
           dotnet-version: '10.0.x'
       - uses: actions/cache@v4
         with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+      - uses: actions/cache@v4
+        with:
           path: |
+            src/*/bin
             src/*/obj
-            tests/*/obj
-          key: ${{ matrix.rid }}-build-obj-${{ github.sha }}
-          restore-keys: |
-            ${{ matrix.rid }}-build-obj-
-      - run: dotnet publish src/Buildout.Cli -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --output publish/cli
-      - run: dotnet publish src/Buildout.Mcp -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --output publish/mcp
+          key: ${{ matrix.rid }}-build-${{ github.sha }}
+          fail-on-cache-miss: true
+      - run: dotnet publish src/Buildout.Cli -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --no-build --output publish/cli
+      - run: dotnet publish src/Buildout.Mcp -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --no-build --output publish/mcp
       - uses: actions/upload-artifact@v4
         with:
           name: buildout-cli-${{ matrix.rid }}
@@ -122,7 +138,7 @@ jobs:
           path: publish/mcp/
 
   publish-fdd:
-    needs: [build, test-unit]
+    needs: test-integration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -132,13 +148,14 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: |
+            src/*/bin
             src/*/obj
+            tests/*/bin
             tests/*/obj
-          key: linux-x64-build-obj-${{ github.sha }}
-          restore-keys: |
-            linux-x64-build-obj-
-      - run: dotnet publish src/Buildout.Cli -c Release --output publish/cli
-      - run: dotnet publish src/Buildout.Mcp -c Release --output publish/mcp
+          key: fdd-build-${{ github.sha }}
+          fail-on-cache-miss: true
+      - run: dotnet publish src/Buildout.Cli -c Release --no-build --output publish/cli
+      - run: dotnet publish src/Buildout.Mcp -c Release --no-build --output publish/mcp
       - uses: actions/upload-artifact@v4
         with:
           name: buildout-cli-fdd
