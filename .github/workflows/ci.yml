@@ -7,35 +7,6 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        include:
-          - runner: ubuntu-latest
-            rid: linux-x64
-          - runner: ubuntu-latest
-            rid: linux-arm64
-          - runner: macos-latest
-            rid: osx-arm64
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: ${{ runner.os }}-nuget-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            src/*/bin
-            src/*/obj
-          key: ${{ matrix.rid }}-build-${{ github.sha }}
-      - run: dotnet build src/Buildout.Cli src/Buildout.Mcp -c Release -r ${{ matrix.rid }}
-
-  build-fdd:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,8 +16,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: ${{ runner.os }}-nuget-
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
       - uses: actions/cache@v4
         with:
           path: |
@@ -58,7 +29,7 @@ jobs:
       - run: dotnet build -c Release
 
   test-unit:
-    needs: build-fdd
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -98,7 +69,7 @@ jobs:
       - run: dotnet test tests/Buildout.IntegrationTests -c Release --no-build
 
   publish-singlefile:
-    needs: [build, test-integration]
+    needs: test-integration
     strategy:
       matrix:
         include:
@@ -117,17 +88,10 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: ${{ runner.os }}-nuget-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            src/*/bin
-            src/*/obj
-          key: ${{ matrix.rid }}-build-${{ github.sha }}
-          fail-on-cache-miss: true
-      - run: dotnet publish src/Buildout.Cli -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --no-build --output publish/cli
-      - run: dotnet publish src/Buildout.Mcp -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --no-build --output publish/mcp
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+      - run: dotnet publish src/Buildout.Cli -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --output publish/cli
+      - run: dotnet publish src/Buildout.Mcp -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --output publish/mcp
       - uses: actions/upload-artifact@v4
         with:
           name: buildout-cli-${{ matrix.rid }}
@@ -148,8 +112,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: ${{ runner.os }}-nuget-
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
       - uses: actions/cache@v4
         with:
           path: |
