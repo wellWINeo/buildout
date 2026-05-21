@@ -33,7 +33,7 @@ jobs:
             src/*/bin
             src/*/obj
           key: ${{ matrix.rid }}-build-${{ github.sha }}
-      - run: dotnet build -c Release -r ${{ matrix.rid }}
+      - run: dotnet build src/Buildout.Cli src/Buildout.Mcp -c Release -r ${{ matrix.rid }}
 
   build-fdd:
     runs-on: ubuntu-latest
@@ -145,6 +145,11 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
       - uses: actions/cache@v4
         with:
           path: |
