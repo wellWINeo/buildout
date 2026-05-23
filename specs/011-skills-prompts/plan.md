@@ -5,7 +5,7 @@
 
 ## Summary
 
-Provide embedded skills for LLM agents to work with buildout-cli and embedded prompts in MCP to instruct models how to deal with tools. The CLI gets a `skills` branch command with `install` and `remove` subcommands, supporting `claude` and `opencode` agents. Skills are stored as markdown files in the repository, embedded as resources in the CLI assembly, and installed to a `buildout/` subdirectory within agent config directories. The MCP server moves its hardcoded server instructions to embedded resources and adds a named MCP prompt for the update workflow.
+Provide embedded skills for LLM agents to work with buildout-cli and embedded prompts in MCP to instruct models how to deal with tools. The CLI gets a `skills` branch command with `install` and `remove` subcommands, supporting `claude` and `opencode` agents. Skills are stored as markdown files in the repository, embedded as resources in the CLI assembly, and installed to a `buildout-cli/` subdirectory within agent config directories. The MCP server moves its hardcoded server instructions to embedded resources and adds a named MCP prompt for the update workflow.
 
 ## Technical Context
 
@@ -33,6 +33,7 @@ Provide embedded skills for LLM agents to work with buildout-cli and embedded pr
 | VI. Non-Destructive Editing | **N/A** | No page editing involved. |
 | CLI framework | **PASS** | `skills` command uses Spectre.Console.Cli branch pattern (same as existing `db` branch). |
 | Solution layout | **PASS** | New files in `Buildout.Cli/` and `Buildout.Mcp/` only. No new projects. |
+| VII. Skills & Prompts Parity | **PASS** | Feature creates the skills and prompts infrastructure itself. Every CLI subcommand gets a skill file; the update tool gets a named prompt. |
 | MCP tool changes | **N/A** | No tool signature changes. Adding a prompt handler only. |
 
 **Gate result**: PASS — no violations.

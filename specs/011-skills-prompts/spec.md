@@ -112,7 +112,7 @@ An LLM client connects to the buildout MCP server and receives compact server in
 
 ### Session 2026-05-23
 
-- Q: What file naming convention and subdirectory structure should skills use within agent config directories? → A: A `buildout/` subdirectory containing multiple skill .md files per topic (e.g., read.md, update.md, delete.md, search.md, create.md)
+- Q: What file naming convention and subdirectory structure should skills use within agent config directories? → A: A `buildout-cli/` subdirectory containing multiple skill .md files per topic (e.g., read.md, update.md, delete.md, search.md, create.md)
 - Q: How should the `--overwrite` detection work? → A: Just check if files already exist — if any file exists, require `--overwrite`
 - Q: How should MCP update-specific prompts be delivered to clients? → A: Register as an MCP named prompt that the client requests when using the update tool
 
