@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.DatabaseViews;
 
-internal sealed partial class DatabaseViewRenderer : IDatabaseViewRenderer
+internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
 {
     private readonly IBuildinClient _client;
     private readonly IPropertyValueFormatter _formatter;
@@ -164,7 +164,7 @@ internal sealed partial class DatabaseViewRenderer : IDatabaseViewRenderer
             foreach (var props in result.Results)
                 rows.Add(new DatabaseRow(string.Empty, props));
 
-            LogPaginateRowsPage(pageNumber, result.Results.Count);
+            DatabaseViewRendererLog.PaginateRowsPage(_logger, pageNumber, result.Results.Count);
 
             cursor = result.HasMore ? result.NextCursor : null;
             pageNumber++;
@@ -173,9 +173,6 @@ internal sealed partial class DatabaseViewRenderer : IDatabaseViewRenderer
 
         return rows;
     }
-
-    [LoggerMessage(Level = LogLevel.Debug, Message = "PaginateRows pagination_page={PageNumber} pagination_items={ItemCount}")]
-    private partial void LogPaginateRowsPage(int pageNumber, int itemCount);
 
     private static string ExtractTitle(Database database)
     {

@@ -5,7 +5,7 @@
     <IsPackable>false</IsPackable>
     <UseSprites>true</UseSprites>
     <ImplicitUsings>enable</ImplicitUsings>
-    <NoWarn>xUnit1051;xUnit1026;CA1707;CA1861;CA1873</NoWarn>
+    <NoWarn>xUnit1051;xUnit1026;CA1707</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

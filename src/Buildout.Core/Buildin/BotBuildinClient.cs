@@ -15,7 +15,7 @@ using KiotaApiException = Microsoft.Kiota.Abstractions.ApiException;
 
 namespace Buildout.Core.Buildin;
 
-public sealed partial class BotBuildinClient : IBuildinClient
+public sealed class BotBuildinClient : IBuildinClient
 {
     private readonly Generated.BuildinApiClient _apiClient;
     private readonly ILogger<BotBuildinClient> _logger;
@@ -216,7 +216,7 @@ public sealed partial class BotBuildinClient : IBuildinClient
         {
             var result = await action();
             sw.Stop();
-            LogApiCallCompleted(methodName, "success");
+            BotBuildinClientLog.ApiCallCompleted(_logger, methodName, "success");
             BuildoutMeter.ApiCallsTotal.Add(1, new TagList { { "method", methodName }, { "outcome", "success" } });
             BuildoutMeter.ApiCallDuration.Record(sw.Elapsed.TotalSeconds, new TagList { { "method", methodName }, { "outcome", "success" } });
             return result;
@@ -277,15 +277,10 @@ public sealed partial class BotBuildinClient : IBuildinClient
 
     private void LogAndRecordApiFailure(string methodName, Stopwatch sw, string errorType)
     {
-        LogApiCallFailed(methodName, "failure", errorType);
+        BotBuildinClientLog.ApiCallFailed(_logger, methodName, "failure", errorType);
         var tags = new TagList { { "method", methodName }, { "outcome", "failure" }, { "error_type", errorType } };
         BuildoutMeter.ApiCallsTotal.Add(1, tags);
         BuildoutMeter.ApiCallDuration.Record(sw.Elapsed.TotalSeconds, tags);
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "API call {Method} completed with {Outcome}")]
-    private partial void LogApiCallCompleted(string method, string outcome);
-
-    [LoggerMessage(Level = LogLevel.Error, Message = "API call {Method} failed with {Outcome} error_type {ErrorType}")]
-    private partial void LogApiCallFailed(string method, string outcome, string errorType);
 }

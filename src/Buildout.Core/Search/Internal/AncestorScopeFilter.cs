@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Search.Internal;
 
-internal sealed partial class AncestorScopeFilter
+internal sealed class AncestorScopeFilter
 {
     private readonly IBuildinClient _client;
     private readonly ILogger _logger;
@@ -45,7 +45,7 @@ internal sealed partial class AncestorScopeFilter
 
             if (!visited.Add(ancestorId))
             {
-                LogCycleDetected(ancestorId);
+                AncestorScopeFilterLog.CycleDetected(_logger, ancestorId);
                 return false;
             }
 
@@ -74,6 +74,4 @@ internal sealed partial class AncestorScopeFilter
         return false;
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Cycle detected in parent chain at {AncestorId}")]
-    private partial void LogCycleDetected(string ancestorId);
 }

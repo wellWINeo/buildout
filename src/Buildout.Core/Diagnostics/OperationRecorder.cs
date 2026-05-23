@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Diagnostics;
 
-public sealed partial class OperationRecorder : IDisposable
+public sealed class OperationRecorder : IDisposable
 {
     private readonly ILogger _logger;
     private readonly string _operationName;
@@ -26,7 +26,7 @@ public sealed partial class OperationRecorder : IDisposable
                 _tags[tag.Key] = tag.Value;
         }
 
-        LogOperationStarted(_operationName);
+        OperationRecorderLog.OperationStarted(_logger, _operationName);
     }
 
     public static OperationRecorder Start(ILogger logger, string operationName,
@@ -50,7 +50,7 @@ public sealed partial class OperationRecorder : IDisposable
         var durationSeconds = _stopwatch.Elapsed.TotalSeconds;
 
         var tagSuffix = FormatTags();
-        LogOperationCompleted(_operationName, durationMs, tagSuffix);
+        OperationRecorderLog.OperationCompleted(_logger, _operationName, durationMs, tagSuffix);
 
         var tagList = BuildTagList("success");
         BuildoutMeter.OperationsTotal.Add(1, tagList);
@@ -71,7 +71,7 @@ public sealed partial class OperationRecorder : IDisposable
             _tags["status_code"] = statusCode.Value;
 
         var tagSuffix = FormatTags();
-        LogOperationFailed(_operationName, errorType, statusCode, durationMs, tagSuffix);
+        OperationRecorderLog.OperationFailed(_logger, _operationName, errorType, statusCode, durationMs, tagSuffix);
 
         var tagList = BuildTagList("failure");
         BuildoutMeter.OperationsTotal.Add(1, tagList);
@@ -102,15 +102,6 @@ public sealed partial class OperationRecorder : IDisposable
         }
         return sb.ToString();
     }
-
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Operation {Operation} started")]
-    private partial void LogOperationStarted(string operation);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Operation {Operation} completed in {DurationMs:F2}ms{Tags}")]
-    private partial void LogOperationCompleted(string operation, double durationMs, string tags);
-
-    [LoggerMessage(Level = LogLevel.Error, Message = "Operation {Operation} failed with error_type {ErrorType} status_code {StatusCode} in {DurationMs:F2}ms{Tags}")]
-    private partial void LogOperationFailed(string operation, string errorType, int? statusCode, double durationMs, string tags);
 
     private TagList BuildTagList(string outcome)
     {

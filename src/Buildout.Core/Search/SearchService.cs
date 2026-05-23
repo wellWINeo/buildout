@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Search;
 
-internal sealed partial class SearchService : ISearchService
+internal sealed class SearchService : ISearchService
 {
     private readonly IBuildinClient _client;
     private readonly ITitleRenderer _titleRenderer;
@@ -50,7 +50,7 @@ internal sealed partial class SearchService : ISearchService
                 if (response.Results is not null)
                     allPages.AddRange(response.Results);
 
-                LogSearchPage(pageNumber, response.Results?.Count ?? 0);
+                SearchServiceLog.SearchPage(_logger, pageNumber, response.Results?.Count ?? 0);
                 pageNumber++;
 
                 cursor = response.HasMore ? response.NextCursor : null;
@@ -92,9 +92,6 @@ internal sealed partial class SearchService : ISearchService
             throw;
         }
     }
-
-    [LoggerMessage(Level = LogLevel.Debug, Message = "SearchAsync pagination_page={PageNumber} pagination_items={ItemCount}")]
-    private partial void LogSearchPage(int pageNumber, int itemCount);
 
     private static SearchObjectType MapObjectType(string? objectType) => objectType switch
     {

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Markdown.Internal;
 
-internal static partial class BlockTreeFetcher
+internal static class BlockTreeFetcher
 {
     internal static async Task<List<BlockSubtree>> FetchAsync(
         IBuildinClient client,
@@ -28,7 +28,7 @@ internal static partial class BlockTreeFetcher
                 .GetBlockChildrenAsync(parentId, query, ct)
                 .ConfigureAwait(false);
 
-            LogFetchChildrenPage(logger, pageNumber, page.Results.Count);
+            BlockTreeFetcherLog.FetchChildrenPage(logger, pageNumber, page.Results.Count);
 
             foreach (var block in page.Results)
             {
@@ -56,6 +56,4 @@ internal static partial class BlockTreeFetcher
         return result;
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "FetchChildren pagination_page={PageNumber} pagination_items={ItemsCount}")]
-    private static partial void LogFetchChildrenPage(ILogger logger, int pageNumber, int itemsCount);
 }

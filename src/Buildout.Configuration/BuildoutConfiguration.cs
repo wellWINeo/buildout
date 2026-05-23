@@ -47,13 +47,7 @@ public static class BuildoutConfiguration
 
         builder.AddEnvironmentVariables(options.Prefix);
 
-        var baseConfigRoot = (IConfigurationRoot)builder.Build();
-
-        var remapBuilder = new ConfigurationBuilder();
-        remapBuilder.AddConfiguration(baseConfigRoot);
-        remapBuilder.Sources.Add(new HttpSectionRemapSource(baseConfigRoot));
-
-        var configRoot = (IConfigurationRoot)remapBuilder.Build();
+        var configRoot = (IConfigurationRoot)builder.Build();
 
         var botToken = configRoot["BotToken"];
         if (string.IsNullOrWhiteSpace(botToken))
