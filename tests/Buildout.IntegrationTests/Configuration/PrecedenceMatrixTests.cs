@@ -20,8 +20,7 @@ public sealed class PrecedenceMatrixTests
 
         try
         {
-            var args = Array.Empty<string>();
-            var (config, _) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build();
 
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(config);
@@ -67,8 +66,7 @@ public sealed class PrecedenceMatrixTests
         {
             File.WriteAllText(configPath, jsonConfig);
 
-            var args = new[] { "--config", configPath };
-            var (config, _) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build(configPath);
 
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(config);
@@ -116,8 +114,7 @@ public sealed class PrecedenceMatrixTests
         {
             File.WriteAllText(configPath, jsonConfig);
 
-            var args = new[] { "--config", configPath };
-            var (config, _) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build(configPath);
 
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(config);
@@ -163,8 +160,7 @@ public sealed class PrecedenceMatrixTests
         {
             File.WriteAllText(configPath, jsonConfig);
 
-            var args = new[] { "--config", configPath };
-            var (config, _) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build(configPath);
 
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(config);

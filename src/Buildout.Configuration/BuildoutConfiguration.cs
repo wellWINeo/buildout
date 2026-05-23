@@ -6,17 +6,13 @@ public static class BuildoutConfiguration
 {
     private static readonly BuildoutConfigurationOptions DefaultOptions = new();
 
-    public static (IConfiguration Configuration, string[] ResidualArgs) Build(string[] args)
+    public static IConfiguration Build(string? configPath = null)
     {
-        return Build(args, DefaultOptions);
+        return Build(configPath, DefaultOptions);
     }
 
-    internal static (IConfiguration Configuration, string[] ResidualArgs) Build(
-        string[] args,
-        BuildoutConfigurationOptions options)
+    internal static IConfiguration Build(string? configPath, BuildoutConfigurationOptions options)
     {
-        var (configPath, residualArgs) = ConfigFlagParser.Extract(args);
-
         var builder = new ConfigurationBuilder();
 
         string filePath;
@@ -62,11 +58,12 @@ public static class BuildoutConfiguration
         var botToken = configRoot["BotToken"];
         if (string.IsNullOrWhiteSpace(botToken))
         {
-            var filePathStr = !string.IsNullOrEmpty(configPath) ? configPath : (!string.IsNullOrEmpty(options.DefaultFilePath) ? options.DefaultFilePath : "no configuration file");
+            var filePathStr = !string.IsNullOrEmpty(configPath) ? configPath
+                : (!string.IsNullOrEmpty(options.DefaultFilePath) ? options.DefaultFilePath : "no configuration file");
             var message = $"BotToken is required. Set the {options.Prefix}BotToken environment variable, or provide it in {filePathStr}";
             throw new BuildoutConfigurationException(message, !string.IsNullOrEmpty(configPath) ? configPath : null);
         }
 
-        return (configRoot, residualArgs);
+        return configRoot;
     }
 }

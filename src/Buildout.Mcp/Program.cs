@@ -11,9 +11,21 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 
+// Extract --config/-c before the host builder runs.
+string? configPath = null;
+for (var i = 0; i < args.Length; i++)
+{
+    if ((args[i] is "--config" or "-c") && i + 1 < args.Length)
+        configPath = args[++i];
+    else if (args[i].StartsWith("--config=", StringComparison.Ordinal))
+        configPath = args[i]["--config=".Length..];
+    else if (args[i].StartsWith("-c=", StringComparison.Ordinal))
+        configPath = args[i]["-c=".Length..];
+}
+
 try
 {
-    var (config, _) = BuildoutConfiguration.Build(args);
+    var config = BuildoutConfiguration.Build(configPath);
 
     var builder = Host.CreateApplicationBuilder([]);
     builder.Configuration.Sources.Clear();

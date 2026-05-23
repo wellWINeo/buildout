@@ -1,14 +1,29 @@
 using Buildout.Cli.Commands;
 using Buildout.Cli.Rendering;
-using Buildout.Core.Buildin;
 using Buildout.Configuration;
+using Buildout.Core.Buildin;
 using Buildout.Core.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console.Cli;
 
+// Extract --config/-c before Spectre sees the args; Spectre doesn't know about this flag.
+string? configPath = null;
+var spectreArgs = new List<string>();
+for (var i = 0; i < args.Length; i++)
+{
+    if ((args[i] is "--config" or "-c") && i + 1 < args.Length)
+        configPath = args[++i];
+    else if (args[i].StartsWith("--config=", StringComparison.Ordinal))
+        configPath = args[i]["--config=".Length..];
+    else if (args[i].StartsWith("-c=", StringComparison.Ordinal))
+        configPath = args[i]["-c=".Length..];
+    else
+        spectreArgs.Add(args[i]);
+}
+
 try
 {
-    var (config, residualArgs) = BuildoutConfiguration.Build(args);
+    var config = BuildoutConfiguration.Build(configPath);
 
     var services = new ServiceCollection();
     services.AddBuildinClient(config);
@@ -35,7 +50,7 @@ try
         });
     });
 
-    await app.RunAsync(residualArgs);
+    await app.RunAsync(spectreArgs.ToArray());
 }
 catch (BuildoutConfigurationException ex)
 {

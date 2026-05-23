@@ -12,12 +12,10 @@ public sealed class McpConfigFlagTests
 
         try
         {
-            var args = Array.Empty<string>();
-            var (config, residualArgs) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build();
 
             var botToken = config["BotToken"];
             Assert.Equal("mcp-test-token-789", botToken);
-            Assert.Empty(residualArgs);
         }
         finally
         {
@@ -43,12 +41,10 @@ public sealed class McpConfigFlagTests
         {
             File.WriteAllText(configPath, jsonConfig);
 
-            var args = Array.Empty<string>();
-            var (config, residualArgs) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build();
 
             var botToken = config["BotToken"];
             Assert.Equal("minimal-mcp-token", botToken);
-            Assert.Empty(residualArgs);
         }
         finally
         {
@@ -92,12 +88,10 @@ public sealed class McpConfigFlagTests
             File.WriteAllText(defaultConfigPath, defaultJsonConfig);
             File.WriteAllText(mcpConfigPath, mcpJsonConfig);
 
-            var args = new[] { "-c", mcpConfigPath };
-            var (config, residualArgs) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build(mcpConfigPath);
 
             var botToken = config["BotToken"];
             Assert.Equal("mcp-prod-token", botToken);
-            Assert.Empty(residualArgs);
         }
         finally
         {
@@ -123,10 +117,9 @@ public sealed class McpConfigFlagTests
     [Fact]
     public void MissingConfigPath_ExitsNonZero_WithErrorMessage()
     {
-        var args = new[] { "-c", "./nonexistent-mcp.json" };
         var ex = Assert.ThrowsAny<Exception>(() =>
         {
-            var _ = BuildoutConfiguration.Build(args);
+            var _ = BuildoutConfiguration.Build("./nonexistent-mcp.json");
         });
 
         Assert.NotNull(ex);

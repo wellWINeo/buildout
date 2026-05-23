@@ -169,7 +169,7 @@ public sealed class ConfigurationBindingTests
             {
                 File.WriteAllText(tempFile, jsonConfig);
 
-                var (config, _) = BuildoutConfiguration.Build(["--config", tempFile]);
+                var config = BuildoutConfiguration.Build(tempFile);
 
                 var options = new BuildinClientOptions();
                 config.Bind(options);
@@ -202,7 +202,7 @@ public sealed class ConfigurationBindingTests
             {
                 File.WriteAllText(tempFile, jsonConfig);
 
-                var (config, _) = BuildoutConfiguration.Build(["--config", tempFile]);
+                var config = BuildoutConfiguration.Build(tempFile);
 
                 var options = new BuildinClientOptions();
                 config.Bind(options);
@@ -234,7 +234,7 @@ public sealed class ConfigurationBindingTests
                 File.WriteAllText(tempFile, jsonConfig);
                 Environment.SetEnvironmentVariable("Buildout__BotToken", "env-token-789");
 
-                var (config, _) = BuildoutConfiguration.Build(["--config", tempFile]);
+                var config = BuildoutConfiguration.Build(tempFile);
 
                 var options = new BuildinClientOptions();
                 config.Bind(options);
@@ -246,31 +246,6 @@ public sealed class ConfigurationBindingTests
             {
                 File.Delete(tempFile);
                 Environment.SetEnvironmentVariable("Buildout__BotToken", null);
-            }
-        }
-
-        [Fact]
-        public void BuildoutConfiguration_Build_ResidualArgsPreserved()
-        {
-            var jsonConfig = """
-                {
-                    "BotToken": "test-token"
-                }
-                """;
-
-            var tempFile = Path.GetTempFileName();
-            try
-            {
-                File.WriteAllText(tempFile, jsonConfig);
-
-                var args = new[] { "--config", tempFile, "create", "--title", "Test Page" };
-                var (_, residualArgs) = BuildoutConfiguration.Build(args);
-
-                Assert.Equal(new[] { "create", "--title", "Test Page" }, residualArgs);
-            }
-            finally
-            {
-                File.Delete(tempFile);
             }
         }
     }

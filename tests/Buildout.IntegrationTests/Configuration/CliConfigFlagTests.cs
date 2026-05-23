@@ -12,12 +12,10 @@ public sealed class CliConfigFlagTests
 
         try
         {
-            var args = Array.Empty<string>();
-            var (config, residualArgs) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build();
 
             var botToken = config["BotToken"];
             Assert.Equal("test-token-123", botToken);
-            Assert.Empty(residualArgs);
         }
         finally
         {
@@ -43,12 +41,10 @@ public sealed class CliConfigFlagTests
         {
             File.WriteAllText(configPath, jsonConfig);
 
-            var args = Array.Empty<string>();
-            var (config, residualArgs) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build();
 
             var botToken = config["BotToken"];
             Assert.Equal("default-file-token-456", botToken);
-            Assert.Empty(residualArgs);
         }
         finally
         {
@@ -81,10 +77,9 @@ public sealed class CliConfigFlagTests
         {
             File.WriteAllText(configPath, jsonConfig);
 
-            var args = Array.Empty<string>();
             var ex = Assert.ThrowsAny<Exception>(() =>
             {
-                var _ = BuildoutConfiguration.Build(args);
+                var _ = BuildoutConfiguration.Build();
             });
 
             Assert.NotNull(ex);
@@ -136,8 +131,7 @@ public sealed class CliConfigFlagTests
             File.WriteAllText(defaultConfigPath, defaultJsonConfig);
             File.WriteAllText(overrideConfigPath, overrideJsonConfig);
 
-            var args = new[] { "--config", overrideConfigPath };
-            var (config, residualArgs) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build(overrideConfigPath);
 
             var botToken = config["BotToken"];
             Assert.Equal("override-file-token", botToken);
@@ -180,8 +174,7 @@ public sealed class CliConfigFlagTests
         {
             File.WriteAllText(configPath, jsonConfig);
 
-            var args = new[] { "-c", configPath };
-            var (config, residualArgs) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build(configPath);
 
             var botToken = config["BotToken"];
             Assert.Equal("short-flag-token", botToken);
@@ -217,10 +210,9 @@ public sealed class CliConfigFlagTests
         {
             File.WriteAllText(defaultConfigPath, defaultJsonConfig);
 
-            var args = new[] { "--config", "./nonexistent.json" };
             var ex = Assert.ThrowsAny<Exception>(() =>
             {
-                var _ = BuildoutConfiguration.Build(args);
+                var _ = BuildoutConfiguration.Build("./nonexistent.json");
             });
 
             Assert.NotNull(ex);
@@ -261,8 +253,7 @@ public sealed class CliConfigFlagTests
             File.WriteAllText(configPath, jsonConfig);
             Environment.SetEnvironmentVariable("Buildout__BotToken", "env-var-token");
 
-            var args = new[] { "--config", configPath };
-            var (config, residualArgs) = BuildoutConfiguration.Build(args);
+            var config = BuildoutConfiguration.Build(configPath);
 
             var botToken = config["BotToken"];
             Assert.Equal("env-var-token", botToken);
