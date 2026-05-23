@@ -1,22 +1,22 @@
 <!--
-SYNC IMPACT REPORT
-Version change: 1.0.1 → 1.1.0 (MINOR — adds principle VII: Skills & Prompts Parity)
+ SYNC IMPACT REPORT
+ Version change: 1.0.1 → 1.1.0 (MINOR — adds principle VII: Skills & Prompts Parity)
 
-Modified principles: N/A
+ Modified principles: N/A
 
-Added sections:
-  - Principle VII: Skills & Prompts Parity
+ Added sections:
+   - Principle VII: Skills & Prompts Parity
 
-Removed sections: N/A
+ Removed sections: N/A
 
-Modified content: N/A
+ Modified content: N/A
 
-Templates requiring updates:
-  - ✅ .specify/templates/plan-template.md  no change needed
-  - ✅ .specify/templates/spec-template.md  no change needed
-  - ✅ .specify/templates/tasks-template.md no change needed
+ Templates requiring updates:
+   - ✅ .specify/templates/plan-template.md  no change needed
+   - ✅ .specify/templates/spec-template.md  no change needed
+   - ✅ .specify/templates/tasks-template.md no change needed
 
-Follow-up TODOs: none.
+ Follow-up TODOs: none.
 
 ---
 
@@ -134,7 +134,7 @@ destructive operations impossible to invoke by accident.
 
 ### VII. Skills & Prompts Parity
 
-Every CLI subcommand MUST be documented by a corresponding skill reference file
+Every CLI command MUST be documented by a corresponding skill reference file
 embedded in the `Buildout.Cli` assembly. Every MCP tool whose behavior is complex
 enough to warrant detailed instructions MUST have a corresponding named prompt
 embedded in the `Buildout.Mcp` assembly. Adding a new CLI subcommand without a

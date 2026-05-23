@@ -1,5 +1,6 @@
 using Buildout.IntegrationTests.Buildin;
 using Buildout.IntegrationTests.Llm;
+using Buildout.Mcp.Prompts;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -17,6 +18,14 @@ public sealed class McpServerMetadataTests
     {
         await using var harness = await McpSkBridge.CreateHarnessAsync(_fixture);
         Assert.False(string.IsNullOrWhiteSpace(harness.Client.ServerInstructions));
+    }
+
+    [Fact]
+    public async Task McpServer_ServerInstructions_MatchEmbeddedResource()
+    {
+        await using var harness = await McpSkBridge.CreateHarnessAsync(_fixture);
+        var expected = PromptResourceLoader.Load("server-instructions");
+        Assert.Equal(expected, harness.Client.ServerInstructions);
     }
 
     [Fact]

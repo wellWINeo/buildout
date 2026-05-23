@@ -13,20 +13,20 @@ buildout-cli update [options]
 ## Options
 
 | Flag | Type | Default | Description |
-|------|------|---------|-------------|
+|---|---|---|---|
 | `--page` | `string` | (required) | Page ID to update |
 | `--revision` | `string` | (required) | Revision token from `get --editing` |
 | `--ops` | `string` | (required) | Path to a JSON ops file, or `-` to read from stdin |
 | `--dry-run` | `bool` | `false` | Compute and display changes without applying them |
 | `--allow-large-delete` | `bool` | `false` | Permit operations that delete many blocks at once |
-| `--print` | `string` | `summary` | Output format: `summary` (human-readable) or `json` |
+| `--print` | `string` | `"summary"` | Output format: `summary` (human-readable) or `json` |
 
 ## Patch Operations
 
 The `--ops` file must contain a JSON array of operation objects. Each object requires an `op` discriminator field. All property names use `snake_case`.
 
 | `op` value | Fields | Description |
-|-------------|--------|-------------|
+|---|---|---|
 | `replace_block` | `anchor`, `markdown` | Replace a single anchored block with new markdown |
 | `replace_section` | `anchor`, `markdown` | Replace the section (heading + children) under the anchor |
 | `search_replace` | `old_str`, `new_str` | Find-and-replace text across the page markdown |
@@ -37,7 +37,7 @@ The `--ops` file must contain a JSON array of operation objects. Each object req
 
 Basic update — replace a single block:
 
-```sh
+```
 buildout-cli update \
   --page abc123 \
   --revision "r:sha256:..." \
@@ -46,7 +46,7 @@ buildout-cli update \
 
 Dry-run to preview changes without applying:
 
-```sh
+```
 buildout-cli update \
   --page abc123 \
   --revision "r:sha256:..." \
@@ -56,7 +56,7 @@ buildout-cli update \
 
 Read ops from stdin (useful for piped/generated operations):
 
-```sh
+```
 echo '[{"op":"search_replace","old_str":"foo","new_str":"bar"}]' | \
   buildout-cli update \
     --page abc123 \
@@ -66,7 +66,7 @@ echo '[{"op":"search_replace","old_str":"foo","new_str":"bar"}]' | \
 
 Allow a large delete (exceeds the configured safety threshold):
 
-```sh
+```
 buildout-cli update \
   --page abc123 \
   --revision "r:sha256:..." \
@@ -76,7 +76,7 @@ buildout-cli update \
 
 JSON output mode:
 
-```sh
+```
 buildout-cli update \
   --page abc123 \
   --revision "r:sha256:..." \
@@ -87,7 +87,7 @@ buildout-cli update \
 ## Exit Codes
 
 | Code | Meaning |
-|------|---------|
+|---|---|
 | 0 | Success |
 | 2 | Missing or invalid argument (missing `--page`, `--revision`, `--ops`, file not found, malformed JSON) |
 | 3 | Page not found (HTTP 404) |

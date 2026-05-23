@@ -34,6 +34,11 @@ app.Configure(config =>
     {
         db.AddCommand<DbViewCommand>("view");
     });
+    config.AddBranch<SkillsSettings>("skills", skills =>
+    {
+        skills.AddCommand<SkillsInstallCommand>("install");
+        skills.AddCommand<SkillsRemoveCommand>("remove");
+    });
 });
 
 await app.RunAsync(args);

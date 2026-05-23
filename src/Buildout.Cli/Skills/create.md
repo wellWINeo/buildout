@@ -12,9 +12,9 @@ buildout-cli create <markdown_source> [options]
 
 ## Arguments
 
-| Argument | Description |
-|---|---|
-| `<markdown_source>` | Path to a Markdown file, or `-` to read from stdin (max 16 MB). |
+| Argument | Required | Description |
+|---|---|---|
+| `<markdown_source>` | Yes | Path to a Markdown file, or `-` to read from stdin (max 16 MB). |
 
 ## Options
 
@@ -50,7 +50,7 @@ buildout-cli create page.md --print json
 Create a root-level page with an icon and cover:
 
 ```
-buildout-cli create index.md --icon "\ud83c\udfe0" --cover https://example.com/cover.jpg
+buildout-cli create index.md --icon "🏠" --cover https://example.com/cover.jpg
 ```
 
 ## Exit Codes

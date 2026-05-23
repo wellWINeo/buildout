@@ -27,10 +27,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Buildout.Cli\Buildout.Cli.csproj" />
     <ProjectReference Include="..\..\src\Buildout.Core\Buildout.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Buildout.Core\Buildout.Core.csproj" />
     <ProjectReference Include="..\..\src\Buildout.Mcp\Buildout.Mcp.csproj" />
   </ItemGroup>
 

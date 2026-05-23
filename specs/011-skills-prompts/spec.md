@@ -3,7 +3,7 @@
 **Feature Branch**: `011-skills-prompts`
 **Created**: 2026-05-23
 **Status**: Draft
-**Input**: User description: "Provide embedded skills for LLM agents to work with buildout-cli and embedded prompts in MCP to instruct models how to deal with tools. CLI command: buildout-cli skills [install|remove] --agent [claude|opencode] [--local]. Skills/prompts stored as markdown in repo. Use embedded resources for prompt content in executable."
+**Input**: User description: "Provide embedded skills for LLM agents to work with buildout-cli and embedded prompts in MCP to instruct models how to deal with tools. CLI command: buildout-cli skills install|remove --agent claude|opencode [--local]. Skills/prompts stored as markdown in repo. Use embedded resources for prompt content in executable."
 
 ## User Scenarios & Testing *(mandatory)*
 

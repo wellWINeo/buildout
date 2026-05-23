@@ -12,15 +12,15 @@ buildout-cli delete <page_id> [options]
 
 ## Arguments
 
-| Name       | Required | Description         |
-|------------|----------|---------------------|
-| `<page_id>` | Yes     | The Notion page ID to archive |
+| Name | Required | Description |
+|---|---|---|
+| `<page_id>` | Yes | The buildin page ID to archive. |
 
 ## Options
 
-| Flag        | Type   | Default     | Description                          |
-|-------------|--------|-------------|--------------------------------------|
-| `--print`   | string | `summary`   | Output format: `summary` or `json`   |
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--print` | string | `"summary"` | Output format: `summary` (human-readable) or `json` (machine-readable `PageLifecycleOutcome`). |
 
 ## Examples
 
@@ -40,14 +40,14 @@ JSON output serializes the full `PageLifecycleOutcome` object (camelCase), inclu
 
 ## Exit Codes
 
-| Code | Meaning                                      |
-|------|----------------------------------------------|
-| 0    | Success — page archived                      |
-| 2    | Missing or empty page ID                     |
-| 3    | Page not found                               |
-| 4    | Authentication failure                       |
-| 5    | Transport / network error                    |
-| 6    | Unexpected error                             |
+| Code | Meaning |
+|---|---|
+| 0 | Success — page archived |
+| 2 | Missing or empty page ID |
+| 3 | Page not found |
+| 4 | Authentication failure |
+| 5 | Transport / network error |
+| 6 | Unexpected error |
 
 ## Notes
 

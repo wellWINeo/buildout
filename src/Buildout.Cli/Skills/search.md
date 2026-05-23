@@ -13,14 +13,14 @@ buildout-cli search <query> [options]
 ## Arguments
 
 | Argument | Required | Description |
-|----------|----------|-------------|
+|---|---|---|
 | `<query>` | Yes | The search text. |
 
 ## Options
 
 | Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--page <PAGE_ID>` | `string?` | `null` | Restrict results to a single page by its ID. |
+|---|---|---|---|
+| `--page` | `string?` | `null` | Restrict results to a single page by its ID. |
 
 ## Examples
 
@@ -39,7 +39,7 @@ buildout-cli search "meeting notes" --page abc123
 ## Exit Codes
 
 | Code | Meaning |
-|------|---------|
+|---|---|
 | 0 | Success — results returned (may be empty list). |
 | 2 | Invalid input — query is empty or whitespace. |
 | 3 | Page not found — the `--page` ID does not exist. |

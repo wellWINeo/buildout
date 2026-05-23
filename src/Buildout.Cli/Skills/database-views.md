@@ -12,17 +12,17 @@ buildout-cli db view <DATABASE_ID> [options]
 
 ## Arguments
 
-| Name          | Required | Description              |
-|---------------|----------|--------------------------|
-| `<DATABASE_ID>` | Yes     | ID of the Notion database |
+| Name | Required | Description |
+|---|---|---|
+| `<DATABASE_ID>` | Yes | ID of the Notion database. |
 
 ## Options
 
-| Flag                  | Type   | Default | Description                                              |
-|-----------------------|--------|---------|----------------------------------------------------------|
-| `-s`, `--style`       | enum   | `table` | View style: `table`, `board`, `gallery`, `list`, `calendar`, `timeline` |
-| `-g`, `--group-by`    | string | _(none)_| Property name to group by. Required for `board` view.    |
-| `-d`, `--date-property` | string | _(none)_| Property carrying a date. Required for `calendar` and `timeline` views. |
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `-s`, `--style` | enum | `table` | View style: `table`, `board`, `gallery`, `list`, `calendar`, `timeline`. |
+| `-g`, `--group-by` | string | _(none)_ | Property name to group by. Required for `board` view. |
+| `-d`, `--date-property` | string | _(none)_ | Property carrying a date. Required for `calendar` and `timeline` views. |
 
 ## Examples
 
@@ -46,14 +46,14 @@ buildout-cli db view abc123 --style calendar --date-property "Due Date"
 
 ## Exit Codes
 
-| Code | Meaning                  |
-|------|--------------------------|
-| 0    | Success                  |
-| 2    | Validation error (missing required options, invalid arguments) |
-| 3    | Database not found (404) |
-| 4    | Authentication failure (401/403) |
-| 5    | Transport failure (network error) |
-| 6    | Unexpected API error     |
+| Code | Meaning |
+|---|---|
+| 0 | Success |
+| 2 | Validation error (missing required options, invalid arguments) |
+| 3 | Database not found (404) |
+| 4 | Authentication failure (401/403) |
+| 5 | Transport failure (network error) |
+| 6 | Unexpected API error |
 
 ## Notes
 
