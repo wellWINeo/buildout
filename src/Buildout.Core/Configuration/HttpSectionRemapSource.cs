@@ -30,13 +30,13 @@ public sealed class HttpSectionRemapSource : IConfigurationSource
             var timeout = _parent["Http:Timeout"];
             if (!string.IsNullOrEmpty(timeout))
             {
-                Data["HttpTimeout"] = timeout;
+                Data["Http:Timeout"] = timeout;
             }
 
             var unsafeAllowInsecure = _parent["Http:UnsafeAllowInsecure"];
             if (!string.IsNullOrEmpty(unsafeAllowInsecure))
             {
-                Data["UnsafeAllowInsecure"] = unsafeAllowInsecure;
+                Data["Http:UnsafeAllowInsecure"] = unsafeAllowInsecure;
             }
         }
     }

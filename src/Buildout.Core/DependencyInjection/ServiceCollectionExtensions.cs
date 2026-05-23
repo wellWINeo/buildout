@@ -45,7 +45,7 @@ public static class ServiceCollectionExtensions
             return new HttpClient
             {
                 BaseAddress = opts.BaseUrl,
-                Timeout = opts.HttpTimeout
+                Timeout = opts.Http.Timeout
             };
         });
 

@@ -20,7 +20,7 @@ internal static class McpSkBridge
             {
                 ["Buildin__BaseUrl"] = fixture.BaseUrl,
                 ["Buildin__BotToken"] = "test-token",
-                ["Buildin__UnsafeAllowInsecure"] = "true",
+                ["Buildin__Http__UnsafeAllowInsecure"] = "true",
             },
             ShutdownTimeout = TimeSpan.FromSeconds(5),
         });

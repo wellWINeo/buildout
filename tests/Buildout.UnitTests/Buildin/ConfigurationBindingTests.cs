@@ -17,7 +17,7 @@ public sealed class ConfigurationBindingTests
         {
             BaseUrl = new Uri("https://api.buildin.ai/"),
             BotToken = "valid-token",
-            HttpTimeout = TimeSpan.FromSeconds(30)
+            Http = new HttpOptions { Timeout = TimeSpan.FromSeconds(30) }
         };
 
         var result = _validator.Validate(null, options);
@@ -32,7 +32,7 @@ public sealed class ConfigurationBindingTests
         {
             BaseUrl = null!,
             BotToken = "valid-token",
-            HttpTimeout = TimeSpan.FromSeconds(30)
+            Http = new HttpOptions { Timeout = TimeSpan.FromSeconds(30) }
         };
 
         var result = _validator.Validate(null, options);
@@ -48,7 +48,7 @@ public sealed class ConfigurationBindingTests
         {
             BaseUrl = new Uri("/relative", UriKind.Relative),
             BotToken = "valid-token",
-            HttpTimeout = TimeSpan.FromSeconds(30)
+            Http = new HttpOptions { Timeout = TimeSpan.FromSeconds(30) }
         };
 
         var result = _validator.Validate(null, options);
@@ -64,8 +64,7 @@ public sealed class ConfigurationBindingTests
         {
             BaseUrl = new Uri("http://api.buildin.ai/"),
             BotToken = "valid-token",
-            HttpTimeout = TimeSpan.FromSeconds(30),
-            UnsafeAllowInsecure = false
+            Http = new HttpOptions { Timeout = TimeSpan.FromSeconds(30), UnsafeAllowInsecure = false }
         };
 
         var result = _validator.Validate(null, options);
@@ -81,8 +80,7 @@ public sealed class ConfigurationBindingTests
         {
             BaseUrl = new Uri("http://localhost:8080/"),
             BotToken = "valid-token",
-            HttpTimeout = TimeSpan.FromSeconds(30),
-            UnsafeAllowInsecure = true
+            Http = new HttpOptions { Timeout = TimeSpan.FromSeconds(30), UnsafeAllowInsecure = true }
         };
 
         var result = _validator.Validate(null, options);
@@ -97,7 +95,7 @@ public sealed class ConfigurationBindingTests
         {
             BaseUrl = new Uri("https://api.buildin.ai/"),
             BotToken = "",
-            HttpTimeout = TimeSpan.FromSeconds(30)
+            Http = new HttpOptions { Timeout = TimeSpan.FromSeconds(30) }
         };
 
         var result = _validator.Validate(null, options);
@@ -113,7 +111,7 @@ public sealed class ConfigurationBindingTests
         {
             BaseUrl = new Uri("https://api.buildin.ai/"),
             BotToken = "   ",
-            HttpTimeout = TimeSpan.FromSeconds(30)
+            Http = new HttpOptions { Timeout = TimeSpan.FromSeconds(30) }
         };
 
         var result = _validator.Validate(null, options);
@@ -129,13 +127,13 @@ public sealed class ConfigurationBindingTests
         {
             BaseUrl = new Uri("https://api.buildin.ai/"),
             BotToken = "valid-token",
-            HttpTimeout = TimeSpan.Zero
+            Http = new HttpOptions { Timeout = TimeSpan.Zero }
         };
 
         var result = _validator.Validate(null, options);
 
         Assert.True(result.Failed);
-        Assert.Contains("HttpTimeout", result.FailureMessage);
+        Assert.Contains("Http:Timeout", result.FailureMessage);
     }
 
     [Fact]
@@ -145,13 +143,13 @@ public sealed class ConfigurationBindingTests
         {
             BaseUrl = new Uri("https://api.buildin.ai/"),
             BotToken = "valid-token",
-            HttpTimeout = TimeSpan.FromSeconds(-5)
+            Http = new HttpOptions { Timeout = TimeSpan.FromSeconds(-5) }
         };
 
         var result = _validator.Validate(null, options);
 
         Assert.True(result.Failed);
-        Assert.Contains("HttpTimeout", result.FailureMessage);
+        Assert.Contains("Http:Timeout", result.FailureMessage);
     }
 
     public sealed class BuildoutConfigurationBindingTests
@@ -192,8 +190,10 @@ public sealed class ConfigurationBindingTests
                 {
                     "BotToken": "test-token-456",
                     "BaseUrl": "https://custom.api.com/",
-                    "HttpTimeout": "00:02:00",
-                    "UnsafeAllowInsecure": true
+                    "Http": {
+                        "Timeout": "00:02:00",
+                        "UnsafeAllowInsecure": true
+                    }
                 }
                 """;
 
@@ -209,8 +209,8 @@ public sealed class ConfigurationBindingTests
 
                 Assert.Equal("test-token-456", options.BotToken);
                 Assert.Equal(new Uri("https://custom.api.com/"), options.BaseUrl);
-                Assert.Equal(TimeSpan.FromMinutes(2), options.HttpTimeout);
-                Assert.True(options.UnsafeAllowInsecure);
+                Assert.Equal(TimeSpan.FromMinutes(2), options.Http.Timeout);
+                Assert.True(options.Http.UnsafeAllowInsecure);
             }
             finally
             {

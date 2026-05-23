@@ -20,8 +20,8 @@ public static class UnknownKeyAuditor
     {
         ["Buildin:BotToken"] = "BotToken",
         ["Buildin:BaseUrl"] = "BaseUrl",
-        ["Buildin:HttpTimeout"] = "Http:Timeout",
-        ["Buildin:UnsafeAllowInsecure"] = "Http:UnsafeAllowInsecure",
+        ["Buildin:Http:Timeout"] = "Http:Timeout",
+        ["Buildin:Http:UnsafeAllowInsecure"] = "Http:UnsafeAllowInsecure",
         ["PageEditor:LargeDeleteThreshold"] = "Limitations:LargeDeleteThreshold",
         ["BUILDOUT_TELEMETRY_ENABLED"] = "Telemetry:Enabled"
     };
@@ -38,9 +38,12 @@ public static class UnknownKeyAuditor
 
     public static void Audit(IConfiguration configuration, ILogger logger)
     {
-        var loadedKeys = configuration.GetChildren()
-            .Select(child => child.Key)
+        var allKeys = configuration.AsEnumerable()
+            .Where(kv => !string.IsNullOrEmpty(kv.Key))
+            .Select(kv => kv.Key)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var loadedKeys = allKeys.Where(key => !IsParentOfAnyKey(key, allKeys)).ToHashSet();
 
         foreach (var key in loadedKeys)
         {
@@ -48,6 +51,9 @@ public static class UnknownKeyAuditor
                 continue;
 
             if (CanonicalKeys.Contains(key))
+                continue;
+
+            if (IsParentOfCanonicalKey(key))
                 continue;
 
             if (LegacyKeyHints.TryGetValue(key, out var replacement))
@@ -60,6 +66,10 @@ public static class UnknownKeyAuditor
                     replacement,
                     replacement.Replace(":", "__"));
             }
+            else if (IsParentOfLegacyKey(key))
+            {
+                continue;
+            }
             else
             {
                 logger.LogWarning(
@@ -67,5 +77,37 @@ public static class UnknownKeyAuditor
                     key);
             }
         }
+    }
+
+    private static bool IsParentOfAnyKey(string key, HashSet<string> allKeys)
+    {
+        foreach (var otherKey in allKeys)
+        {
+            if (otherKey != key && otherKey.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool IsParentOfCanonicalKey(string key)
+    {
+        foreach (var canonicalKey in CanonicalKeys)
+        {
+            if (canonicalKey.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsParentOfLegacyKey(string key)
+    {
+        foreach (var legacyKey in LegacyKeyHints.Keys)
+        {
+            if (legacyKey.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 }

@@ -19,12 +19,7 @@ public sealed class BuildinClientOptions
     public string BotToken { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the HTTP timeout for API requests.
+    /// Gets or sets the HTTP-related configuration options.
     /// </summary>
-    public TimeSpan HttpTimeout { get; set; } = TimeSpan.FromSeconds(30);
-
-    /// <summary>
-    /// Gets or sets a value indicating whether to allow insecure HTTP connections.
-    /// </summary>
-    public bool UnsafeAllowInsecure { get; set; }
+    public HttpOptions Http { get; set; } = new();
 }

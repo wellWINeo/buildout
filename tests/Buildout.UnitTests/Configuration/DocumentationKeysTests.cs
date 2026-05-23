@@ -68,8 +68,20 @@ public class DocumentationKeysTests
         var buildinProps = typeof(BuildinClientOptions).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         foreach (var prop in buildinProps)
         {
-            var key = MapPropertyToConfigKey(prop.Name, null);
-            keys.Add(key);
+            if (prop.Name == "Http")
+            {
+                var httpProps = prop.PropertyType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                foreach (var httpProp in httpProps)
+                {
+                    var key = MapPropertyToConfigKey(httpProp.Name, "Http");
+                    keys.Add(key);
+                }
+            }
+            else
+            {
+                var key = MapPropertyToConfigKey(prop.Name, null);
+                keys.Add(key);
+            }
         }
 
         var telemetryProps = typeof(TelemetryOptions).GetProperties(BindingFlags.Public | BindingFlags.Instance);

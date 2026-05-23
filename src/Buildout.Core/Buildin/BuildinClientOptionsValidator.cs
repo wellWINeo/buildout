@@ -12,11 +12,11 @@ public sealed class BuildinClientOptionsValidator : IValidateOptions<BuildinClie
         if (options.BaseUrl is null || !options.BaseUrl.IsAbsoluteUri)
             return ValidateOptionsResult.Fail("BaseUrl must be an absolute URI.");
 
-        if (!options.BaseUrl.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) && !options.UnsafeAllowInsecure)
+        if (!options.BaseUrl.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) && !options.Http.UnsafeAllowInsecure)
             return ValidateOptionsResult.Fail("BaseUrl must use HTTPS. Set Http:UnsafeAllowInsecure to allow HTTP.");
 
-        if (options.HttpTimeout <= TimeSpan.Zero)
-            return ValidateOptionsResult.Fail("HttpTimeout must be a positive duration.");
+        if (options.Http.Timeout <= TimeSpan.Zero)
+            return ValidateOptionsResult.Fail("Http:Timeout must be a positive duration.");
 
         return ValidateOptionsResult.Success;
     }

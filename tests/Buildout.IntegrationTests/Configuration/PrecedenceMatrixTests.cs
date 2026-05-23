@@ -129,7 +129,7 @@ public sealed class PrecedenceMatrixTests
 
             var buildinOptions = provider.GetRequiredService<IOptions<BuildinClientOptions>>().Value;
 
-            Assert.Equal(TimeSpan.FromMinutes(1), buildinOptions.HttpTimeout);
+            Assert.Equal(TimeSpan.FromMinutes(1), buildinOptions.Http.Timeout);
             Assert.Equal(new Uri("https://file.example.com/"), buildinOptions.BaseUrl);
         }
         finally
@@ -239,8 +239,8 @@ public sealed class PrecedenceMatrixTests
 
             var buildinOptions = provider.GetRequiredService<IOptions<BuildinClientOptions>>().Value;
 
-            Assert.Equal(TimeSpan.FromMinutes(1), buildinOptions.HttpTimeout);
-            Assert.True(buildinOptions.UnsafeAllowInsecure);
+            Assert.Equal(TimeSpan.FromMinutes(1), buildinOptions.Http.Timeout);
+            Assert.True(buildinOptions.Http.UnsafeAllowInsecure);
         }
         finally
         {
