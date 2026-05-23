@@ -18,7 +18,7 @@
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
 - [x] All acceptance scenarios are defined
-- [x] Edge cases are identified
+- [x] Edge cases are identified and resolved
 - [x] Scope is clearly bounded
 - [x] Dependencies and assumptions identified
 
@@ -32,4 +32,8 @@
 ## Notes
 
 - All items pass. Spec is ready for `/speckit-clarify` or `/speckit-plan`.
-- The user provided specific implementation guidance (embedded resources, static Prompts class) which was captured as functional requirements without prescribing internal class structure in the spec itself.
+- Update subcommand removed — install with overwrite handles this use case.
+- Global is now the default; `--local` flag opts into project-local installation.
+- `--overwrite` flag protects user-modified files by default.
+- MCP base instructions are compact; update prompts loaded separately on demand.
+- Same skill content for all agents; only installation directory differs.
