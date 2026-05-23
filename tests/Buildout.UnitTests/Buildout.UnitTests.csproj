@@ -5,7 +5,7 @@
     <IsPackable>false</IsPackable>
     <UseSprites>true</UseSprites>
     <ImplicitUsings>enable</ImplicitUsings>
-    <NoWarn>xUnit1051;CA1707</NoWarn>
+    <NoWarn>xUnit1051;xUnit1026;CA1707</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Buildout.Cli\Buildout.Cli.csproj" />
+    <ProjectReference Include="..\..\src\Buildout.Configuration\Buildout.Configuration.csproj" />
     <ProjectReference Include="..\..\src\Buildout.Core\Buildout.Core.csproj" />
   </ItemGroup>
 

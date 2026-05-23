@@ -2,7 +2,7 @@ using Spectre.Console.Cli;
 
 namespace Buildout.Cli.Commands;
 
-public sealed class RestoreSettings : CommandSettings
+public sealed class RestoreSettings : BuildoutCommandSettings
 {
     [CommandArgument(0, "<page_id>")]
     public string PageId { get; init; } = string.Empty;

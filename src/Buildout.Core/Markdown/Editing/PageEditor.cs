@@ -17,7 +17,7 @@ public sealed class PageEditor : IPageEditor
 {
     private readonly IBuildinClient _client;
     private readonly IPageMarkdownRenderer _renderer;
-    private readonly IOptions<PageEditorOptions> _options;
+    private readonly IOptions<LimitationsOptions> _options;
     private readonly ILogger<PageEditor> _logger;
     private readonly BlockToMarkdownRegistry _registry;
     private readonly IMarkdownToBlocksParser _parser;
@@ -27,7 +27,7 @@ public sealed class PageEditor : IPageEditor
     public PageEditor(
         IBuildinClient client,
         IPageMarkdownRenderer renderer,
-        IOptions<PageEditorOptions> options,
+        IOptions<LimitationsOptions> options,
         ILogger<PageEditor> logger,
         BlockToMarkdownRegistry registry,
         IMarkdownToBlocksParser parser,

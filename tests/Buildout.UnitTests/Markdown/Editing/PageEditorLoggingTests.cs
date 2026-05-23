@@ -53,7 +53,7 @@ public sealed class PageEditorLoggingTests : IDisposable
         var inlineRenderer = new InlineRenderer(mentionRegistry);
         var parser = Substitute.For<IMarkdownToBlocksParser>();
         var renderer = Substitute.For<IPageMarkdownRenderer>();
-        var options = Options.Create(new PageEditorOptions { LargeDeleteThreshold = 10 });
+        var options = Options.Create(new LimitationsOptions { LargeDeleteThreshold = 10 });
         var logger = Substitute.For<ILogger<PageEditor>>();
 
         _sut = new PageEditor(_client, renderer, options, logger, registry, parser, inlineRenderer);

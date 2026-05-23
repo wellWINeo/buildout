@@ -5,6 +5,7 @@ using Buildout.IntegrationTests.Buildin;
 using Buildout.IntegrationTests.Llm;
 using Buildout.Mcp.Resources;
 using Buildout.Mcp.Tools;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -115,7 +116,8 @@ public sealed class CreatePageRoundTripLlmTests : IAsyncLifetime
         var client = _fixture.CreateClient();
 
         var services = new ServiceCollection();
-        services.AddBuildoutCore();
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddBuildoutCore(configuration);
         services.AddSingleton<IBuildinClient>(client);
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
         services.AddMcpServer()

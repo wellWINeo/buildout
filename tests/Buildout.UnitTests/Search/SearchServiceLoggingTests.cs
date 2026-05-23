@@ -17,7 +17,7 @@ public sealed class SearchServiceLoggingTests
     private readonly IBuildinClient _client;
     private readonly ITitleRenderer _titleRenderer;
     private readonly AncestorScopeFilter _scopeFilter;
-    private readonly ILogger<SearchService> _logger;
+    private readonly CapturingLogger _logger;
     private readonly SearchService _service;
 
     public SearchServiceLoggingTests()
@@ -25,8 +25,7 @@ public sealed class SearchServiceLoggingTests
         _client = Substitute.For<IBuildinClient>();
         _titleRenderer = Substitute.For<ITitleRenderer>();
         _scopeFilter = new AncestorScopeFilter(_client, Substitute.For<ILogger<AncestorScopeFilter>>());
-        _logger = Substitute.For<ILogger<SearchService>>();
-        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        _logger = new CapturingLogger();
         _service = new SearchService(_client, _titleRenderer, _scopeFilter, _logger);
     }
 
@@ -56,14 +55,11 @@ public sealed class SearchServiceLoggingTests
 
         await _service.SearchAsync("test query", null, CancellationToken.None);
 
-#pragma warning disable CA1873
-        _logger.Received(1).Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(v => v.ToString()!.Contains("search") && v.ToString()!.Contains("query=test query") && v.ToString()!.Contains("result_count=2")),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-#pragma warning restore CA1873
+        Assert.Single(_logger.Entries,
+            e => e.Level == LogLevel.Information
+                 && e.Message.Contains("search")
+                 && e.Message.Contains("query=test query")
+                 && e.Message.Contains("result_count=2"));
     }
 
     [Fact]
@@ -178,14 +174,9 @@ public sealed class SearchServiceLoggingTests
         await _service.SearchAsync(longQuery, null, CancellationToken.None);
 
         var truncated = string.Concat(longQuery.AsSpan(0, 100), "…");
-#pragma warning disable CA1873
-        _logger.Received(1).Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(v => v.ToString()!.Contains("query=" + truncated)),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-#pragma warning restore CA1873
+
+        Assert.Single(_logger.Entries,
+            e => e.Level == LogLevel.Information && e.Message.Contains("query=" + truncated));
     }
 
     private static Dictionary<string, object?> ToDictionary(KeyValuePair<string, object?>[] tags)
@@ -194,5 +185,20 @@ public sealed class SearchServiceLoggingTests
         foreach (var tag in tags)
             dict[tag.Key] = tag.Value;
         return dict;
+    }
+
+    private sealed class CapturingLogger : ILogger<SearchService>
+    {
+        public sealed record LogEntry(LogLevel Level, string Message);
+        public List<LogEntry> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add(new LogEntry(logLevel, formatter(state, exception)));
+        }
     }
 }

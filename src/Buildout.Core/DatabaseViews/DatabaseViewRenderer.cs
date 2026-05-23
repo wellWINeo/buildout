@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using Buildout.Core.Buildin;
@@ -35,7 +34,6 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
         _logger = logger;
     }
 
-    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
     public async Task<string> RenderAsync(DatabaseViewRequest request, CancellationToken cancellationToken = default)
     {
         ValidateStatic(request);
@@ -152,7 +150,6 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
         }
     }
 
-    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
     private async Task<List<DatabaseRow>> PaginateRowsAsync(string databaseId, CancellationToken ct)
     {
         var rows = new List<DatabaseRow>();
@@ -167,8 +164,7 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
             foreach (var props in result.Results)
                 rows.Add(new DatabaseRow(string.Empty, props));
 
-            if (_logger.IsEnabled(LogLevel.Debug))
-                _logger.LogDebug("PaginateRows pagination_page={PageNumber} pagination_items={ItemCount}", pageNumber, result.Results.Count);
+            DatabaseViewRendererLog.PaginateRowsPage(_logger, pageNumber, result.Results.Count);
 
             cursor = result.HasMore ? result.NextCursor : null;
             pageNumber++;

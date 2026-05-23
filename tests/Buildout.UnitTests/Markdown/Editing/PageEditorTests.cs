@@ -22,7 +22,7 @@ public sealed class PageEditorTests
 {
     private readonly IBuildinClient _client;
     private readonly IPageMarkdownRenderer _renderer;
-    private readonly IOptions<PageEditorOptions> _options;
+    private readonly IOptions<LimitationsOptions> _options;
     private readonly TestLogger _logger;
     private readonly BlockToMarkdownRegistry _registry;
     private readonly IMarkdownToBlocksParser _parser;
@@ -33,7 +33,7 @@ public sealed class PageEditorTests
     {
         _client = Substitute.For<IBuildinClient>();
         _renderer = Substitute.For<IPageMarkdownRenderer>();
-        _options = Options.Create(new PageEditorOptions { LargeDeleteThreshold = 10 });
+        _options = Options.Create(new LimitationsOptions { LargeDeleteThreshold = 10 });
         _logger = new TestLogger();
 
         var blockConverters = new IBlockToMarkdownConverter[]

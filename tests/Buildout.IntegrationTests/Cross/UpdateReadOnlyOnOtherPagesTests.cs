@@ -83,7 +83,8 @@ public sealed class UpdateReadOnlyOnOtherPagesTests
         var client = _fixture.CreateClient();
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
-        services.AddBuildoutCore();
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddBuildoutCore(configuration);
         services.AddSingleton<IBuildinClient>(client);
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
 

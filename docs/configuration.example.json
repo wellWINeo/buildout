@@ -1,0 +1,15 @@
+{
+  "BotToken": "<your-bot-token>",
+  "BaseUrl": "https://api.buildin.ai/",
+  "Http": {
+    "Timeout": "00:00:30",
+    "UnsafeAllowInsecure": false
+  },
+  "Limitations": {
+    "LargeDeleteThreshold": 10
+  },
+  "Telemetry": {
+    "Enabled": false,
+    "OtlpEndpoint": "http://localhost:4318"
+  }
+}

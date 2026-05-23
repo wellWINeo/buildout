@@ -11,6 +11,7 @@ using Microsoft.Kiota.Abstractions.Serialization;
 using NSubstitute;
 using Xunit;
 
+
 namespace Buildout.UnitTests.Buildin;
 
 [Collection("MetricsTests")]
@@ -33,6 +34,9 @@ public sealed class BotBuildinClientLoggingTests
     [Fact]
     public async Task WrapAsync_Success_LogsDebugWithMethodAndOutcome()
     {
+        var capturingLogger = new CapturingLogger();
+        var client = new BotBuildinClient(_adapter, _options, capturingLogger);
+
         var generated = new Gen.UserMe
         {
             Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -47,16 +51,10 @@ public sealed class BotBuildinClientLoggingTests
                 Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Gen.UserMe?>(generated));
 
-        await _client.GetMeAsync();
+        await client.GetMeAsync();
 
-#pragma warning disable CA1873
-        _logger.Received(1).Log(
-            LogLevel.Debug,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(v => v.ToString()!.Contains("GetMeAsync") && v.ToString()!.Contains("success")),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-#pragma warning restore CA1873
+        Assert.Single(capturingLogger.Entries,
+            e => e.Level == LogLevel.Debug && e.Message.Contains("GetMeAsync") && e.Message.Contains("success"));
     }
 
     [Fact]
@@ -114,6 +112,9 @@ public sealed class BotBuildinClientLoggingTests
     [Fact]
     public async Task WrapAsync_ApiError_LogsErrorWithMethodAndErrorType()
     {
+        var capturingLogger = new CapturingLogger();
+        var client = new BotBuildinClient(_adapter, _options, capturingLogger);
+
         var apiError = new Gen.Error
         {
             Status = 404,
@@ -128,21 +129,18 @@ public sealed class BotBuildinClientLoggingTests
                 Arg.Any<CancellationToken>())
             .Returns<Task<Gen.UserMe?>>(_ => throw apiError);
 
-        await Assert.ThrowsAsync<BuildinApiException>(() => _client.GetMeAsync());
+        await Assert.ThrowsAsync<BuildinApiException>(() => client.GetMeAsync());
 
-#pragma warning disable CA1873
-        _logger.Received(1).Log(
-            LogLevel.Error,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(v => v.ToString()!.Contains("GetMeAsync") && v.ToString()!.Contains("failure") && v.ToString()!.Contains("api")),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-#pragma warning restore CA1873
+        Assert.Single(capturingLogger.Entries,
+            e => e.Level == LogLevel.Error && e.Message.Contains("GetMeAsync") && e.Message.Contains("failure") && e.Message.Contains("api"));
     }
 
     [Fact]
     public async Task WrapAsync_TransportError_LogsErrorWithTransportErrorType()
     {
+        var capturingLogger = new CapturingLogger();
+        var client = new BotBuildinClient(_adapter, _options, capturingLogger);
+
         _adapter.SendAsync(
                 Arg.Any<RequestInformation>(),
                 Arg.Any<ParsableFactory<Gen.UserMe>>(),
@@ -150,16 +148,10 @@ public sealed class BotBuildinClientLoggingTests
                 Arg.Any<CancellationToken>())
             .Returns<Task<Gen.UserMe?>>(_ => throw new HttpRequestException("Connection refused"));
 
-        await Assert.ThrowsAsync<BuildinApiException>(() => _client.GetMeAsync());
+        await Assert.ThrowsAsync<BuildinApiException>(() => client.GetMeAsync());
 
-#pragma warning disable CA1873
-        _logger.Received(1).Log(
-            LogLevel.Error,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(v => v.ToString()!.Contains("GetMeAsync") && v.ToString()!.Contains("failure") && v.ToString()!.Contains("transport")),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-#pragma warning restore CA1873
+        Assert.Single(capturingLogger.Entries,
+            e => e.Level == LogLevel.Error && e.Message.Contains("GetMeAsync") && e.Message.Contains("failure") && e.Message.Contains("transport"));
     }
 
     [Fact]
@@ -256,6 +248,9 @@ public sealed class BotBuildinClientLoggingTests
     [Fact]
     public async Task WrapAsync_UnknownError_LogsErrorWithUnknownErrorType()
     {
+        var capturingLogger = new CapturingLogger();
+        var client = new BotBuildinClient(_adapter, _options, capturingLogger);
+
         _adapter.SendAsync(
                 Arg.Any<RequestInformation>(),
                 Arg.Any<ParsableFactory<Gen.UserMe>>(),
@@ -263,16 +258,10 @@ public sealed class BotBuildinClientLoggingTests
                 Arg.Any<CancellationToken>())
             .Returns<Task<Gen.UserMe?>>(_ => throw new InvalidOperationException("Unexpected"));
 
-        await Assert.ThrowsAsync<BuildinApiException>(() => _client.GetMeAsync());
+        await Assert.ThrowsAsync<BuildinApiException>(() => client.GetMeAsync());
 
-#pragma warning disable CA1873
-        _logger.Received(1).Log(
-            LogLevel.Error,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(v => v.ToString()!.Contains("GetMeAsync") && v.ToString()!.Contains("failure") && v.ToString()!.Contains("unknown")),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-#pragma warning restore CA1873
+        Assert.Single(capturingLogger.Entries,
+            e => e.Level == LogLevel.Error && e.Message.Contains("GetMeAsync") && e.Message.Contains("failure") && e.Message.Contains("unknown"));
     }
 
     [Fact]
@@ -318,5 +307,20 @@ public sealed class BotBuildinClientLoggingTests
         foreach (var tag in tags)
             dict[tag.Key] = tag.Value;
         return dict;
+    }
+
+    private sealed class CapturingLogger : ILogger<BotBuildinClient>
+    {
+        public sealed record LogEntry(LogLevel Level, string Message);
+        public List<LogEntry> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add(new LogEntry(logLevel, formatter(state, exception)));
+        }
     }
 }

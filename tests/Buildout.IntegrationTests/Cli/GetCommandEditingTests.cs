@@ -58,7 +58,7 @@ public sealed class GetCommandEditingTests
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
         services.AddSingleton<IMarkdownToBlocksParser, MarkdownToBlocksParser>();
-        services.AddSingleton<IOptions<PageEditorOptions>>(static _ => Options.Create(new PageEditorOptions()));
+        services.AddSingleton<IOptions<LimitationsOptions>>(static _ => Options.Create(new LimitationsOptions()));
         services.AddSingleton<IPageEditor, PageEditor>();
 
         var testConsole = new TestConsole();

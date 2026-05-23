@@ -4,6 +4,7 @@ using Buildout.Core.DatabaseViews;
 using Buildout.Core.DatabaseViews.Properties;
 using Buildout.Core.DatabaseViews.Rendering;
 using Buildout.Core.DatabaseViews.Styles;
+using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Authoring.Properties;
@@ -27,28 +28,23 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddBuildinClient(this IServiceCollection services, IConfiguration configuration)
     {
-        var options = new BuildinClientOptions();
-        configuration.GetSection("Buildin").Bind(options);
+        services.AddOptions<BuildinClientOptions>()
+            .Bind(configuration)
+            .ValidateOnStart();
 
-        var validator = new BuildinClientOptionsValidator();
-        var validationResult = validator.Validate(null, options);
-        if (validationResult.Failed)
-            throw new InvalidOperationException(validationResult.FailureMessage);
-
-        services.AddSingleton(options);
-        services.AddSingleton<IValidateOptions<BuildinClientOptions>>(_ => validator);
+        services.AddSingleton<IValidateOptions<BuildinClientOptions>, BuildinClientOptionsValidator>();
         services.AddSingleton<IAuthenticationProvider>(sp =>
         {
-            var opts = sp.GetRequiredService<BuildinClientOptions>();
+            var opts = sp.GetRequiredService<IOptions<BuildinClientOptions>>().Value;
             return new BotTokenAuthenticationProvider(opts.BotToken);
         });
         services.AddSingleton(sp =>
         {
-            var opts = sp.GetRequiredService<BuildinClientOptions>();
+            var opts = sp.GetRequiredService<IOptions<BuildinClientOptions>>().Value;
             return new HttpClient
             {
                 BaseAddress = opts.BaseUrl,
-                Timeout = opts.HttpTimeout
+                Timeout = opts.Http.Timeout
             };
         });
 
@@ -57,7 +53,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddBuildoutCore(this IServiceCollection services)
+    public static IServiceCollection AddBuildoutCore(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new ParagraphConverter());
         services.AddSingleton<IBlockToMarkdownConverter>(static _ => new Heading1Converter());
@@ -108,13 +104,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ParentKindProbe>();
         services.AddSingleton<IPageCreator, PageCreator>();
 
-        services.AddSingleton<IOptions<PageEditorOptions>>(static sp =>
-        {
-            var config = sp.GetRequiredService<IConfiguration>();
-            var options = new PageEditorOptions();
-            config.GetSection("PageEditor").Bind(options);
-            return Options.Create(options);
-        });
+        services.AddOptions<LimitationsOptions>()
+            .Bind(configuration.GetSection("Limitations"))
+            .ValidateOnStart();
+        services.AddOptions<TelemetryOptions>()
+            .Bind(configuration.GetSection("Telemetry"))
+            .ValidateOnStart();
         services.AddSingleton<IPageEditor, PageEditor>();
         services.AddSingleton<IPageLifecycle, PageLifecycleService>();
 

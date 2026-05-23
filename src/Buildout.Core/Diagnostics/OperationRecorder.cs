@@ -1,12 +1,10 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Diagnostics;
 
-[SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
 public sealed class OperationRecorder : IDisposable
 {
     private readonly ILogger _logger;
@@ -28,8 +26,7 @@ public sealed class OperationRecorder : IDisposable
                 _tags[tag.Key] = tag.Value;
         }
 
-        if (_logger.IsEnabled(LogLevel.Debug))
-            _logger.LogDebug("Operation {Operation} started", _operationName);
+        OperationRecorderLog.OperationStarted(_logger, _operationName);
     }
 
     public static OperationRecorder Start(ILogger logger, string operationName,
@@ -53,9 +50,7 @@ public sealed class OperationRecorder : IDisposable
         var durationSeconds = _stopwatch.Elapsed.TotalSeconds;
 
         var tagSuffix = FormatTags();
-        if (_logger.IsEnabled(LogLevel.Information))
-            _logger.LogInformation("Operation {Operation} completed in {DurationMs:F2}ms{Tags}",
-                _operationName, durationMs, tagSuffix);
+        OperationRecorderLog.OperationCompleted(_logger, _operationName, durationMs, tagSuffix);
 
         var tagList = BuildTagList("success");
         BuildoutMeter.OperationsTotal.Add(1, tagList);
@@ -76,9 +71,7 @@ public sealed class OperationRecorder : IDisposable
             _tags["status_code"] = statusCode.Value;
 
         var tagSuffix = FormatTags();
-        if (_logger.IsEnabled(LogLevel.Error))
-            _logger.LogError("Operation {Operation} failed with error_type {ErrorType} status_code {StatusCode} in {DurationMs:F2}ms{Tags}",
-                _operationName, errorType, statusCode, durationMs, tagSuffix);
+        OperationRecorderLog.OperationFailed(_logger, _operationName, errorType, statusCode, durationMs, tagSuffix);
 
         var tagList = BuildTagList("failure");
         BuildoutMeter.OperationsTotal.Add(1, tagList);

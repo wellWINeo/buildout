@@ -2,7 +2,7 @@ using Spectre.Console.Cli;
 
 namespace Buildout.Cli.Commands;
 
-public sealed class UpdateSettings : CommandSettings
+public sealed class UpdateSettings : BuildoutCommandSettings
 {
     [CommandOption("--page")]
     public string PageId { get; init; } = string.Empty;
