@@ -20,6 +20,7 @@
     <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
     <PackageReference Include="Spectre.Console.Testing" Version="0.55.0" />
     <PackageReference Include="WireMock.Net" Version="2.5.0" />
+    <PackageReference Include="xunit.abstractions" Version="2.0.3" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>

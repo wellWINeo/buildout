@@ -12,7 +12,7 @@ public sealed class GetCommand : AsyncCommand<GetCommand.Settings>
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    public sealed class Settings : CommandSettings
+    public sealed class Settings : BuildoutCommandSettings
     {
         [CommandArgument(0, "<page_id>")]
         public string PageId { get; init; } = string.Empty;

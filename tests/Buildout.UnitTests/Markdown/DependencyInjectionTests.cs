@@ -2,6 +2,7 @@ using Buildout.Core.Buildin;
 using Buildout.Core.DatabaseViews;
 using Buildout.Core.DependencyInjection;
 using Buildout.Core.Markdown;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,7 +17,8 @@ public class DependencyInjectionTests
     public void AddBuildoutCore_ResolvesIPageMarkdownRenderer()
     {
         var services = new ServiceCollection();
-        services.AddBuildoutCore();
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddBuildoutCore(configuration);
         services.AddSingleton<ILogger<PageMarkdownRenderer>>(NullLogger<PageMarkdownRenderer>.Instance);
         services.AddSingleton<ILogger<DatabaseViewRenderer>>(NullLogger<DatabaseViewRenderer>.Instance);
         services.AddSingleton<IBuildinClient>(Substitute.For<IBuildinClient>());

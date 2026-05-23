@@ -1,4 +1,6 @@
 using Buildout.Core.Buildin;
+using Buildout.Core.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -150,5 +152,126 @@ public sealed class ConfigurationBindingTests
 
         Assert.True(result.Failed);
         Assert.Contains("HttpTimeout", result.FailureMessage);
+    }
+
+    public sealed class BuildoutConfigurationBindingTests
+    {
+        [Fact]
+        public void BuildoutConfiguration_Build_BindsBotTokenFromJson()
+        {
+            var jsonConfig = """
+                {
+                    "BotToken": "test-token-123",
+                    "BaseUrl": "https://custom.api.com/"
+                }
+                """;
+
+            var tempFile = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(tempFile, jsonConfig);
+
+                var (config, _) = BuildoutConfiguration.Build(["--config", tempFile]);
+
+                var options = new BuildinClientOptions();
+                config.Bind(options);
+
+                Assert.Equal("test-token-123", options.BotToken);
+                Assert.Equal(new Uri("https://custom.api.com/"), options.BaseUrl);
+            }
+            finally
+            {
+                File.Delete(tempFile);
+            }
+        }
+
+        [Fact]
+        public void BuildoutConfiguration_Build_BindsAllPropertiesFromJson()
+        {
+            var jsonConfig = """
+                {
+                    "BotToken": "test-token-456",
+                    "BaseUrl": "https://custom.api.com/",
+                    "HttpTimeout": "00:02:00",
+                    "UnsafeAllowInsecure": true
+                }
+                """;
+
+            var tempFile = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(tempFile, jsonConfig);
+
+                var (config, _) = BuildoutConfiguration.Build(["--config", tempFile]);
+
+                var options = new BuildinClientOptions();
+                config.Bind(options);
+
+                Assert.Equal("test-token-456", options.BotToken);
+                Assert.Equal(new Uri("https://custom.api.com/"), options.BaseUrl);
+                Assert.Equal(TimeSpan.FromMinutes(2), options.HttpTimeout);
+                Assert.True(options.UnsafeAllowInsecure);
+            }
+            finally
+            {
+                File.Delete(tempFile);
+            }
+        }
+
+        [Fact]
+        public void BuildoutConfiguration_Build_EnvVarOverridesJson()
+        {
+            var jsonConfig = """
+                {
+                    "BotToken": "json-token",
+                    "BaseUrl": "https://json.api.com/"
+                }
+                """;
+
+            var tempFile = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(tempFile, jsonConfig);
+                Environment.SetEnvironmentVariable("Buildout__BotToken", "env-token-789");
+
+                var (config, _) = BuildoutConfiguration.Build(["--config", tempFile]);
+
+                var options = new BuildinClientOptions();
+                config.Bind(options);
+
+                Assert.Equal("env-token-789", options.BotToken);
+                Assert.Equal(new Uri("https://json.api.com/"), options.BaseUrl);
+            }
+            finally
+            {
+                File.Delete(tempFile);
+                Environment.SetEnvironmentVariable("Buildout__BotToken", null);
+            }
+        }
+
+        [Fact]
+        public void BuildoutConfiguration_Build_ResidualArgsPreserved()
+        {
+            var jsonConfig = """
+                {
+                    "BotToken": "test-token"
+                }
+                """;
+
+            var tempFile = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(tempFile, jsonConfig);
+
+                var args = new[] { "--config", tempFile, "create", "--title", "Test Page" };
+                var (_, residualArgs) = BuildoutConfiguration.Build(args);
+
+                Assert.Equal(new[] { "create", "--title", "Test Page" }, residualArgs);
+            }
+            finally
+            {
+                File.Delete(tempFile);
+            }
+        }
     }
 }

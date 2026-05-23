@@ -8,7 +8,7 @@ namespace Buildout.Cli.Commands;
 
 public sealed class SearchCommand : AsyncCommand<SearchCommand.Settings>
 {
-    public sealed class Settings : CommandSettings
+    public sealed class Settings : BuildoutCommandSettings
     {
         [CommandArgument(0, "<query>")]
         public string Query { get; init; } = string.Empty;

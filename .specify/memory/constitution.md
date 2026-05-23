@@ -1,5 +1,31 @@
 <!--
 SYNC IMPACT REPORT
+Version change: 1.0.1 → 1.1.0 (MINOR — adds a new non-negotiable principle
+governing how configurable options are surfaced, per versioning policy)
+
+Modified principles: N/A
+
+Added sections:
+  - Principle VII — Dual-Channel Configuration (NON-NEGOTIABLE)
+
+Removed sections: N/A
+
+Modified content:
+  - Technology & Implementation Standards: Secrets paragraph now references
+    Principle VII for the loader and channel requirements (the substance of
+    the secrets rule is unchanged).
+
+Templates requiring updates:
+  - ✅ .specify/templates/plan-template.md  no change needed; the existing
+       Constitution Check gate already validates all principles by reference.
+  - ✅ .specify/templates/spec-template.md  no change needed.
+  - ✅ .specify/templates/tasks-template.md no change needed.
+
+Follow-up TODOs: none.
+
+------------------------------------------------------------------------------
+HISTORICAL SYNC IMPACT REPORT — v1.0.0 → 1.0.1 (retained for traceability)
+
 Version change: 1.0.0 → 1.0.1 (PATCH — fills deferred TODO without changing
 semantics, per versioning policy)
 
@@ -111,6 +137,41 @@ rewrites MUST be a separate, distinctly named operation from edits.
 silently rewrites a page can destroy user work; the tool contract must make
 destructive operations impossible to invoke by accident.
 
+### VII. Dual-Channel Configuration (NON-NEGOTIABLE)
+
+Every user-facing configurable option introduced by any feature MUST be exposed
+through both channels of the unified configuration surface established by feature
+010 (`specs/010-configuration/`):
+
+1. The JSON configuration file (default `~/.config/buildout/config.json`,
+   override via `--config` / `-c` on either presentation), and
+2. The corresponding `Buildout__`-prefixed environment variable, using `__` as
+   the section separator.
+
+Configuration loading MUST go through the single `Microsoft.Extensions.Configuration`
+loader provided by `Buildout.Core`. Features MUST NOT introduce ad-hoc
+configuration sources — no custom file formats, no custom env-var prefixes, no
+process-wide globals, no hard-coded paths, no per-feature `IConfiguration`
+chains. The schema reference at `docs/configuration.md` MUST be updated in the
+same PR that introduces a new option.
+
+Defaults and validation belong on the bound options class via an
+`IValidateOptions<T>` implementation that fails fast at startup. A feature MAY
+NOT defer validation to first use, log a warning and continue, or silently
+substitute defaults for unparseable values; a misconfigured process MUST refuse
+to start with a single human-readable error naming the offending key.
+
+Secrets follow the additional rules in Technology & Implementation Standards
+below: they MUST flow through the same loader, MUST NOT be logged or echoed,
+and MUST NOT appear in source, fixtures, or committed configuration.
+
+**Rationale**: Two presentations (CLI + MCP, plus future surfaces) bind to the
+same domain core. Without a single dual-channel configuration discipline,
+operators end up reading the source to learn which knobs exist, where they live,
+and how to set them — and option drift between CLI and MCP becomes inevitable.
+Forcing every option through both channels keeps the surface coherent, keeps
+`docs/configuration.md` authoritative, and keeps secret handling auditable.
+
 ## Technology & Implementation Standards
 
 **Target framework**: .NET 10. Projects use SDK-style `.csproj`. Nullable reference
@@ -142,9 +203,12 @@ tests/
 behind the buildin client interface (see Principle V) without source changes outside
 `Buildout.Core`.
 
-**Secrets**: Buildin tokens, OAuth secrets, and LLM keys MUST be read from
-environment variables or user-scoped configuration. Tests MUST use fixtures or
-mocks. No secrets in source, in test fixtures, or in committed configuration.
+**Secrets**: Buildin tokens, OAuth secrets, and LLM keys MUST be read through the
+single configuration loader mandated by Principle VII — i.e. from the JSON
+configuration file or the `Buildout__`-prefixed environment variables. Tests MUST
+use fixtures or mocks. No secrets in source, in test fixtures, or in committed
+configuration. The loader MUST NOT echo secret values to logs, error messages,
+or validation failures.
 
 **Out of scope** (current version): admin dashboard, managed or enterprise
 deployment, multi-tenant hosting. Adding any of these requires a constitution
@@ -204,4 +268,4 @@ override.
 review. Plans MUST run the Constitution Check gate before Phase 0 research and
 re-check after Phase 1 design.
 
-**Version**: 1.0.1 | **Ratified**: 2026-05-04 | **Last Amended**: 2026-05-04
+**Version**: 1.1.0 | **Ratified**: 2026-05-04 | **Last Amended**: 2026-05-21

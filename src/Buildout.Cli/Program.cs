@@ -1,42 +1,50 @@
 using Buildout.Cli.Commands;
 using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin;
+using Buildout.Core.Configuration;
 using Buildout.Core.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console.Cli;
 
-var services = new ServiceCollection();
-
-var configuration = new ConfigurationBuilder()
-    .AddEnvironmentVariables()
-    .Build();
-
-services.AddBuildinClient(configuration);
-services.AddBuildoutCore();
-services.AddSingleton<Spectre.Console.IAnsiConsole>(_ => Spectre.Console.AnsiConsole.Console);
-services.AddSingleton<TerminalCapabilities>();
-services.AddSingleton<MarkdownTerminalRenderer>();
-services.AddSingleton<SearchResultStyledRenderer>();
-
-var registrar = new TypeRegistrar(services);
-var app = new CommandApp(registrar);
-
-app.Configure(config =>
+try
 {
-    config.AddCommand<CreateCommand>("create");
-    config.AddCommand<GetCommand>("get");
-    config.AddCommand<SearchCommand>("search");
-    config.AddCommand<UpdateCommand>("update");
-    config.AddCommand<DeleteCommand>("delete");
-    config.AddCommand<RestoreCommand>("restore");
-    config.AddBranch<DbSettings>("db", db =>
-    {
-        db.AddCommand<DbViewCommand>("view");
-    });
-});
+    var (config, residualArgs) = BuildoutConfiguration.Build(args);
 
-await app.RunAsync(args);
+    var services = new ServiceCollection();
+    services.AddSingleton<IConfiguration>(config);
+
+    services.AddBuildinClient(config);
+    services.AddBuildoutCore(config);
+    services.AddSingleton<Spectre.Console.IAnsiConsole>(_ => Spectre.Console.AnsiConsole.Console);
+    services.AddSingleton<TerminalCapabilities>();
+    services.AddSingleton<MarkdownTerminalRenderer>();
+    services.AddSingleton<SearchResultStyledRenderer>();
+
+    var registrar = new TypeRegistrar(services);
+    var app = new CommandApp(registrar);
+
+    app.Configure(config =>
+    {
+        config.AddCommand<CreateCommand>("create");
+        config.AddCommand<GetCommand>("get");
+        config.AddCommand<SearchCommand>("search");
+        config.AddCommand<UpdateCommand>("update");
+        config.AddCommand<DeleteCommand>("delete");
+        config.AddCommand<RestoreCommand>("restore");
+        config.AddBranch<DbSettings>("db", db =>
+        {
+            db.AddCommand<DbViewCommand>("view");
+        });
+    });
+
+    await app.RunAsync(residualArgs);
+}
+catch (BuildoutConfigurationException ex)
+{
+    await Console.Error.WriteLineAsync(ex.Message);
+    Environment.Exit(1);
+}
 
 internal sealed class TypeRegistrar : ITypeRegistrar
 {

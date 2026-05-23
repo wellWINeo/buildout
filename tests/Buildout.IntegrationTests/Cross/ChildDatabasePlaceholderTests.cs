@@ -72,7 +72,7 @@ public sealed class ChildDatabasePlaceholderTests
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
         services.AddSingleton<IPageEditor, PageEditor>();
-        services.AddSingleton<Microsoft.Extensions.Options.IOptions<PageEditorOptions>>(_ => Microsoft.Extensions.Options.Options.Create(new PageEditorOptions()));
+        services.AddSingleton<Microsoft.Extensions.Options.IOptions<LimitationsOptions>>(_ => Microsoft.Extensions.Options.Options.Create(new LimitationsOptions()));
         services.AddSingleton<IMarkdownToBlocksParser, MarkdownToBlocksParser>();
 
         var testConsole = new TestConsole();

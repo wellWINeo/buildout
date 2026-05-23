@@ -57,7 +57,7 @@ public sealed class GetCommandTests
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
         services.AddSingleton<IPageEditor, PageEditor>();
-        services.AddSingleton<IOptions<PageEditorOptions>>(_ => Options.Create(new PageEditorOptions()));
+        services.AddSingleton<IOptions<LimitationsOptions>>(_ => Options.Create(new LimitationsOptions()));
         services.AddSingleton<IMarkdownToBlocksParser, MarkdownToBlocksParser>();
         services.AddSingleton(client);
 
