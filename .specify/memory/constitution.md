@@ -1,5 +1,26 @@
 <!--
 SYNC IMPACT REPORT
+Version change: 1.0.1 → 1.1.0 (MINOR — adds principle VII: Skills & Prompts Parity)
+
+Modified principles: N/A
+
+Added sections:
+  - Principle VII: Skills & Prompts Parity
+
+Removed sections: N/A
+
+Modified content: N/A
+
+Templates requiring updates:
+  - ✅ .specify/templates/plan-template.md  no change needed
+  - ✅ .specify/templates/spec-template.md  no change needed
+  - ✅ .specify/templates/tasks-template.md no change needed
+
+Follow-up TODOs: none.
+
+---
+
+SYNC IMPACT REPORT
 Version change: 1.0.0 → 1.0.1 (PATCH — fills deferred TODO without changing
 semantics, per versioning policy)
 
@@ -111,6 +132,24 @@ rewrites MUST be a separate, distinctly named operation from edits.
 silently rewrites a page can destroy user work; the tool contract must make
 destructive operations impossible to invoke by accident.
 
+### VII. Skills & Prompts Parity
+
+Every CLI subcommand MUST be documented by a corresponding skill reference file
+embedded in the `Buildout.Cli` assembly. Every MCP tool whose behavior is complex
+enough to warrant detailed instructions MUST have a corresponding named prompt
+embedded in the `Buildout.Mcp` assembly. Adding a new CLI subcommand without a
+skill file, or materially changing the update tool's behavior without updating its
+prompt, MUST NOT merge to `main`.
+
+Skills MUST conform to the [Agent Skills specification](https://agentskills.io/specification):
+a `SKILL.md` entrypoint with valid YAML frontmatter, plus topic reference files
+loaded on demand via progressive disclosure.
+
+**Rationale**: Skills and prompts are the contract between buildout and LLM agents.
+A command without a skill is invisible to agents. A prompt that drifts from tool
+behavior produces incorrect agent actions. Parity ensures agents always have
+accurate, current instructions.
+
 ## Technology & Implementation Standards
 
 **Target framework**: .NET 10. Projects use SDK-style `.csproj`. Nullable reference
@@ -166,6 +205,8 @@ commits except for the initial bootstrap.
 - All round-trip tests for affected block types green (Principle III).
 - Core/presentation separation respected — presentation projects compile against
   the public surface of `Buildout.Core` only (Principle I).
+- Skills & prompts parity — new CLI subcommands include skill files, material MCP
+  tool changes include prompt updates (Principle VII).
 
 **Reviews**: Every PR review MUST include an explicit constitution-compliance
 check. Violations MUST be either fixed before merge or documented in the plan's
@@ -204,4 +245,4 @@ override.
 review. Plans MUST run the Constitution Check gate before Phase 0 research and
 re-check after Phase 1 design.
 
-**Version**: 1.0.1 | **Ratified**: 2026-05-04 | **Last Amended**: 2026-05-04
+**Version**: 1.1.0 | **Ratified**: 2026-05-04 | **Last Amended**: 2026-05-23

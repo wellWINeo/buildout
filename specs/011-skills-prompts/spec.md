@@ -17,12 +17,12 @@ A developer wants an LLM coding agent (Claude Code or OpenCode) to understand ho
 
 **Acceptance Scenarios**:
 
-1. **Given** no agent skills installed, **When** the user runs `buildout-cli skills install --agent claude`, **Then** multiple skill markdown files are written to a `buildout/` subdirectory within the global agent config directory (`~/.claude/buildout/`)
-2. **Given** no agent skills installed, **When** the user runs `buildout-cli skills install --agent opencode`, **Then** multiple skill markdown files are written to a `buildout/` subdirectory within the global agent config directory (`~/.config/opencode/buildout/`)
-3. **Given** the `--local` flag, **When** the user runs `buildout-cli skills install --agent claude --local`, **Then** skill files are written to the project-local agent config subdirectory (`.claude/buildout/`)
-4. **Given** the `--local` flag and no local config directory, **When** the user runs `buildout-cli skills install --agent claude --local`, **Then** the `.claude/buildout/` directory is created and skill files are written
-5. **Given** an existing `buildout/` subdirectory with skill files, **When** the user runs `buildout-cli skills install --agent claude`, **Then** the command reports existing files and suggests using `--overwrite` to replace them
-6. **Given** an existing `buildout/` subdirectory with skill files, **When** the user runs `buildout-cli skills install --agent claude --overwrite`, **Then** all existing skill files are overwritten with the latest embedded versions
+1. **Given** no agent skills installed, **When** the user runs `buildout-cli skills install --agent claude`, **Then** multiple skill markdown files are written to the agent skills subdirectory within the global agent config directory (`~/.claude/skills/buildout-cli/`)
+2. **Given** no agent skills installed, **When** the user runs `buildout-cli skills install --agent opencode`, **Then** multiple skill markdown files are written to the agent skills subdirectory within the global agent config directory (`~/.config/opencode/skills/buildout-cli/`)
+3. **Given** the `--local` flag, **When** the user runs `buildout-cli skills install --agent claude --local`, **Then** skill files are written to the project-local agent config subdirectory (`.claude/skills/buildout-cli/`)
+4. **Given** the `--local` flag and no local config directory, **When** the user runs `buildout-cli skills install --agent claude --local`, **Then** the `.claude/skills/buildout-cli/` directory is created and skill files are written
+5. **Given** an existing skills subdirectory with skill files, **When** the user runs `buildout-cli skills install --agent claude`, **Then** the command reports existing files and suggests using `--overwrite` to replace them
+6. **Given** an existing skills subdirectory with skill files, **When** the user runs `buildout-cli skills install --agent claude --overwrite`, **Then** all existing skill files are overwritten with the latest embedded versions
 
 ---
 
@@ -36,7 +36,7 @@ A developer no longer wants buildout-cli skills in their agent configuration. Th
 
 **Acceptance Scenarios**:
 
-1. **Given** installed skill files for an agent, **When** the user runs `buildout-cli skills remove --agent claude`, **Then** the entire `buildout/` subdirectory is deleted from the agent config directory
+1. **Given** installed skill files for an agent, **When** the user runs `buildout-cli skills remove --agent claude`, **Then** the entire `skills/buildout-cli/` subdirectory is deleted from the agent config directory
 2. **Given** no installed skill files, **When** the user runs `buildout-cli skills remove --agent claude`, **Then** the command reports no skills were found and exits gracefully
 
 ---
@@ -61,7 +61,7 @@ An LLM client connects to the buildout MCP server and receives compact server in
 
 - **Unsupported agent name**: The command shows a clear error message listing supported agents
 - **Target directory doesn't exist (global)**: The command shows an error — the global agent config directory must already exist
-- **Target directory doesn't exist (local)**: The directory is created automatically
+- **Target directory doesn't exist (local)**: The directory and any parents are created automatically
 - **User lacks write permissions**: The command shows an error
 - **Existing skill files without `--overwrite`**: The command shows an error suggesting `--overwrite`
 
@@ -71,14 +71,17 @@ An LLM client connects to the buildout MCP server and receives compact server in
 
 - **FR-001**: The CLI MUST provide a `skills` command with `install` and `remove` subcommands
 - **FR-002**: The `skills install` command MUST accept an `--agent` option with values `claude` or `opencode`
-- **FR-003**: The `skills install` command MUST write skill markdown files to a `buildout/` subdirectory within the global agent config directory by default — one .md file per topic (e.g., read.md, update.md, delete.md, search.md, create.md)
-- **FR-004**: The `skills` commands MUST accept a `--local` option that targets the `buildout/` subdirectory within the project-local agent config directory instead of the global directory
+- **FR-003**: The `skills install` command MUST write skill markdown files to an agent-specific skills subdirectory within the global agent config directory by default — including an entrypoint `SKILL.md` and one .md file per topic (e.g., `~/.claude/skills/buildout-cli/SKILL.md`, `~/.claude/skills/buildout-cli/update.md`)
+- **FR-004**: The `skills` commands MUST accept a `--local` option that targets the skills subdirectory within the project-local agent config directory instead of the global directory
 - **FR-005**: The `skills` commands MUST accept an `--overwrite` option that forces replacement of user-modified skill files
 - **FR-006**: The `skills install` command MUST refuse to write files if any skill file already exists in the target directory, unless `--overwrite` is specified — showing an error suggesting the flag
 - **FR-007**: The `skills remove` command MUST delete previously installed skill files from the agent config directory
 - **FR-008**: The CLI MUST validate the `--agent` value and reject unsupported agent names with a clear error message
 - **FR-009**: Skill content MUST be stored as markdown files in the repository and embedded as resources in the CLI assembly
 - **FR-010**: Skill content MUST be the same for all supported agents — only the installation target directory differs per agent
+- **FR-010a**: The installed skill directory MUST conform to the Agent Skills specification (https://agentskills.io/specification): a `SKILL.md` entrypoint with valid YAML frontmatter (`name: buildout-cli`, `description`), plus topic reference files
+- **FR-010b**: The `SKILL.md` entrypoint MUST contain an overview of all buildout-cli commands, a typical workflow, and relative file references to topic-specific reference documents
+- **FR-010c**: Each CLI subcommand MUST be covered by a corresponding topic reference file (e.g., `create.md`, `update.md`) documenting syntax, options, examples, exit codes, and behavioral notes
 - **FR-011**: The MCP server MUST load its base server instructions from embedded resources rather than hardcoded strings
 - **FR-012**: MCP server instructions MUST be compact to economize context tokens
 - **FR-013**: Detailed update-specific prompts MUST be registered as a named MCP prompt (separate from base server instructions) that clients request on demand when using the update tool
@@ -87,9 +90,11 @@ An LLM client connects to the buildout MCP server and receives compact server in
 
 ### Key Entities
 
-- **Skill**: A markdown document that teaches an LLM agent how to work with a specific buildout-cli command. Stored in the repository as individual .md files per topic, embedded in the CLI assembly, and installed as a set to a `buildout/` subdirectory within agent configuration directories. Content is identical for all agents.
+- **Skill**: A directory conforming to the Agent Skills specification containing a `SKILL.md` entrypoint (with YAML frontmatter) and topic-specific reference files. Stored in the repository as individual .md files, embedded in the CLI assembly, and installed as a set to an agent-specific skills directory. Content is identical for all agents.
+- **SKILL.md**: The entrypoint file per the Agent Skills specification. Contains YAML frontmatter (`name: buildout-cli`, `description`), a buildout-cli command overview, typical workflow, and relative file references to topic-specific documents.
+- **Topic Reference**: A markdown file within the skill directory documenting a single buildout-cli subcommand (syntax, options, examples, exit codes, notes). Loaded on demand by the agent following the progressive disclosure model defined in the Agent Skills specification.
 - **Prompt**: A markdown document embedded in the MCP assembly that provides instructions to connected LLM clients about how to use buildout MCP tools effectively. Base instructions are compact; detailed prompts for specific workflows (e.g., update) are loaded separately.
-- **Agent Target**: The destination for skill installation, determined by agent type (claude/opencode) and scope (local vs global). Maps to a specific directory path.
+- **Agent Target**: The destination for skill installation, determined by agent type (claude/opencode) and scope (local vs global). Maps to a specific directory path under the agent's skills config.
 
 ## Success Criteria *(mandatory)*
 
@@ -113,8 +118,8 @@ An LLM client connects to the buildout MCP server and receives compact server in
 
 ## Assumptions
 
-- Claude agent skills are installed to `~/.claude/buildout/` (global, default) or `.claude/buildout/` (local)
-- OpenCode agent skills are installed to `~/.config/opencode/buildout/` (global, default) or `.opencode/buildout/` (local)
+- Claude agent skills are installed to `~/.claude/skills/buildout-cli/` (global, default) or `.claude/skills/buildout-cli/` (local)
+- OpenCode agent skills are installed to `~/.config/opencode/skills/buildout-cli/` (global, default) or `.opencode/skills/buildout-cli/` (local)
 - Only `claude` and `opencode` agents are supported initially; other agents can be added later without architectural changes
 - Skill files are standalone markdown documents — no templating or variable substitution is required
 - The update process is the primary MCP tool workflow needing detailed prompt instructions, as it is the most complex and destructive operation
