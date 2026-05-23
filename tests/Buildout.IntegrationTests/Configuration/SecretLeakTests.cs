@@ -14,11 +14,11 @@ public sealed class SecretLeakTests
 
         try
         {
-            var cliProjectPath = GetProjectPath("Buildout.Cli");
+            var cliDllPath = GetBuiltDllPath("Buildout.Cli");
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = "run --project \"" + cliProjectPath + "\" -- --help",
+                Arguments = "exec \"" + cliDllPath + "\" --help",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -37,7 +37,7 @@ public sealed class SecretLeakTests
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            Assert.True(process.WaitForExit(30000), "CLI process did not exit in time");
+            Assert.True(process.WaitForExit(10000), "CLI process did not exit in time");
 
             var allOutput = outputBuilder.ToString() + errorBuilder.ToString();
 
@@ -57,13 +57,14 @@ public sealed class SecretLeakTests
 
         try
         {
-            var mcpProjectPath = GetProjectPath("Buildout.Mcp");
+            var mcpDllPath = GetBuiltDllPath("Buildout.Mcp");
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = "run --project \"" + mcpProjectPath + "\" --help",
+                Arguments = "exec \"" + mcpDllPath + "\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
@@ -80,7 +81,14 @@ public sealed class SecretLeakTests
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            Assert.True(process.WaitForExit(30000), "MCP process did not exit in time");
+            // Give the MCP server a moment to emit any startup output, then close stdin to signal EOF
+            Thread.Sleep(1000);
+            process.StandardInput.Close();
+
+            // Process should exit shortly after stdin is closed (stdio transport sees EOF)
+            _ = process.WaitForExit(5000);
+            if (!process.HasExited)
+                process.Kill();
 
             var allOutput = outputBuilder.ToString() + errorBuilder.ToString();
 
@@ -100,13 +108,14 @@ public sealed class SecretLeakTests
 
         try
         {
-            var mcpProjectPath = GetProjectPath("Buildout.Mcp");
+            var mcpDllPath = GetBuiltDllPath("Buildout.Mcp");
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = "run --project \"" + mcpProjectPath + "\" --help",
+                Arguments = "exec \"" + mcpDllPath + "\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
@@ -123,7 +132,14 @@ public sealed class SecretLeakTests
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            Assert.True(process.WaitForExit(30000), "MCP process did not exit in time");
+            // Give the MCP server a moment to emit any startup output, then close stdin to signal EOF
+            await Task.Delay(1000);
+            process.StandardInput.Close();
+
+            // Process should exit shortly after stdin is closed (stdio transport sees EOF)
+            _ = process.WaitForExit(5000);
+            if (!process.HasExited)
+                process.Kill();
 
             var allOutput = outputBuilder.ToString() + errorBuilder.ToString();
 
@@ -135,22 +151,34 @@ public sealed class SecretLeakTests
         }
     }
 
-    private static string GetProjectPath(string projectName)
+    private static string GetBuiltDllPath(string projectName)
     {
-        var currentDir = Directory.GetCurrentDirectory();
-        var solutionDir = currentDir;
+        // Derive the configuration (Release/Debug) and TFM from where THIS test assembly lives.
+        // AppContext.BaseDirectory ends in:  …/tests/Buildout.IntegrationTests/bin/{Config}/{TFM}/
+        // The target project DLL is at:      …/src/{projectName}/bin/{Config}/{TFM}/{projectName}.dll
+        var baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, '/');
+        var tfm = Path.GetFileName(baseDir);
+        var configuration = Path.GetFileName(Path.GetDirectoryName(baseDir)!);
 
-        while (solutionDir != null && !Directory.Exists(Path.Combine(solutionDir, ".git")))
+        var solutionDir = FindSolutionRoot();
+        var dllPath = Path.Combine(solutionDir, "src", projectName, "bin", configuration, tfm, $"{projectName}.dll");
+
+        Assert.True(File.Exists(dllPath),
+            $"Pre-built DLL not found at {dllPath}. " +
+            $"Run 'dotnet build -c {configuration}' before running these tests.");
+
+        return dllPath;
+    }
+
+    private static string FindSolutionRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
         {
-            solutionDir = Directory.GetParent(solutionDir)?.FullName;
+            if (Directory.Exists(Path.Combine(dir.FullName, ".git")))
+                return dir.FullName;
+            dir = dir.Parent;
         }
-
-        Assert.NotNull(solutionDir);
-        Assert.NotEmpty(solutionDir);
-
-        var projectPath = Path.Combine(solutionDir ?? "", "src", projectName);
-        Assert.True(Directory.Exists(projectPath), $"Project path does not exist: {projectPath}");
-
-        return Path.Combine(projectPath, projectName + ".csproj");
+        throw new InvalidOperationException("Could not locate repository root (no .git directory found).");
     }
 }

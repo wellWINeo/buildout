@@ -8,5 +8,4 @@ internal record BuildoutConfigurationOptions
         "buildout",
         "config.json");
     public string Prefix { get; init; } = "Buildout__";
-    public string LegacyOtelEnvVar { get; init; } = "OTEL_EXPORTER_OTLP_ENDPOINT";
 }

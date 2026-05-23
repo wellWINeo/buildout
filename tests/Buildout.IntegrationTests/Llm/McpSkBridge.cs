@@ -18,9 +18,9 @@ internal static class McpSkBridge
             Arguments = [],
             EnvironmentVariables = new Dictionary<string, string?>
             {
-                ["Buildin__BaseUrl"] = fixture.BaseUrl,
-                ["Buildin__BotToken"] = "test-token",
-                ["Buildin__Http__UnsafeAllowInsecure"] = "true",
+                ["Buildout__BaseUrl"] = fixture.BaseUrl,
+                ["Buildout__BotToken"] = "test-token",
+                ["Buildout__Http__UnsafeAllowInsecure"] = "true",
             },
             ShutdownTimeout = TimeSpan.FromSeconds(5),
         });

@@ -268,16 +268,11 @@ expected format.
   profile directory cannot be resolved, default-file discovery is silently
   skipped (no error); the user is expected to supply `--config` or env
   vars. Surfaced to users in the documentation.
-- **`OTEL_EXPORTER_OTLP_ENDPOINT` (existing, vendor-neutral standard env
-  var)**: continues to be honoured by `Buildout.Mcp` for backwards
-  compatibility with industry tooling, but is no longer the documented
-  configuration channel. The documented channel is
-  `Buildout__Telemetry__OtlpEndpoint` / JSON `Telemetry.OtlpEndpoint`.
-  The two are read in that order (Buildout-prefixed wins).
-- **`BUILDOUT_TELEMETRY_ENABLED` (existing)**: removed and replaced by
-  `Buildout__Telemetry__Enabled`. This is the only intentional breaking
-  change introduced by the feature; documented under "Migration" in
-  `docs/configuration.md`.
+- **`OTEL_EXPORTER_OTLP_ENDPOINT`**: not honoured. Use
+  `Buildout__Telemetry__OtlpEndpoint` or the JSON `Telemetry:OtlpEndpoint`
+  key instead.
+- **`BUILDOUT_TELEMETRY_ENABLED`**: not honoured. Use
+  `Buildout__Telemetry__Enabled` instead.
 
 ## Requirements *(mandatory)*
 
@@ -341,15 +336,15 @@ expected format.
   following keys, all flat at the root of the JSON object and
   corresponding env vars prefixed with `Buildout__`:
 
-  | Key | Type | Default | Required | Validation | Replaces |
-  |-----|------|---------|----------|------------|----------|
-  | `BotToken` | string | — | **yes** | non-empty | `Buildin:BotToken` |
-  | `BaseUrl` | URI string | `https://api.buildin.ai/` | no | absolute URI; must be `https` unless `Http:UnsafeAllowInsecure=true` | `Buildin:BaseUrl` |
-  | `Http:Timeout` | `TimeSpan` | `00:00:30` | no | > 0 | `Buildin:HttpTimeout` |
-  | `Http:UnsafeAllowInsecure` | bool | `false` | no | — | `Buildin:UnsafeAllowInsecure` |
-  | `Limitations:LargeDeleteThreshold` | int | `10` | no | ≥ 0 | `PageEditor:LargeDeleteThreshold` |
-  | `Telemetry:Enabled` | bool | `false` | no | — | `BUILDOUT_TELEMETRY_ENABLED` |
-  | `Telemetry:OtlpEndpoint` | URI string | `http://localhost:4318` | no | absolute URI | `OTEL_EXPORTER_OTLP_ENDPOINT` (Buildout-prefixed key wins; legacy env var honoured as fallback only) |
+  | Key | Type | Default | Required | Validation |
+  |-----|------|---------|----------|------------|
+  | `BotToken` | string | — | **yes** | non-empty |
+  | `BaseUrl` | URI string | `https://api.buildin.ai/` | no | absolute URI; must be `https` unless `Http:UnsafeAllowInsecure=true` |
+  | `Http:Timeout` | `TimeSpan` | `00:00:30` | no | > 0 |
+  | `Http:UnsafeAllowInsecure` | bool | `false` | no | — |
+  | `Limitations:LargeDeleteThreshold` | int | `10` | no | ≥ 0 |
+  | `Telemetry:Enabled` | bool | `false` | no | — |
+  | `Telemetry:OtlpEndpoint` | URI string | `http://localhost:4318` | no | absolute URI |
 
   Per-section grouping: `Http:*` covers HTTP transport tuning (timeout,
   insecure-scheme opt-out) for the buildin client. `Telemetry:*` covers
@@ -361,31 +356,16 @@ expected format.
   because they identify the workspace and endpoint, not a
   transport-tuning or feature-area concern.
 
-  No other keys are accepted. Unknown keys are logged at startup as a
-  single warning (not an error) and otherwise ignored. The exact warning
-  format is a `/speckit-plan` decision.
+  No other keys are recognised. Unknown keys are silently ignored.
 
-- **FR-010**: Migration handling — the existing `BUILDOUT_TELEMETRY_ENABLED`
-  env var is **removed** from the recognised set. The existing
-  `OTEL_EXPORTER_OTLP_ENDPOINT` env var continues to be read as a
-  lower-precedence fallback below `Buildout__Telemetry__OtlpEndpoint` and
-  the JSON value, for compatibility with vendor-neutral OpenTelemetry
-  tooling. The existing `Buildin:*` keys are **removed**; users must
-  rename them to the flat / `Http:*` keys above. The existing
-  `PageEditor:LargeDeleteThreshold` key is **renamed** to
-  `Limitations:LargeDeleteThreshold` (same type, default, validation,
-  and bound value — only the section name changes). The removal /
-  rename is documented in `docs/configuration.md` under "Migration from
-  earlier versions" with a one-to-one rename table.
 - **FR-011**: The feature MUST ship `docs/configuration.md` containing,
   at minimum: (a) a one-paragraph summary of how configuration is
   loaded and the precedence order; (b) the supported file location and
   the CLI override flag; (c) a complete reference of every key in
   FR-009 with type, default, validation, env var form, JSON form, and
-  one worked example per channel; (d) a "Migration from earlier
-  versions" section with the rename table from FR-010; (e) a "Common
-  pitfalls" section covering at least the edge cases enumerated in this
-  spec (missing file vs. explicit `--config`, env var case sensitivity,
+  one worked example per channel; (d) a "Common pitfalls" section
+  covering at least the edge cases enumerated in this spec (missing
+  file vs. explicit `--config`, env var case sensitivity,
   double-underscore separator, `TimeSpan` format).
 - **FR-012**: A reference example file MUST also ship at
   `docs/configuration.example.json` containing every key from FR-009
@@ -397,9 +377,9 @@ expected format.
   (defaults < file < env), (b) `--config` overriding the default file,
   (c) `--config` to a missing file failing hard, (d) validator failures
   surfacing as a single error string, (e) the `Buildout__` env prefix
-  being applied and not bleeding from unrelated env vars, (f) unknown
-  keys logged but ignored. The constitution's Test-First Discipline
-  (Principle IV) applies — these tests precede the implementation.
+  being applied and not bleeding from unrelated env vars. The
+  constitution's Test-First Discipline (Principle IV) applies — these
+  tests precede the implementation.
 - **FR-014**: An integration test in `Buildout.IntegrationTests` MUST
   exercise the CLI's `--config` flag end-to-end with a temp-file JSON
   config and assert the resulting `BuildinClientOptions` instance.
@@ -471,10 +451,9 @@ expected format.
   recognised by the loader, with no extras and no missing keys —
   verifiable by a documentation lint test that diffs the key set in
   the doc against the schema defined in FR-009.
-- **SC-006**: Removing the `BUILDOUT_TELEMETRY_ENABLED` env var and
-  the `Buildin:*` keys breaks no tests outside this feature's own
-  migration tests — verifiable by the existing `Buildout.UnitTests`
-  and `Buildout.IntegrationTests` suites passing after the migration.
+- **SC-006**: The `Buildout.UnitTests` and `Buildout.IntegrationTests`
+  suites pass without any tests referencing legacy key names or
+  legacy env vars.
 - **SC-007**: No log line, error, or warning emitted by any process
   in any of the unit/integration test suites contains the literal
   string value of a configured `BotToken` — verifiable by tests that
@@ -483,16 +462,11 @@ expected format.
 
 ## Assumptions
 
-- The `Buildin:*` configuration section name and the
-  `BUILDOUT_TELEMETRY_ENABLED` env var are not yet relied on by external
-  users; they are internal-only configuration of pre-1.0 specs (001 -
-  009). This feature replaces them with the unified schema in a single
-  step (no overlap window) — only documented as a rename table.
-- `OTEL_EXPORTER_OTLP_ENDPOINT` is intentionally kept as a low-precedence
-  fallback because it is an OpenTelemetry-standard env var that
-  downstream tooling (collectors, sidecars) may already set; removing it
-  would surprise operators using vendor-neutral OTel deployment
-  patterns.
+- The `Buildin:*` configuration section names and the
+  `BUILDOUT_TELEMETRY_ENABLED` / `OTEL_EXPORTER_OTLP_ENDPOINT` env vars
+  are not relied on by external users; they are internal-only configuration
+  of pre-1.0 specs (001–009). This feature replaces them with the unified
+  schema and does not provide a compatibility bridge.
 - The home directory is resolvable in all targeted execution
   environments (developer workstations, CI runners, MCP launchers
   inheriting the user's environment). The "no home directory"

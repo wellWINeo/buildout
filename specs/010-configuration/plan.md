@@ -15,14 +15,11 @@ binding `PageEditor` directly out of `IConfiguration`) into a single
 caller's residual args (with `--config` / `-c` stripped). Both presentations
 call the same helper at the top of `Program.cs`.
 
-The provider chain is exactly the four layers FR-002 demands, in order:
+The provider chain is exactly the three layers FR-002 demands, in order:
 defaults on the bound options classes → JSON file (default
 `~/.config/buildout/config.json` or the `--config <path>` override; default file
 is `optional: true`, override file is `optional: false` so a missing override
-hard-errors) → `Buildout__`-prefixed env vars → a thin compatibility-only
-provider that maps `OTEL_EXPORTER_OTLP_ENDPOINT` (vendor-neutral env var) to
-`Telemetry:OtlpEndpoint` BELOW the Buildout-prefixed env-var layer (so the
-Buildout-prefixed key always wins — FR-009 row 7).
+hard-errors) → `Buildout__`-prefixed env vars.
 
 The flat root + nested-sections schema (FR-009) binds to three options
 classes registered through `services.AddOptions<T>().Bind(IConfiguration).ValidateOnStart()`:
@@ -42,8 +39,8 @@ OtlpEndpoint }` covering both `Buildout.Mcp` lookups deleted from
 `Program.cs:17-20`.
 
 User docs land at `docs/configuration.md` (per FR-011) with a complete schema
-reference, every key in env-var + JSON form, the loader precedence diagram,
-and a migration table; an executable example file lands at
+reference, every key in env-var + JSON form, and the loader precedence diagram;
+an executable example file lands at
 `docs/configuration.example.json` (per FR-012) carrying every key at its
 default value with a placeholder for the required `BotToken`.
 
@@ -111,13 +108,8 @@ New test categories (Phase 2 will enumerate them as tasks):
   every FR-013 sub-clause: precedence layers, `--config` override,
   `--config` missing-file hard error, validator failures producing a
   single error string, env-var prefix isolation (an unrelated `Buildout`
-  prefix without trailing `__` MUST NOT bleed in), unknown-key warning
-  semantics, and the renamed-key migration (`HttpTimeout` → `Http:Timeout`
-  rejection if both old and new keys are set, with a clear error).
+  prefix without trailing `__` MUST NOT bleed in).
 - Unit tests for `TelemetryOptionsValidator` (range, scheme).
-- Unit tests for the `OTEL_EXPORTER_OTLP_ENDPOINT` fallback precedence
-  (`Buildout__Telemetry__OtlpEndpoint` > JSON `Telemetry:OtlpEndpoint` >
-  `OTEL_EXPORTER_OTLP_ENDPOINT` > default).
 - Integration tests in `Buildout.IntegrationTests/Configuration/` that
   invoke each presentation's entry point with `--config <temp.json>`
   and assert bound `BuildinClientOptions` / `TelemetryOptions` /
@@ -191,12 +183,12 @@ specific p99 target — purely "fast enough that nobody notices".
 | IV | Test-First Discipline (NON-NEGOTIABLE) | ✅ PASS | Phase 2 tasks order red-first: loader precedence test → loader implementation; validator test → validator; docs-lint test → docs; secret-scrub test → final wiring. No tests skipped, disabled, or deleted to make the build pass. |
 | V | Buildin API Abstraction | ✅ PASS | The buildin client interface and the bot/user-API split are not touched. `BuildinClientOptions` continues to be the only place authentication options live, regardless of which `IBuildinClient` implementation is in use. |
 | VI | Non-Destructive Editing | ✅ PASS (N/A) | Feature does not implement block edits. The renamed `Limitations:LargeDeleteThreshold` continues to gate spec 008's destructive-edit guard exactly as before. |
-| VII | Dual-Channel Configuration (NON-NEGOTIABLE) | ✅ PASS | This feature *is* the dual-channel infrastructure: every key in FR-009 ships in both `docs/configuration.md` env-var and JSON forms (verified by the SC-005 docs-lint test). The loader is `Buildout.Core.Configuration.BuildoutConfiguration.Build(args)`. Validation lives on `IValidateOptions<T>` per options class and runs at startup (FR-007). No ad-hoc sources, no custom file formats, no custom env prefixes. The `OTEL_EXPORTER_OTLP_ENDPOINT` fallback is a documented exception (industry-standard env var, vendor-neutral) and is wired through the same loader as a low-precedence layer — not as a side channel. |
+| VII | Dual-Channel Configuration (NON-NEGOTIABLE) | ✅ PASS | This feature *is* the dual-channel infrastructure: every key in FR-009 ships in both `docs/configuration.md` env-var and JSON forms (verified by the SC-005 docs-lint test). The loader is `Buildout.Core.Configuration.BuildoutConfiguration.Build(args)`. Validation lives on `IValidateOptions<T>` per options class and runs at startup (FR-007). No ad-hoc sources, no custom file formats, no custom env prefixes, no legacy compatibility shims. |
 
 | Standard | Compliance | Notes |
 |---|---|---|
 | .NET 10 target framework | ✅ | All projects unchanged. |
-| Nullable + warnings-as-errors | ✅ | New code respects `Directory.Build.props`. The `[Obsolete]` forwarder for `PageEditorOptions` uses an explicit suppression in its own file only (deleted in the next release per migration table). |
+| Nullable + warnings-as-errors | ✅ | New code respects `Directory.Build.props`. |
 | `ModelContextProtocol` SDK | ✅ | Unchanged. |
 | `Spectre.Console.Cli` | ✅ | New `BuildoutCommandSettings` base. Existing command registration loop unchanged. |
 | Solution layout (5 projects) | ✅ | No new projects. |
@@ -222,8 +214,7 @@ specs/010-configuration/
 ├── contracts/               # Phase 1 output
 │   ├── loader.md                # BuildoutConfiguration.Build(args) surface, residual-args contract
 │   ├── schema.md                # JSON schema for config.json + env-var name table (FR-009 source of truth)
-│   ├── cli-config-flag.md       # --config / -c surface across CLI and MCP entry points
-│   └── migration.md             # Old-to-new rename table (Buildin:*, PageEditor:*, BUILDOUT_TELEMETRY_ENABLED)
+│   └── cli-config-flag.md       # --config / -c surface across CLI and MCP entry points
 ├── checklists/
 │   └── requirements.md      # Spec quality checklist (already created)
 └── tasks.md                 # Phase 2 output (/speckit-tasks — NOT this command)
@@ -239,9 +230,7 @@ src/
       BuildoutConfigurationException.cs                       # NEW: thrown for hard errors (missing --config file, JSON parse error)
       BuildoutConfigurationOptions.cs                         # NEW: internal options object — default-file path, prefix, fallback envs (used by tests to inject fakes)
       ConfigFlagParser.cs                                     # NEW: extract --config <path> / -c <path> from args, return path + residual args
-      LegacyOtelEndpointSource.cs                             # NEW: IConfigurationSource that maps OTEL_EXPORTER_OTLP_ENDPOINT → Telemetry:OtlpEndpoint at lowest precedence inside our chain
       HttpSectionRemapSource.cs                               # NEW: maps Http:Timeout → HttpTimeout and Http:UnsafeAllowInsecure → UnsafeAllowInsecure so the existing BuildinClientOptions property names stay stable
-      UnknownKeyAuditor.cs                                    # NEW: enumerates loaded keys after binding, logs a single warning per unknown root-level key (FR-009 unknown-key rule)
     Buildin/
       BuildinClientOptions.cs                                 # MODIFIED: no shape change; XML doc updated to point at docs/configuration.md
       BuildinClientOptionsValidator.cs                        # MODIFIED: error messages reference the new key names (`BaseUrl`, `Http:Timeout`, `Http:UnsafeAllowInsecure`, `BotToken`); validation rules unchanged
@@ -276,7 +265,7 @@ src/
     Buildout.Mcp.csproj                                       # UNCHANGED (Host package already pulls Json + EnvironmentVariables transitively; Buildout.Core's explicit references are belt-and-braces)
 
 docs/                                                          # NEW directory
-  configuration.md                                            # NEW (FR-011): authoritative schema reference, env+JSON examples, precedence diagram, migration table
+  configuration.md                                            # NEW (FR-011): authoritative schema reference, env+JSON examples, precedence diagram
   configuration.example.json                                  # NEW (FR-012): every key at its default value, placeholder BotToken
   README.md                                                   # NEW: one-line "see configuration.md for configuration" + table of contents stub (so docs/ has a discoverable entry point; future spec docs land alongside)
 
@@ -284,10 +273,8 @@ tests/
   Buildout.UnitTests/
     Configuration/                                            # NEW directory
       ConfigFlagParserTests.cs                                # NEW: --config <path>, -c <path>, repeated flag, missing-value, dashed-but-not-config-flag, residual-args invariant
-      BuildoutConfigurationTests.cs                           # NEW: precedence (defaults < default-file < env < OTEL fallback below env), --config overrides default file, --config missing file throws BuildoutConfigurationException, unknown root keys warned not errored, secret-key (BotToken) never written to logger output, Http: prefix flattening behaves correctly, OTEL_EXPORTER_OTLP_ENDPOINT honoured only when Buildout__Telemetry__OtlpEndpoint absent
-      LegacyOtelEndpointSourceTests.cs                        # NEW: precedence within the chain, no-op when both keys unset
+      BuildoutConfigurationTests.cs                           # NEW: precedence (defaults < default-file < env), --config overrides default file, --config missing file throws BuildoutConfigurationException, validator failures surfaced as single error string, Http: prefix flattening behaves correctly
       HttpSectionRemapSourceTests.cs                          # NEW: Http:Timeout → HttpTimeout flattening, idempotency, untouched non-Http keys
-      UnknownKeyAuditorTests.cs                               # NEW: known keys silent, unknown root keys yield exactly one warning per key, unknown env vars under the prefix yield warnings too
       TelemetryOptionsValidatorTests.cs                       # NEW
       LimitationsOptionsValidatorTests.cs                     # NEW
       DocumentationKeysTests.cs                               # NEW: parses docs/configuration.md key table, diffs against reflection-derived schema (SC-005)
@@ -300,7 +287,6 @@ tests/
       McpConfigFlagTests.cs                                   # NEW: buildout-mcp -c <tmp.json> startup loads file; OTEL fallback honoured; Buildout__-prefixed override wins
       PrecedenceMatrixTests.cs                                # NEW: [Theory] table covering every cell of (default | file | env | OTEL fallback) precedence to assert FR-002 layering
       SecretLeakTests.cs                                      # NEW (SC-007): runs both presentations through full startup with sentinel BotToken, fails if sentinel appears anywhere in captured output
-      MigrationTests.cs                                       # NEW: old key names (Buildin:BotToken, BUILDOUT_TELEMETRY_ENABLED) explicitly fail with the documented error message naming the new key
 ```
 
 **Structure Decision**: A new top-level `Buildout.Core.Configuration`
@@ -395,21 +381,6 @@ Items unknown at the start of `/speckit-plan` and resolved in `research.md`:
   to model HTTP options as a nested struct, (a) becomes a localised
   refactor at that point.
 
-- **R5 — `OTEL_EXPORTER_OTLP_ENDPOINT` fallback wiring**: the env var must
-  be honoured ONLY when neither `Buildout__Telemetry__OtlpEndpoint` nor
-  JSON `Telemetry:OtlpEndpoint` is set. The cleanest way is a custom
-  `LegacyOtelEndpointSource : IConfigurationSource` that contributes one
-  key (`Telemetry:OtlpEndpoint`) sourced from `Environment.GetEnvironmentVariable
-  ("OTEL_EXPORTER_OTLP_ENDPOINT")`, added to the chain ONCE, between
-  the default-file layer and the `Buildout__`-prefixed env-var layer.
-  Microsoft.Extensions.Configuration's later-wins semantics then give
-  the desired precedence (default < default-file < OTEL fallback <
-  `Buildout__` env). Decision: implement as documented above. The source
-  contributes nothing if the env var is unset (no empty-string poison).
-  Alternative considered: read the legacy env var imperatively inside
-  the validator — rejected because validators see only the already-bound
-  options instance and have no clean way to influence precedence.
-
 - **R6 — `Microsoft.Extensions.Configuration.EnvironmentVariables` prefix
   semantics**: passing `prefix: "Buildout__"` to `.AddEnvironmentVariables(prefix)`
   strips the prefix AND treats `__` as the section separator on what
@@ -424,25 +395,6 @@ Items unknown at the start of `/speckit-plan` and resolved in `research.md`:
   Alternative considered: parsing env vars by hand — rejected as
   needless duplication and a constitution Principle VII violation
   ("use Microsoft.Extensions.Configuration").
-
-- **R7 — Migration error semantics**: when a user's environment still
-  carries the legacy `BUILDOUT_TELEMETRY_ENABLED` or
-  `Buildin__BotToken` (note the un-prefixed legacy form the current
-  CLI binds today), the loader needs to give a helpful error rather
-  than silently dropping the value. The auditor (`UnknownKeyAuditor`)
-  is the natural place: after binding, enumerate the env-var provider's
-  keys and warn for any legacy key NOT in the new schema; for
-  specifically known-legacy keys, the warning text names the new key.
-  Decision: maintain a small hardcoded `LegacyKeyHints` table inside
-  `UnknownKeyAuditor` mapping `BUILDOUT_TELEMETRY_ENABLED` →
-  `Buildout__Telemetry__Enabled`, `Buildin:BotToken` →
-  `BotToken` (the new root-level key), etc., so the warning is
-  actionable. The warning is logged through `ILogger<BuildoutConfiguration>`
-  (resolved lazily so loader callers without DI get a fallback writer
-  to `Console.Error`). This is NOT an error — the new key may also be
-  set and have already won precedence. Hard-erroring would punish users
-  legitimately migrating, who often have both forms set during the
-  transition.
 
 - **R8 — docs-lint test design (SC-005)**: the test parses
   `docs/configuration.md` looking for the FR-009 markdown table (matched
@@ -520,9 +472,6 @@ Four contract documents:
   precedence vs. the default file, behaviour when the file does not
   exist (hard error), behaviour when supplied multiple times
   (last wins — Microsoft.Extensions.Configuration semantics).
-- `migration.md` — old-to-new rename table covering everything FR-010
-  enumerates. This file is the source of truth for the warning
-  messages emitted by `UnknownKeyAuditor` (R7).
 
 ### quickstart.md
 

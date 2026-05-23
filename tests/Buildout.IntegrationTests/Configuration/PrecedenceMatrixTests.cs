@@ -16,7 +16,6 @@ public sealed class PrecedenceMatrixTests
     {
         Environment.SetEnvironmentVariable("Buildout__BotToken", "env-token");
         Environment.SetEnvironmentVariable("Buildout__Telemetry__OtlpEndpoint", null);
-        Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", null);
 
         try
         {
@@ -137,69 +136,6 @@ public sealed class PrecedenceMatrixTests
             Environment.SetEnvironmentVariable("Buildout__Http__Timeout", null);
             if (File.Exists(configPath)) File.Delete(configPath);
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true);
-        }
-    }
-
-    [Fact]
-    public void OtelExporterEnvVar_PopulatesTelemetryOtlpEndpoint_WhenBuildoutTelemetryOtlpEndpointAbsent()
-    {
-        Environment.SetEnvironmentVariable("Buildout__BotToken", "env-token");
-        Environment.SetEnvironmentVariable("Buildout__Telemetry__OtlpEndpoint", null);
-        Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-legacy:4318");
-
-        try
-        {
-            var args = Array.Empty<string>();
-            var (config, _) = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
-
-            var services = new ServiceCollection();
-            services.AddSingleton<IConfiguration>(config);
-            services.AddOptions<TelemetryOptions>()
-                .Bind(config.GetSection("Telemetry"))
-                .ValidateOnStart();
-
-            var provider = services.BuildServiceProvider();
-
-            var telemetryOptions = provider.GetRequiredService<IOptions<TelemetryOptions>>().Value;
-
-            Assert.Equal(new Uri("http://otel-legacy:4318"), telemetryOptions.OtlpEndpoint);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("Buildout__BotToken", null);
-            Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", null);
-        }
-    }
-
-    [Fact]
-    public void BuildoutTelemetryOtlpEndpoint_WinsOverOtelExporterEnvVar()
-    {
-        Environment.SetEnvironmentVariable("Buildout__BotToken", "env-token");
-        Environment.SetEnvironmentVariable("Buildout__Telemetry__OtlpEndpoint", "http://buildout-otel:4318");
-        Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-legacy:4318");
-
-        try
-        {
-            var args = Array.Empty<string>();
-            var (config, _) = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
-
-            var services = new ServiceCollection();
-            services.AddSingleton<IConfiguration>(config);
-            services.AddOptions<TelemetryOptions>()
-                .Bind(config.GetSection("Telemetry"))
-                .ValidateOnStart();
-
-            var provider = services.BuildServiceProvider();
-
-            var telemetryOptions = provider.GetRequiredService<IOptions<TelemetryOptions>>().Value;
-
-            Assert.Equal(new Uri("http://buildout-otel:4318"), telemetryOptions.OtlpEndpoint);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("Buildout__BotToken", null);
-            Environment.SetEnvironmentVariable("Buildout__Telemetry__OtlpEndpoint", null);
-            Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", null);
         }
     }
 

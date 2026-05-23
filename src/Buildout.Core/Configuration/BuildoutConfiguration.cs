@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Configuration;
 
@@ -9,13 +8,12 @@ public static class BuildoutConfiguration
 
     public static (IConfiguration Configuration, string[] ResidualArgs) Build(string[] args)
     {
-        return Build(args, DefaultOptions, null);
+        return Build(args, DefaultOptions);
     }
 
     internal static (IConfiguration Configuration, string[] ResidualArgs) Build(
         string[] args,
-        BuildoutConfigurationOptions options,
-        ILogger? logger)
+        BuildoutConfigurationOptions options)
     {
         var (configPath, residualArgs) = ConfigFlagParser.Extract(args);
 
@@ -51,8 +49,6 @@ public static class BuildoutConfiguration
             builder.AddJsonFile(filePath, optional: string.IsNullOrEmpty(configPath), reloadOnChange: false);
         }
 
-        builder.Sources.Add(new LegacyOtelEndpointSource());
-        builder.Sources.Add(new LegacyEnvVarSource());
         builder.AddEnvironmentVariables(options.Prefix);
 
         var baseConfigRoot = (IConfigurationRoot)builder.Build();
@@ -63,9 +59,6 @@ public static class BuildoutConfiguration
 
         var configRoot = (IConfigurationRoot)remapBuilder.Build();
 
-        var auditLogger = logger ?? new FallbackLogger();
-        UnknownKeyAuditor.Audit(configRoot, auditLogger);
-
         var botToken = configRoot["BotToken"];
         if (string.IsNullOrWhiteSpace(botToken))
         {
@@ -75,20 +68,5 @@ public static class BuildoutConfiguration
         }
 
         return (configRoot, residualArgs);
-    }
-
-    private sealed class FallbackLogger : ILogger
-    {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-        public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            if (logLevel >= LogLevel.Warning)
-            {
-                Console.Error.WriteLine(formatter(state, exception));
-            }
-        }
     }
 }
