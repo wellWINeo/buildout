@@ -20,4 +20,8 @@
     <ProjectReference Include="..\Buildout.Core\Buildout.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Prompts\**\*.md" />
+  </ItemGroup>
+
 </Project>

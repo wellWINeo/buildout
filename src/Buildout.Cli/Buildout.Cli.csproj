@@ -17,4 +17,8 @@
     <ProjectReference Include="..\Buildout.Core\Buildout.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Skills\**\*.md" />
+  </ItemGroup>
+
 </Project>

@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Active feature plan: [specs/010-configuration/plan.md](./specs/010-configuration/plan.md)
+Active feature plan: [specs/011-skills-prompts/plan.md](./specs/011-skills-prompts/plan.md)
 
 For technologies, project structure, shell commands, and other context, read
 that plan and its sibling artifacts (`research.md`, `data-model.md`,
