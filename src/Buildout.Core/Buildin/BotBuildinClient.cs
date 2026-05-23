@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
 using Gen = Buildout.Core.Buildin.Generated.Models;
@@ -16,7 +15,7 @@ using KiotaApiException = Microsoft.Kiota.Abstractions.ApiException;
 
 namespace Buildout.Core.Buildin;
 
-public sealed class BotBuildinClient : IBuildinClient
+public sealed partial class BotBuildinClient : IBuildinClient
 {
     private readonly Generated.BuildinApiClient _apiClient;
     private readonly ILogger<BotBuildinClient> _logger;
@@ -210,10 +209,6 @@ public sealed class BotBuildinClient : IBuildinClient
         });
     }
 
-    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates",
-        Justification = "Dynamic method names prevent compile-time LoggerMessage definitions")]
-    [SuppressMessage("Performance", "CA1873:Evaluate log message arguments eagerly",
-        Justification = "All arguments are cheap string variables — no actual evaluation cost")]
     private async Task<T> WrapAsync<T>(Func<Task<T>> action, [CallerMemberName] string methodName = "")
     {
         var sw = Stopwatch.StartNew();
@@ -221,7 +216,7 @@ public sealed class BotBuildinClient : IBuildinClient
         {
             var result = await action();
             sw.Stop();
-            _logger.LogDebug("API call {Method} completed with {Outcome}", methodName, "success");
+            LogApiCallCompleted(methodName, "success");
             BuildoutMeter.ApiCallsTotal.Add(1, new TagList { { "method", methodName }, { "outcome", "success" } });
             BuildoutMeter.ApiCallDuration.Record(sw.Elapsed.TotalSeconds, new TagList { { "method", methodName }, { "outcome", "success" } });
             return result;
@@ -280,14 +275,17 @@ public sealed class BotBuildinClient : IBuildinClient
         }
     }
 
-    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates",
-        Justification = "Dynamic method names prevent compile-time LoggerMessage definitions")]
     private void LogAndRecordApiFailure(string methodName, Stopwatch sw, string errorType)
     {
-        _logger.LogError("API call {Method} failed with {Outcome} error_type {ErrorType}",
-            methodName, "failure", errorType);
+        LogApiCallFailed(methodName, "failure", errorType);
         var tags = new TagList { { "method", methodName }, { "outcome", "failure" }, { "error_type", errorType } };
         BuildoutMeter.ApiCallsTotal.Add(1, tags);
         BuildoutMeter.ApiCallDuration.Record(sw.Elapsed.TotalSeconds, tags);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "API call {Method} completed with {Outcome}")]
+    private partial void LogApiCallCompleted(string method, string outcome);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "API call {Method} failed with {Outcome} error_type {ErrorType}")]
+    private partial void LogApiCallFailed(string method, string outcome, string errorType);
 }

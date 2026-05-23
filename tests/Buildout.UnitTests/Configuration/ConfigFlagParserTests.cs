@@ -1,4 +1,4 @@
-using Buildout.Core.Configuration;
+using Buildout.Configuration;
 using Xunit;
 
 namespace Buildout.UnitTests.Configuration;

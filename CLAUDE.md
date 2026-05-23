@@ -11,9 +11,9 @@ all features.
 
 ## Integration Tests with LLM
 
-Integration tests that require LLM access (e.g., `RegenerateBuildinClient_ProducesCleanWorkingTree`)
-are skipped when `OPENROUTER_API_KEY` is not set. These tests are designed to run in CI/CD
-with the environment variable configured.
+Tests in `tests/Buildout.IntegrationTests/Llm/` require LLM access (e.g., `RegenerateBuildinClient_ProducesCleanWorkingTree`)
+and are skipped when `OPENROUTER_API_KEY` is not set. These tests are designed to run in CI/CD
+with the environment variable configured. All other integration tests do not require this key.
 
 **Running locally**: Do not run LLM tests locally without the API key set.
 Set `OPENROUTER_API_KEY` in your environment to enable these tests.

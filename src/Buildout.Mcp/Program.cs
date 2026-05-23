@@ -1,4 +1,4 @@
-using Buildout.Core.Configuration;
+using Buildout.Configuration;
 using Buildout.Core.DependencyInjection;
 using Buildout.Mcp.Resources;
 using Buildout.Mcp.Tools;

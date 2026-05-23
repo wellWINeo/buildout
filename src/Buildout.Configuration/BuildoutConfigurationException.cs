@@ -1,4 +1,4 @@
-namespace Buildout.Core.Configuration;
+namespace Buildout.Configuration;
 
 public class BuildoutConfigurationException : Exception
 {

@@ -1,5 +1,5 @@
 using Buildout.Core.Buildin;
-using Buildout.Core.Configuration;
+using Buildout.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Xunit;

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using Buildout.Core.Buildin;
@@ -13,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.DatabaseViews;
 
-internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
+internal sealed partial class DatabaseViewRenderer : IDatabaseViewRenderer
 {
     private readonly IBuildinClient _client;
     private readonly IPropertyValueFormatter _formatter;
@@ -35,7 +34,6 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
         _logger = logger;
     }
 
-    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
     public async Task<string> RenderAsync(DatabaseViewRequest request, CancellationToken cancellationToken = default)
     {
         ValidateStatic(request);
@@ -152,7 +150,6 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
         }
     }
 
-    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
     private async Task<List<DatabaseRow>> PaginateRowsAsync(string databaseId, CancellationToken ct)
     {
         var rows = new List<DatabaseRow>();
@@ -167,8 +164,7 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
             foreach (var props in result.Results)
                 rows.Add(new DatabaseRow(string.Empty, props));
 
-            if (_logger.IsEnabled(LogLevel.Debug))
-                _logger.LogDebug("PaginateRows pagination_page={PageNumber} pagination_items={ItemCount}", pageNumber, result.Results.Count);
+            LogPaginateRowsPage(pageNumber, result.Results.Count);
 
             cursor = result.HasMore ? result.NextCursor : null;
             pageNumber++;
@@ -177,6 +173,9 @@ internal sealed class DatabaseViewRenderer : IDatabaseViewRenderer
 
         return rows;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "PaginateRows pagination_page={PageNumber} pagination_items={ItemCount}")]
+    private partial void LogPaginateRowsPage(int pageNumber, int itemCount);
 
     private static string ExtractTitle(Database database)
     {

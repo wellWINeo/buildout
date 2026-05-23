@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 
-namespace Buildout.Core.Configuration;
+namespace Buildout.Configuration;
 
 public static class BuildoutConfiguration
 {

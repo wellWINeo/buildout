@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
@@ -9,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Search;
 
-internal sealed class SearchService : ISearchService
+internal sealed partial class SearchService : ISearchService
 {
     private readonly IBuildinClient _client;
     private readonly ITitleRenderer _titleRenderer;
@@ -28,8 +27,6 @@ internal sealed class SearchService : ISearchService
         _logger = logger;
     }
 
-    [SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
-    [SuppressMessage("Performance", "CA1873:Evaluate log message arguments eagerly", Justification = "All arguments are cheap string variables")]
     public async Task<IReadOnlyList<SearchMatch>> SearchAsync(
         string query,
         string? pageId,
@@ -53,9 +50,7 @@ internal sealed class SearchService : ISearchService
                 if (response.Results is not null)
                     allPages.AddRange(response.Results);
 
-                if (_logger.IsEnabled(LogLevel.Debug))
-                    _logger.LogDebug("SearchAsync pagination_page={PageNumber} pagination_items={ItemCount}",
-                        pageNumber, response.Results?.Count ?? 0);
+                LogSearchPage(pageNumber, response.Results?.Count ?? 0);
                 pageNumber++;
 
                 cursor = response.HasMore ? response.NextCursor : null;
@@ -97,6 +92,9 @@ internal sealed class SearchService : ISearchService
             throw;
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "SearchAsync pagination_page={PageNumber} pagination_items={ItemCount}")]
+    private partial void LogSearchPage(int pageNumber, int itemCount);
 
     private static SearchObjectType MapObjectType(string? objectType) => objectType switch
     {

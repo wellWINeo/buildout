@@ -1,9 +1,8 @@
 using Buildout.Cli.Commands;
 using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin;
-using Buildout.Core.Configuration;
+using Buildout.Configuration;
 using Buildout.Core.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console.Cli;
 
@@ -12,8 +11,6 @@ try
     var (config, residualArgs) = BuildoutConfiguration.Build(args);
 
     var services = new ServiceCollection();
-    services.AddSingleton<IConfiguration>(config);
-
     services.AddBuildinClient(config);
     services.AddBuildoutCore(config);
     services.AddSingleton<Spectre.Console.IAnsiConsole>(_ => Spectre.Console.AnsiConsole.Console);

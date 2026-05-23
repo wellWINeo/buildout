@@ -1,10 +1,11 @@
 using System.Reflection;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Buildout.Configuration;
 using Buildout.Core.Buildin;
 using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown.Editing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Buildout.IntegrationTests.Configuration;
@@ -20,7 +21,7 @@ public sealed class PrecedenceMatrixTests
         try
         {
             var args = Array.Empty<string>();
-            var (config, _) = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
+            var (config, _) = BuildoutConfiguration.Build(args);
 
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(config);
@@ -67,7 +68,7 @@ public sealed class PrecedenceMatrixTests
             File.WriteAllText(configPath, jsonConfig);
 
             var args = new[] { "--config", configPath };
-            var (config, _) = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
+            var (config, _) = BuildoutConfiguration.Build(args);
 
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(config);
@@ -116,7 +117,7 @@ public sealed class PrecedenceMatrixTests
             File.WriteAllText(configPath, jsonConfig);
 
             var args = new[] { "--config", configPath };
-            var (config, _) = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
+            var (config, _) = BuildoutConfiguration.Build(args);
 
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(config);
@@ -163,7 +164,7 @@ public sealed class PrecedenceMatrixTests
             File.WriteAllText(configPath, jsonConfig);
 
             var args = new[] { "--config", configPath };
-            var (config, _) = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
+            var (config, _) = BuildoutConfiguration.Build(args);
 
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(config);

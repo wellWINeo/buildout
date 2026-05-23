@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
 using Buildout.Core.Markdown.Conversion;
@@ -6,8 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Markdown.Internal;
 
-[SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
-internal static class BlockTreeFetcher
+internal static partial class BlockTreeFetcher
 {
     internal static async Task<List<BlockSubtree>> FetchAsync(
         IBuildinClient client,
@@ -30,8 +28,7 @@ internal static class BlockTreeFetcher
                 .GetBlockChildrenAsync(parentId, query, ct)
                 .ConfigureAwait(false);
 
-            if (logger.IsEnabled(LogLevel.Debug))
-                logger.LogDebug("FetchChildren pagination_page={PageNumber} pagination_items={ItemsCount}", pageNumber, page.Results.Count);
+            LogFetchChildrenPage(logger, pageNumber, page.Results.Count);
 
             foreach (var block in page.Results)
             {
@@ -58,4 +55,7 @@ internal static class BlockTreeFetcher
 
         return result;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "FetchChildren pagination_page={PageNumber} pagination_items={ItemsCount}")]
+    private static partial void LogFetchChildrenPage(ILogger logger, int pageNumber, int itemsCount);
 }

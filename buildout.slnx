@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Buildout.Cli/Buildout.Cli.csproj" />
+    <Project Path="src/Buildout.Configuration/Buildout.Configuration.csproj" />
     <Project Path="src/Buildout.Core/Buildout.Core.csproj" />
     <Project Path="src/Buildout.Mcp/Buildout.Mcp.csproj" />
   </Folder>

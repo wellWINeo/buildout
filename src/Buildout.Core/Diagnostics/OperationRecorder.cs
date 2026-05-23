@@ -1,13 +1,11 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Diagnostics;
 
-[SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Dynamic operation names prevent compile-time LoggerMessage definitions")]
-public sealed class OperationRecorder : IDisposable
+public sealed partial class OperationRecorder : IDisposable
 {
     private readonly ILogger _logger;
     private readonly string _operationName;
@@ -28,8 +26,7 @@ public sealed class OperationRecorder : IDisposable
                 _tags[tag.Key] = tag.Value;
         }
 
-        if (_logger.IsEnabled(LogLevel.Debug))
-            _logger.LogDebug("Operation {Operation} started", _operationName);
+        LogOperationStarted(_operationName);
     }
 
     public static OperationRecorder Start(ILogger logger, string operationName,
@@ -53,9 +50,7 @@ public sealed class OperationRecorder : IDisposable
         var durationSeconds = _stopwatch.Elapsed.TotalSeconds;
 
         var tagSuffix = FormatTags();
-        if (_logger.IsEnabled(LogLevel.Information))
-            _logger.LogInformation("Operation {Operation} completed in {DurationMs:F2}ms{Tags}",
-                _operationName, durationMs, tagSuffix);
+        LogOperationCompleted(_operationName, durationMs, tagSuffix);
 
         var tagList = BuildTagList("success");
         BuildoutMeter.OperationsTotal.Add(1, tagList);
@@ -76,9 +71,7 @@ public sealed class OperationRecorder : IDisposable
             _tags["status_code"] = statusCode.Value;
 
         var tagSuffix = FormatTags();
-        if (_logger.IsEnabled(LogLevel.Error))
-            _logger.LogError("Operation {Operation} failed with error_type {ErrorType} status_code {StatusCode} in {DurationMs:F2}ms{Tags}",
-                _operationName, errorType, statusCode, durationMs, tagSuffix);
+        LogOperationFailed(_operationName, errorType, statusCode, durationMs, tagSuffix);
 
         var tagList = BuildTagList("failure");
         BuildoutMeter.OperationsTotal.Add(1, tagList);
@@ -109,6 +102,15 @@ public sealed class OperationRecorder : IDisposable
         }
         return sb.ToString();
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Operation {Operation} started")]
+    private partial void LogOperationStarted(string operation);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Operation {Operation} completed in {DurationMs:F2}ms{Tags}")]
+    private partial void LogOperationCompleted(string operation, double durationMs, string tags);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Operation {Operation} failed with error_type {ErrorType} status_code {StatusCode} in {DurationMs:F2}ms{Tags}")]
+    private partial void LogOperationFailed(string operation, string errorType, int? statusCode, double durationMs, string tags);
 
     private TagList BuildTagList(string outcome)
     {

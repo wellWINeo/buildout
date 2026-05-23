@@ -1,3 +1,4 @@
+using Buildout.Configuration;
 using Xunit;
 
 namespace Buildout.IntegrationTests.Configuration;
@@ -12,7 +13,7 @@ public sealed class McpConfigFlagTests
         try
         {
             var args = Array.Empty<string>();
-            var (config, residualArgs) = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
+            var (config, residualArgs) = BuildoutConfiguration.Build(args);
 
             var botToken = config["BotToken"];
             Assert.Equal("mcp-test-token-789", botToken);
@@ -43,7 +44,7 @@ public sealed class McpConfigFlagTests
             File.WriteAllText(configPath, jsonConfig);
 
             var args = Array.Empty<string>();
-            var (config, residualArgs) = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
+            var (config, residualArgs) = BuildoutConfiguration.Build(args);
 
             var botToken = config["BotToken"];
             Assert.Equal("minimal-mcp-token", botToken);
@@ -92,7 +93,7 @@ public sealed class McpConfigFlagTests
             File.WriteAllText(mcpConfigPath, mcpJsonConfig);
 
             var args = new[] { "-c", mcpConfigPath };
-            var (config, residualArgs) = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
+            var (config, residualArgs) = BuildoutConfiguration.Build(args);
 
             var botToken = config["BotToken"];
             Assert.Equal("mcp-prod-token", botToken);
@@ -125,7 +126,7 @@ public sealed class McpConfigFlagTests
         var args = new[] { "-c", "./nonexistent-mcp.json" };
         var ex = Assert.ThrowsAny<Exception>(() =>
         {
-            var _ = Buildout.Core.Configuration.BuildoutConfiguration.Build(args);
+            var _ = BuildoutConfiguration.Build(args);
         });
 
         Assert.NotNull(ex);

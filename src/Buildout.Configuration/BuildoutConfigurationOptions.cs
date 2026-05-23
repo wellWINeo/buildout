@@ -1,6 +1,6 @@
-namespace Buildout.Core.Configuration;
+namespace Buildout.Configuration;
 
-internal record BuildoutConfigurationOptions
+internal sealed record BuildoutConfigurationOptions
 {
     public string DefaultFilePath { get; init; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),

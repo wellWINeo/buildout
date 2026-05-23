@@ -1,6 +1,5 @@
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Authentication;
-using Buildout.Core.Configuration;
 using Buildout.Core.DatabaseViews;
 using Buildout.Core.DatabaseViews.Properties;
 using Buildout.Core.DatabaseViews.Rendering;
