@@ -19,7 +19,7 @@ public sealed class DatabaseViewRendererLoggingTests
     private readonly IPropertyValueFormatter _formatter;
     private readonly CellBudget _budget;
     private readonly Dictionary<DatabaseViewStyle, IDatabaseViewStyle> _styles;
-    private readonly ILogger<DatabaseViewRenderer> _logger;
+    private readonly CapturingLogger _logger;
     private readonly DatabaseViewRenderer _renderer;
 
     public DatabaseViewRendererLoggingTests()
@@ -28,8 +28,7 @@ public sealed class DatabaseViewRendererLoggingTests
         _formatter = Substitute.For<IPropertyValueFormatter>();
         _budget = new CellBudget(24, "…");
         _styles = [];
-        _logger = Substitute.For<ILogger<DatabaseViewRenderer>>();
-        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        _logger = new CapturingLogger();
         _renderer = new DatabaseViewRenderer(_client, _formatter, _styles, _budget, _logger);
     }
 
@@ -93,14 +92,12 @@ public sealed class DatabaseViewRendererLoggingTests
 
         await _renderer.RenderAsync(MakeRequest(), CancellationToken.None);
 
-#pragma warning disable CA1873
-        _logger.Received(1).Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(v => v.ToString()!.Contains("database_view") && v.ToString()!.Contains("database_id=test-db-id") && v.ToString()!.Contains("style=table") && v.ToString()!.Contains("row_count=1")),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-#pragma warning restore CA1873
+        Assert.Single(_logger.Entries,
+            e => e.Level == LogLevel.Information
+                 && e.Message.Contains("database_view")
+                 && e.Message.Contains("database_id=test-db-id")
+                 && e.Message.Contains("style=table")
+                 && e.Message.Contains("row_count=1"));
     }
 
     [Fact]
@@ -180,5 +177,20 @@ public sealed class DatabaseViewRendererLoggingTests
         foreach (var tag in tags)
             dict[tag.Key] = tag.Value;
         return dict;
+    }
+
+    private sealed class CapturingLogger : ILogger<DatabaseViewRenderer>
+    {
+        public sealed record LogEntry(LogLevel Level, string Message);
+        public List<LogEntry> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add(new LogEntry(logLevel, formatter(state, exception)));
+        }
     }
 }

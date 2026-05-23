@@ -5,6 +5,7 @@ using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin;
 using Buildout.Core.DependencyInjection;
 using Buildout.IntegrationTests.Buildin;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
@@ -61,7 +62,8 @@ public sealed class CreateCommandTests
     private static (CommandApp app, TestConsole console) CreateCliApp(IBuildinClient client)
     {
         var services = new ServiceCollection();
-        services.AddBuildoutCore();
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddBuildoutCore(configuration);
         services.AddLogging();
         services.AddSingleton(client);
 

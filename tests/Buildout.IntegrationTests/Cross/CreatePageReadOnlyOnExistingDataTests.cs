@@ -3,6 +3,7 @@ using Buildout.Core.Buildin;
 using Buildout.Core.DependencyInjection;
 using Buildout.IntegrationTests.Buildin;
 using Buildout.Mcp.Tools;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -84,7 +85,8 @@ public sealed class CreatePageReadOnlyOnExistingDataTests
 
         var client = _fixture.CreateClient();
         var services = new ServiceCollection();
-        services.AddBuildoutCore();
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddBuildoutCore(configuration);
         services.AddSingleton(client);
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
         services.AddMcpServer().WithTools<CreatePageToolHandler>();

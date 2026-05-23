@@ -2,7 +2,7 @@ using Spectre.Console.Cli;
 
 namespace Buildout.Cli.Commands;
 
-public sealed class CreateSettings : CommandSettings
+public sealed class CreateSettings : BuildoutCommandSettings
 {
     [CommandArgument(0, "<markdown_source>")]
     public string MarkdownSource { get; set; } = string.Empty;

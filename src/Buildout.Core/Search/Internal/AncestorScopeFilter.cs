@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
@@ -6,7 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Buildout.Core.Search.Internal;
 
-[SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Internal class with infrequent debug logging")]
 internal sealed class AncestorScopeFilter
 {
     private readonly IBuildinClient _client;
@@ -47,8 +45,7 @@ internal sealed class AncestorScopeFilter
 
             if (!visited.Add(ancestorId))
             {
-                if (_logger.IsEnabled(LogLevel.Debug))
-                    _logger.LogDebug("Cycle detected in parent chain at {AncestorId}", ancestorId);
+                AncestorScopeFilterLog.CycleDetected(_logger, ancestorId);
                 return false;
             }
 
@@ -76,4 +73,5 @@ internal sealed class AncestorScopeFilter
 
         return false;
     }
+
 }

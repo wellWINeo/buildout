@@ -9,6 +9,7 @@ using Xunit;
 
 namespace Buildout.UnitTests.Search;
 
+[Collection("MetricsTests")]
 public sealed class SearchServiceTests
 {
     private readonly IBuildinClient _client;

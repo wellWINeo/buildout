@@ -5,6 +5,7 @@ using Buildout.Core.Buildin;
 using Buildout.Core.DependencyInjection;
 using Buildout.IntegrationTests.Buildin;
 using Buildout.Mcp.Tools;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -58,7 +59,8 @@ public sealed class CreatePageIdEquivalenceTests
     private static (CommandApp app, TestConsole console) CreateCliApp(IBuildinClient client)
     {
         var services = new ServiceCollection();
-        services.AddBuildoutCore();
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddBuildoutCore(configuration);
         services.AddLogging();
         services.AddSingleton(client);
 
@@ -110,7 +112,8 @@ public sealed class CreatePageIdEquivalenceTests
         // --- MCP side ---
         var mcpClient = _fixture.CreateClient();
         var services = new ServiceCollection();
-        services.AddBuildoutCore();
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddBuildoutCore(configuration);
         services.AddSingleton(mcpClient);
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
         services.AddMcpServer().WithTools<CreatePageToolHandler>();
