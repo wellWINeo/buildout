@@ -1,5 +1,6 @@
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
@@ -14,7 +15,7 @@ namespace Buildout.UnitTests.RoundTrip;
 
 public sealed class MarkdownConverterRoundTripTests
 {
-    private static PageMarkdownRenderer CreateRenderer(IBuildinClient client)
+    private static PageMarkdownRenderer CreateRenderer(IPageContentProvider contentProvider)
     {
         var blockConverters = new IBlockToMarkdownConverter[]
         {
@@ -39,7 +40,7 @@ public sealed class MarkdownConverterRoundTripTests
         var blockRegistry = new BlockToMarkdownRegistry(blockConverters);
         var mentionRegistry = new MentionToMarkdownRegistry(mentionConverters);
         var inlineRenderer = new InlineRenderer(mentionRegistry);
-        return new PageMarkdownRenderer(client, blockRegistry, inlineRenderer, Substitute.For<ILogger<PageMarkdownRenderer>>());
+        return new PageMarkdownRenderer(contentProvider, blockRegistry, inlineRenderer, Substitute.For<ILogger<PageMarkdownRenderer>>());
     }
 
     private static MarkdownToBlocksParser CreateParser() => new();
@@ -49,12 +50,15 @@ public sealed class MarkdownConverterRoundTripTests
     /// </summary>
     private static async Task<string> RenderBlockAsync(Block block, string pageId)
     {
-        var client = Substitute.For<IBuildinClient>();
-        client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = pageId, Title = null });
-        client.GetBlockChildrenAsync(pageId, Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = [block], HasMore = false });
-        return await CreateRenderer(client).RenderAsync(pageId);
+        var contentProvider = Substitute.For<IPageContentProvider>();
+        contentProvider
+            .FetchAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new PageContent
+            {
+                Page = new Page { Id = pageId, Title = null },
+                Blocks = [new BlockSubtree { Block = block, Children = [] }]
+            });
+        return await CreateRenderer(contentProvider).RenderAsync(pageId);
     }
 
     // -------------------------------------------------------------------------

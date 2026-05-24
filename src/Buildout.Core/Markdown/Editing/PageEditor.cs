@@ -1,5 +1,6 @@
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
@@ -16,6 +17,8 @@ namespace Buildout.Core.Markdown.Editing;
 public sealed class PageEditor : IPageEditor
 {
     private readonly IBuildinClient _client;
+    private readonly IPageContentProvider _contentProvider;
+    private readonly IPageReadCache _cache;
     private readonly IPageMarkdownRenderer _renderer;
     private readonly IOptions<LimitationsOptions> _options;
     private readonly ILogger<PageEditor> _logger;
@@ -26,6 +29,8 @@ public sealed class PageEditor : IPageEditor
 
     public PageEditor(
         IBuildinClient client,
+        IPageContentProvider contentProvider,
+        IPageReadCache cache,
         IPageMarkdownRenderer renderer,
         IOptions<LimitationsOptions> options,
         ILogger<PageEditor> logger,
@@ -34,6 +39,8 @@ public sealed class PageEditor : IPageEditor
         IInlineRenderer inlineRenderer)
     {
         _client = client;
+        _contentProvider = contentProvider;
+        _cache = cache;
         _renderer = renderer;
         _options = options;
         _logger = logger;
@@ -50,9 +57,8 @@ public sealed class PageEditor : IPageEditor
         using var recorder = OperationRecorder.Start(_logger, "page_read_editing");
         try
         {
-            // Validates page exists and is accessible (triggers 404/403 before the expensive tree fetch).
-            _ = await _client.GetPageAsync(pageId, cancellationToken).ConfigureAwait(false);
-            var roots = await FetchChildrenAsync(pageId, cancellationToken).ConfigureAwait(false);
+            var content = await _contentProvider.FetchAsync(pageId, cancellationToken).ConfigureAwait(false);
+            var roots = content.Blocks;
 
             var (markdown, unknownBlockIds) = _anchoredRenderer.Render(roots);
             var revision = RevisionTokenComputer.Compute(markdown);
@@ -75,9 +81,6 @@ public sealed class PageEditor : IPageEditor
         }
     }
 
-    private Task<List<BlockSubtree>> FetchChildrenAsync(string parentId, CancellationToken ct)
-        => BlockTreeFetcher.FetchAsync(_client, _registry, parentId, _logger, ct);
-
     private static int CountBlocks(IReadOnlyList<BlockSubtree> subtrees)
     {
         var count = 0;
@@ -98,9 +101,9 @@ public sealed class PageEditor : IPageEditor
         {
             ValidateInput(input);
 
-            // Validates page exists and is accessible (triggers 404/403 before the expensive tree fetch).
-            _ = await _client.GetPageAsync(input.PageId, cancellationToken).ConfigureAwait(false);
-            var roots = await FetchChildrenAsync(input.PageId, cancellationToken).ConfigureAwait(false);
+
+            var content = await _contentProvider.FetchAsync(input.PageId, cancellationToken).ConfigureAwait(false);
+            var roots = content.Blocks;
 
             var (currentMarkdown, _) = _anchoredRenderer.Render(roots);
             var currentRevision = RevisionTokenComputer.Compute(currentMarkdown);
@@ -172,6 +175,8 @@ public sealed class PageEditor : IPageEditor
             var writeOps = Reconciler.Reconcile(originalTree, patchedTree);
 
             var summary = await ExecuteWriteOpsAsync(writeOps, input.PageId, cancellationToken).ConfigureAwait(false);
+
+            _cache.Invalidate(input.PageId);
 
             var preservedBlocks = CollectBlockAnchorIds(originalTree).Count - summary.UpdatedBlocks - summary.DeletedBlocks;
 

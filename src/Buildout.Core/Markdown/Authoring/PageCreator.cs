@@ -4,6 +4,7 @@ using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown.Authoring.Properties;
 using Microsoft.Extensions.Logging;
@@ -16,15 +17,17 @@ public sealed class PageCreator : IPageCreator
     private readonly IMarkdownToBlocksParser _parser;
     private readonly IBuildinClient _client;
     private readonly IDatabasePropertyValueParser _propertyParser;
+    private readonly IPageReadCache _cache;
     private readonly ILogger<PageCreator> _logger;
 
     public PageCreator(ParentKindProbe probe, IMarkdownToBlocksParser parser, IBuildinClient client,
-        IDatabasePropertyValueParser propertyParser, ILogger<PageCreator> logger)
+        IDatabasePropertyValueParser propertyParser, IPageReadCache cache, ILogger<PageCreator> logger)
     {
         _probe = probe;
         _parser = parser;
         _client = client;
         _propertyParser = propertyParser;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -140,6 +143,9 @@ public sealed class PageCreator : IPageCreator
         BuildoutMeter.PagesCreatedTotal.Add(1, new TagList { { "parent_kind", parentKindStr } });
         BuildoutMeter.BlocksProcessedTotal.Add(blockCount, new TagList { { "operation", "page_create" } });
         recorder.Succeed();
+
+        _cache.Invalidate(input.ParentId);
+
         return new CreatePageOutcome { NewPageId = page.Id, ResolvedTitle = title };
     }
 

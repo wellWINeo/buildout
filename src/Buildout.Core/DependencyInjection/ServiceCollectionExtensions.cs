@@ -1,5 +1,6 @@
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Authentication;
+using Buildout.Core.Caching;
 using Buildout.Core.DatabaseViews;
 using Buildout.Core.DatabaseViews.Properties;
 using Buildout.Core.DatabaseViews.Rendering;
@@ -19,6 +20,7 @@ using Buildout.Core.Search;
 using Buildout.Core.Search.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Kiota.Abstractions.Authentication;
 
@@ -110,6 +112,43 @@ public static class ServiceCollectionExtensions
         services.AddOptions<TelemetryOptions>()
             .Bind(configuration.GetSection("Telemetry"))
             .ValidateOnStart();
+        services.AddOptions<CacheOptions>()
+            .Bind(configuration.GetSection("Cache"))
+            .ValidateOnStart();
+
+        services.AddSingleton<IValidateOptions<CacheOptions>, CacheOptionsValidator>();
+
+        services.AddSingleton<IPageReadCache>(sp =>
+        {
+            var opts = sp.GetRequiredService<IOptions<CacheOptions>>().Value;
+            return opts.Enabled ? new PageReadCache(opts) : new NullPageReadCache();
+        });
+
+        services.AddSingleton<IPageContentProvider>(sp =>
+        {
+            var opts = sp.GetRequiredService<IOptions<CacheOptions>>().Value;
+            var cache = sp.GetRequiredService<IPageReadCache>();
+            var client = sp.GetRequiredService<IBuildinClient>();
+            var registry = sp.GetRequiredService<BlockToMarkdownRegistry>();
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger(typeof(BlockTreeFetcher));
+
+            var baseFetch = new Func<string, CancellationToken, Task<PageContent>>(async (pageId, ct) =>
+            {
+                var page = await client.GetPageAsync(pageId, ct).ConfigureAwait(false);
+                var blocks = await BlockTreeFetcher.FetchAsync(client, registry, pageId, logger, ct).ConfigureAwait(false);
+                return new PageContent
+                {
+                    Page = page,
+                    Blocks = blocks
+                };
+            });
+
+            return opts.Enabled
+                ? new CachingPageContentProvider(cache, baseFetch)
+                : new PassthroughPageContentProvider(baseFetch);
+        });
+
         services.AddSingleton<IPageEditor, PageEditor>();
         services.AddSingleton<IPageLifecycle, PageLifecycleService>();
 

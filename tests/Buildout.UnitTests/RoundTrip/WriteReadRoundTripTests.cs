@@ -1,5 +1,6 @@
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
@@ -14,7 +15,7 @@ namespace Buildout.UnitTests.RoundTrip;
 
 public class WriteReadRoundTripTests
 {
-    private static PageMarkdownRenderer CreateRenderer(IBuildinClient client)
+    private static PageMarkdownRenderer CreateRenderer(IPageContentProvider contentProvider)
     {
         var blockConverters = new IBlockToMarkdownConverter[]
         {
@@ -39,17 +40,19 @@ public class WriteReadRoundTripTests
         var blockRegistry = new BlockToMarkdownRegistry(blockConverters);
         var mentionRegistry = new MentionToMarkdownRegistry(mentionConverters);
         var inlineRenderer = new InlineRenderer(mentionRegistry);
-        return new PageMarkdownRenderer(client, blockRegistry, inlineRenderer, Substitute.For<ILogger<PageMarkdownRenderer>>());
+        return new PageMarkdownRenderer(contentProvider, blockRegistry, inlineRenderer, Substitute.For<ILogger<PageMarkdownRenderer>>());
     }
 
-    private static IBuildinClient MakeClient(IReadOnlyList<Block> blocks, IReadOnlyList<RichText>? title = null)
+    private static IPageContentProvider MakeContentProvider(IReadOnlyList<Block> blocks, IReadOnlyList<RichText>? title = null)
     {
-        var client = Substitute.For<IBuildinClient>();
-        client.GetPageAsync("page-id", Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = "page-id", Title = title });
-        client.GetBlockChildrenAsync("page-id", Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = blocks, HasMore = false });
-        return client;
+        var contentProvider = Substitute.For<IPageContentProvider>();
+        contentProvider.FetchAsync("page-id", Arg.Any<CancellationToken>())
+            .Returns(new PageContent
+            {
+                Page = new Page { Id = "page-id", Title = title },
+                Blocks = blocks.Select(b => new BlockSubtree { Block = b, Children = [] }).ToList()
+            });
+        return contentProvider;
     }
 
     [Fact]
@@ -59,8 +62,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("Hello world");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Equal("Hello world" + Environment.NewLine + Environment.NewLine, rendered);
@@ -73,8 +76,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("## Section");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         // Heading2Block renders as ### (one-level shift)
@@ -93,8 +96,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("### Subsection");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         // Heading3Block renders as #### (one-level shift)
@@ -113,8 +116,8 @@ public class WriteReadRoundTripTests
         var bodyBlocks = doc.Body.Select(s => s.Block).ToList();
         var title = new RichText[] { new() { Type = "text", Content = doc.Title! } };
 
-        var client = MakeClient(bodyBlocks, title);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(bodyBlocks, title);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.StartsWith("# My Page", rendered);
@@ -128,8 +131,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("Some paragraph\n\n# Not a title");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         // ParagraphBlock renders verbatim
@@ -145,8 +148,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("- Item text");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Equal("- Item text" + Environment.NewLine, rendered);
@@ -159,8 +162,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("1. First item");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Equal("1. First item" + Environment.NewLine, rendered);
@@ -173,8 +176,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("- [ ] Task");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Equal("- [ ] Task" + Environment.NewLine, rendered);
@@ -187,8 +190,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("- [x] Done");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Equal("- [x] Done" + Environment.NewLine, rendered);
@@ -201,8 +204,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("```csharp\nvar x = 1;\n```");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         var expected = "```csharp" + Environment.NewLine
@@ -219,8 +222,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("> Quoted text");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Equal("> Quoted text" + Environment.NewLine + Environment.NewLine, rendered);
@@ -233,8 +236,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("---");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Equal("---" + Environment.NewLine + Environment.NewLine, rendered);
@@ -247,8 +250,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("<!-- unsupported block: image -->");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Contains("<!-- unsupported block: image -->", rendered);
@@ -261,8 +264,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("**bold text**");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Equal("**bold text**" + Environment.NewLine + Environment.NewLine, rendered);
@@ -275,8 +278,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("*italic text*");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Equal("*italic text*" + Environment.NewLine + Environment.NewLine, rendered);
@@ -291,8 +294,8 @@ public class WriteReadRoundTripTests
         var doc = parser.Parse("[My Page](buildin://page-abc)");
         var blocks = doc.Body.Select(s => s.Block).ToList();
 
-        var client = MakeClient(blocks);
-        var renderer = CreateRenderer(client);
+        var contentProvider = MakeContentProvider(blocks);
+        var renderer = CreateRenderer(contentProvider);
         var rendered = await renderer.RenderAsync("page-id");
 
         Assert.Contains("[My Page](buildin://page-abc)", rendered);

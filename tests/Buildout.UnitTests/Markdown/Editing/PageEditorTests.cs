@@ -1,5 +1,6 @@
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
@@ -27,6 +28,8 @@ public sealed class PageEditorTests
     private readonly BlockToMarkdownRegistry _registry;
     private readonly IMarkdownToBlocksParser _parser;
     private readonly IInlineRenderer _inlineRenderer;
+    private readonly IPageContentProvider _contentProvider;
+    private readonly IPageReadCache _cache;
     private readonly PageEditor _sut;
 
     public PageEditorTests()
@@ -35,6 +38,8 @@ public sealed class PageEditorTests
         _renderer = Substitute.For<IPageMarkdownRenderer>();
         _options = Options.Create(new LimitationsOptions { LargeDeleteThreshold = 10 });
         _logger = new TestLogger();
+        _contentProvider = Substitute.For<IPageContentProvider>();
+        _cache = Substitute.For<IPageReadCache>();
 
         var blockConverters = new IBlockToMarkdownConverter[]
         {
@@ -62,7 +67,7 @@ public sealed class PageEditorTests
         _inlineRenderer = new InlineRenderer(mentionRegistry);
 
         _parser = Substitute.For<IMarkdownToBlocksParser>();
-        _sut = new PageEditor(_client, _renderer, _options, _logger, _registry, _parser, _inlineRenderer);
+        _sut = new PageEditor(_client, _contentProvider, _cache, _renderer, _options, _logger, _registry, _parser, _inlineRenderer);
     }
 
     private async Task<(AnchoredPageSnapshot snapshot, string pageId)> SetupSingleParagraphPageAsync(
@@ -75,10 +80,12 @@ public sealed class PageEditorTests
             RichTextContent = [new RichText { Type = "text", Content = text }]
         };
 
-        _client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = pageId });
-        _client.GetBlockChildrenAsync(pageId, Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = [block], HasMore = false });
+        _contentProvider.FetchAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new PageContent
+            {
+                Page = new Page { Id = pageId },
+                Blocks = [new BlockSubtree { Block = block, Children = [] }]
+            });
 
         var snapshot = await _sut.FetchForEditAsync(pageId);
         return (snapshot, pageId);
@@ -249,10 +256,12 @@ public sealed class PageEditorTests
         var blocks = new List<Block> { heading };
         blocks.AddRange(paragraphs);
 
-        _client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = pageId });
-        _client.GetBlockChildrenAsync(pageId, Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = blocks, HasMore = false });
+        var subtrees = blocks
+            .Select(b => new BlockSubtree { Block = b, Children = [] })
+            .ToList();
+        _contentProvider
+            .FetchAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new PageContent { Page = new Page { Id = pageId }, Blocks = subtrees });
 
         return (await _sut.FetchForEditAsync(pageId), pageId);
     }
@@ -466,10 +475,13 @@ public sealed class PageEditorTests
             RichTextContent = [new RichText { Type = "text", Content = headingText }]
         };
 
-        _client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = pageId });
-        _client.GetBlockChildrenAsync(pageId, Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = [block], HasMore = false });
+        _contentProvider
+            .FetchAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new PageContent
+            {
+                Page = new Page { Id = pageId },
+                Blocks = [new BlockSubtree { Block = block, Children = [] }]
+            });
 
         return (await _sut.FetchForEditAsync(pageId), pageId);
     }

@@ -4,6 +4,7 @@ using Buildout.Configuration;
 using Buildout.Core.Buildin;
 using Buildout.Core.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 
 // Extract --config/-c before Spectre sees the args; Spectre doesn't know about this flag.
@@ -26,6 +27,7 @@ try
     var config = BuildoutConfiguration.Build(configPath);
 
     var services = new ServiceCollection();
+    services.AddLogging();
     services.AddBuildinClient(config);
     services.AddBuildoutCore(config);
     services.AddSingleton<Spectre.Console.IAnsiConsole>(_ => Spectre.Console.AnsiConsole.Console);

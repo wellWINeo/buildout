@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
@@ -21,12 +22,14 @@ namespace Buildout.UnitTests.Markdown.Editing;
 public sealed class PageEditorLoggingTests : IDisposable
 {
     private readonly IBuildinClient _client;
+    private readonly IPageContentProvider _contentProvider;
     private readonly PageEditor _sut;
     private readonly MeterCollector _collector;
 
     public PageEditorLoggingTests()
     {
         _client = Substitute.For<IBuildinClient>();
+        _contentProvider = Substitute.For<IPageContentProvider>();
 
         var blockConverters = new IBlockToMarkdownConverter[]
         {
@@ -53,10 +56,11 @@ public sealed class PageEditorLoggingTests : IDisposable
         var inlineRenderer = new InlineRenderer(mentionRegistry);
         var parser = Substitute.For<IMarkdownToBlocksParser>();
         var renderer = Substitute.For<IPageMarkdownRenderer>();
+        var cache = Substitute.For<IPageReadCache>();
         var options = Options.Create(new LimitationsOptions { LargeDeleteThreshold = 10 });
         var logger = Substitute.For<ILogger<PageEditor>>();
 
-        _sut = new PageEditor(_client, renderer, options, logger, registry, parser, inlineRenderer);
+        _sut = new PageEditor(_client, _contentProvider, cache, renderer, options, logger, registry, parser, inlineRenderer);
         _collector = new MeterCollector();
     }
 
@@ -64,10 +68,12 @@ public sealed class PageEditorLoggingTests : IDisposable
 
     private void SetupPage(string pageId, params Block[] blocks)
     {
-        _client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = pageId });
-        _client.GetBlockChildrenAsync(pageId, Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = blocks.ToList(), HasMore = false });
+        var subtrees = blocks
+            .Select(b => new BlockSubtree { Block = b, Children = [] })
+            .ToList();
+        _contentProvider
+            .FetchAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new PageContent { Page = new Page { Id = pageId }, Blocks = subtrees });
     }
 
     [Fact]
