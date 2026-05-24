@@ -2,6 +2,7 @@ using System.Text.Json;
 using Buildout.Cli.Commands;
 using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
@@ -12,6 +13,7 @@ using Buildout.Core.Markdown.Internal;
 using Buildout.IntegrationTests.Buildin;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
@@ -56,6 +58,23 @@ public sealed class GetCommandEditingTests
         services.AddSingleton<BlockToMarkdownRegistry>();
         services.AddSingleton<MentionToMarkdownRegistry>();
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
+        services.AddSingleton<IPageReadCache>(static _ => new NullPageReadCache());
+        services.AddSingleton<IPageContentProvider>(sp =>
+        {
+            var client = sp.GetRequiredService<IBuildinClient>();
+            var registry = sp.GetRequiredService<BlockToMarkdownRegistry>();
+            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(BlockTreeFetcher));
+            return new PassthroughPageContentProvider(async (pageId, ct) =>
+            {
+                var page = await client.GetPageAsync(pageId, ct).ConfigureAwait(false);
+                var blocks = await BlockTreeFetcher.FetchAsync(client, registry, pageId, logger, ct).ConfigureAwait(false);
+                return new PageContent
+                {
+                    Page = page,
+                    Blocks = blocks
+                };
+            });
+        });
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
         services.AddSingleton<IMarkdownToBlocksParser, MarkdownToBlocksParser>();
         services.AddSingleton<IOptions<LimitationsOptions>>(static _ => Options.Create(new LimitationsOptions()));

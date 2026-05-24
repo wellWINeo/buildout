@@ -1,6 +1,7 @@
 using Buildout.Cli.Commands;
 using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin;
+using Buildout.Core.Caching;
 using Buildout.Core.DatabaseViews;
 using Buildout.Core.DatabaseViews.Properties;
 using Buildout.Core.DatabaseViews.Rendering;
@@ -15,6 +16,8 @@ using Buildout.Core.Markdown.Internal;
 using Buildout.IntegrationTests.Buildin;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 using Xunit;
@@ -69,6 +72,23 @@ public sealed class GetCommandNoRegressionTests
         services.AddSingleton<BlockToMarkdownRegistry>();
         services.AddSingleton<MentionToMarkdownRegistry>();
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
+        services.AddSingleton<IPageReadCache>(static _ => new NullPageReadCache());
+        services.AddSingleton<IPageContentProvider>(sp =>
+        {
+            var client = sp.GetRequiredService<IBuildinClient>();
+            var registry = sp.GetRequiredService<BlockToMarkdownRegistry>();
+            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(BlockTreeFetcher));
+            return new PassthroughPageContentProvider(async (pageId, ct) =>
+            {
+                var page = await client.GetPageAsync(pageId, ct).ConfigureAwait(false);
+                var blocks = await BlockTreeFetcher.FetchAsync(client, registry, pageId, logger, ct).ConfigureAwait(false);
+                return new PageContent
+                {
+                    Page = page,
+                    Blocks = blocks
+                };
+            });
+        });
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
         services.AddSingleton<IPageEditor, PageEditor>();
         services.AddSingleton<Microsoft.Extensions.Options.IOptions<LimitationsOptions>>(_ => Microsoft.Extensions.Options.Options.Create(new LimitationsOptions()));
