@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Buildout.Core.Diagnostics;
 
 namespace Buildout.Core.Caching;
@@ -34,24 +33,17 @@ public sealed class CachingPageContentProvider : IPageContentProvider
 
         BuildoutMeter.CacheMissesTotal.Add(1);
 
-        try
+        var content = await _fetchDelegate(pageId, ct);
+
+        var cacheEntry = new PageCacheEntry
         {
-            var content = await _fetchDelegate(pageId, ct);
+            Page = content.Page,
+            Blocks = content.Blocks,
+            CachedAt = DateTimeOffset.UtcNow
+        };
 
-            var cacheEntry = new PageCacheEntry
-            {
-                Page = content.Page,
-                Blocks = content.Blocks,
-                CachedAt = DateTimeOffset.UtcNow
-            };
+        _cache.Store(pageId, cacheEntry);
 
-            _cache.Store(pageId, cacheEntry);
-
-            return content;
-        }
-        catch
-        {
-            throw;
-        }
+        return content;
     }
 }

@@ -256,10 +256,12 @@ public sealed class PageEditorTests
         var blocks = new List<Block> { heading };
         blocks.AddRange(paragraphs);
 
-        _client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = pageId });
-        _client.GetBlockChildrenAsync(pageId, Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = blocks, HasMore = false });
+        var subtrees = blocks
+            .Select(b => new BlockSubtree { Block = b, Children = [] })
+            .ToList();
+        _contentProvider
+            .FetchAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new PageContent { Page = new Page { Id = pageId }, Blocks = subtrees });
 
         return (await _sut.FetchForEditAsync(pageId), pageId);
     }
@@ -473,10 +475,13 @@ public sealed class PageEditorTests
             RichTextContent = [new RichText { Type = "text", Content = headingText }]
         };
 
-        _client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = pageId });
-        _client.GetBlockChildrenAsync(pageId, Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = [block], HasMore = false });
+        _contentProvider
+            .FetchAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new PageContent
+            {
+                Page = new Page { Id = pageId },
+                Blocks = [new BlockSubtree { Block = block, Children = [] }]
+            });
 
         return (await _sut.FetchForEditAsync(pageId), pageId);
     }
