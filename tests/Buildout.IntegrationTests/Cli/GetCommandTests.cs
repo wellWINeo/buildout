@@ -2,6 +2,7 @@ using Buildout.Cli.Commands;
 using Buildout.Cli.Rendering;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Authentication;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
@@ -55,6 +56,23 @@ public sealed class GetCommandTests
         services.AddSingleton<BlockToMarkdownRegistry>();
         services.AddSingleton<MentionToMarkdownRegistry>();
         services.AddSingleton<IInlineRenderer, InlineRenderer>();
+        services.AddSingleton<IPageReadCache>(static _ => new NullPageReadCache());
+        services.AddSingleton<IPageContentProvider>(sp =>
+        {
+            var client = sp.GetRequiredService<IBuildinClient>();
+            var registry = sp.GetRequiredService<BlockToMarkdownRegistry>();
+            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(BlockTreeFetcher));
+            return new PassthroughPageContentProvider(async (pageId, ct) =>
+            {
+                var page = await client.GetPageAsync(pageId, ct).ConfigureAwait(false);
+                var blocks = await BlockTreeFetcher.FetchAsync(client, registry, pageId, logger, ct).ConfigureAwait(false);
+                return new PageContent
+                {
+                    Page = page,
+                    Blocks = blocks
+                };
+            });
+        });
         services.AddSingleton<IPageMarkdownRenderer, PageMarkdownRenderer>();
         services.AddSingleton<IPageEditor, PageEditor>();
         services.AddSingleton<IOptions<LimitationsOptions>>(_ => Options.Create(new LimitationsOptions()));
@@ -156,15 +174,29 @@ public sealed class GetCommandTests
         var console = new TestConsole();
         console.EmitAnsiSequences();
 
+        var loggerFactory = NullLoggerFactory.Instance;
+        var logger = loggerFactory.CreateLogger(typeof(BlockTreeFetcher));
+        var registry = new BlockToMarkdownRegistry(new List<IBlockToMarkdownConverter>
+        {
+            new ParagraphConverter(), new Heading1Converter(), new Heading2Converter(),
+            new Heading3Converter(), new BulletedListItemConverter(), new NumberedListItemConverter(),
+            new ToDoConverter(), new CodeConverter(), new QuoteConverter(), new DividerConverter()
+        });
+        var provider = new PassthroughPageContentProvider(async (pageId, ct) =>
+        {
+            var page = await client.GetPageAsync(pageId, ct).ConfigureAwait(false);
+            var blocks = await BlockTreeFetcher.FetchAsync(client, registry, pageId, logger, ct).ConfigureAwait(false);
+            return new PageContent
+            {
+                Page = page,
+                Blocks = blocks
+            };
+        });
+
         var renderer = new MarkdownTerminalRenderer(console);
         var coreRenderer = new PageMarkdownRenderer(
-            client,
-            new BlockToMarkdownRegistry(new List<IBlockToMarkdownConverter>
-            {
-                new ParagraphConverter(), new Heading1Converter(), new Heading2Converter(),
-                new Heading3Converter(), new BulletedListItemConverter(), new NumberedListItemConverter(),
-                new ToDoConverter(), new CodeConverter(), new QuoteConverter(), new DividerConverter()
-            }),
+            provider,
+            registry,
             new InlineRenderer(new MentionToMarkdownRegistry(new List<IMentionToMarkdownConverter>
             {
                 new PageMentionConverter(), new DatabaseMentionConverter(),

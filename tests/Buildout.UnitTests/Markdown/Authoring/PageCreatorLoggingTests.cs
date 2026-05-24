@@ -2,6 +2,7 @@ using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Authoring.Properties;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,7 @@ public sealed class PageCreatorLoggingTests : IDisposable
     private readonly IMarkdownToBlocksParser _parser = Substitute.For<IMarkdownToBlocksParser>();
     private readonly IDatabasePropertyValueParser _propertyParser = Substitute.For<IDatabasePropertyValueParser>();
     private readonly TestLogger _logger = new();
+    private readonly IPageReadCache _cache = Substitute.For<IPageReadCache>();
     private readonly ParentKindProbe _probe;
 
     private const string ParentPageId = "parent-page-id";
@@ -62,7 +64,7 @@ public sealed class PageCreatorLoggingTests : IDisposable
     }
 
     private PageCreator CreateSut() =>
-        new(_probe, _parser, _client, _propertyParser, _logger);
+        new(_probe, _parser, _client, _propertyParser, _cache, _logger);
 
     private static BlockSubtreeWrite MakeBlock(string id = "") =>
         new() { Block = new ParagraphBlock { Id = id }, Children = [] };

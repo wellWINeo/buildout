@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Internal;
@@ -11,18 +12,18 @@ namespace Buildout.Core.Markdown;
 
 public sealed class PageMarkdownRenderer : IPageMarkdownRenderer
 {
-    private readonly IBuildinClient _client;
+    private readonly IPageContentProvider _contentProvider;
     private readonly BlockToMarkdownRegistry _registry;
     private readonly IInlineRenderer _inlineRenderer;
     private readonly ILogger<PageMarkdownRenderer> _logger;
 
     public PageMarkdownRenderer(
-        IBuildinClient client,
+        IPageContentProvider contentProvider,
         BlockToMarkdownRegistry registry,
         IInlineRenderer inlineRenderer,
         ILogger<PageMarkdownRenderer> logger)
     {
-        _client = client;
+        _contentProvider = contentProvider;
         _registry = registry;
         _inlineRenderer = inlineRenderer;
         _logger = logger;
@@ -33,8 +34,9 @@ public sealed class PageMarkdownRenderer : IPageMarkdownRenderer
         using var recorder = OperationRecorder.Start(_logger, "page_read");
         try
         {
-            var page = await _client.GetPageAsync(pageId, cancellationToken).ConfigureAwait(false);
-            var roots = await BlockTreeFetcher.FetchAsync(_client, _registry, pageId, _logger, cancellationToken).ConfigureAwait(false);
+            var content = await _contentProvider.FetchAsync(pageId, cancellationToken).ConfigureAwait(false);
+            var page = content.Page;
+            var roots = content.Blocks;
 
             var totalBlockCount = CountBlocks(roots);
             recorder.SetTag("page_id", pageId);

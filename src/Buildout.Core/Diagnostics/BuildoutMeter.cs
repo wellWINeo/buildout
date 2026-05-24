@@ -38,4 +38,13 @@ public static class BuildoutMeter
 
     public static readonly Counter<long> McpResourceReadsTotal = Meter.CreateCounter<long>(
         "buildout.mcp.resource.reads.total", "{read}", "Total MCP resource reads");
+
+    public static readonly Counter<long> CacheHitsTotal = Meter.CreateCounter<long>(
+        "buildout.cache.hits.total", "{hit}", "Total cache hits");
+
+    public static readonly Counter<long> CacheMissesTotal = Meter.CreateCounter<long>(
+        "buildout.cache.misses.total", "{miss}", "Total cache misses");
+
+    public static readonly Counter<long> CacheEvictionsTotal = Meter.CreateCounter<long>(
+        "buildout.cache.evictions.total", "{eviction}", "Total cache evictions");
 }

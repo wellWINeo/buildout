@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
@@ -53,10 +54,12 @@ public sealed class PageEditorLoggingTests : IDisposable
         var inlineRenderer = new InlineRenderer(mentionRegistry);
         var parser = Substitute.For<IMarkdownToBlocksParser>();
         var renderer = Substitute.For<IPageMarkdownRenderer>();
+        var contentProvider = Substitute.For<IPageContentProvider>();
+        var cache = Substitute.For<IPageReadCache>();
         var options = Options.Create(new LimitationsOptions { LargeDeleteThreshold = 10 });
         var logger = Substitute.For<ILogger<PageEditor>>();
 
-        _sut = new PageEditor(_client, renderer, options, logger, registry, parser, inlineRenderer);
+        _sut = new PageEditor(_client, contentProvider, cache, renderer, options, logger, registry, parser, inlineRenderer);
         _collector = new MeterCollector();
     }
 

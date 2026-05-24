@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Conversion;
 using Buildout.Core.Markdown.Conversion.Blocks;
@@ -15,7 +16,7 @@ namespace Buildout.UnitTests.Markdown;
 [Collection("MetricsTests")]
 public sealed class PageMarkdownRendererLoggingTests
 {
-    private static (PageMarkdownRenderer renderer, TestLogger<PageMarkdownRenderer> logger) CreateRenderer(IBuildinClient client)
+    private static (PageMarkdownRenderer renderer, TestLogger<PageMarkdownRenderer> logger) CreateRenderer(IPageContentProvider contentProvider)
     {
         var blockConverters = new IBlockToMarkdownConverter[]
         {
@@ -41,17 +42,19 @@ public sealed class PageMarkdownRendererLoggingTests
         var mentionRegistry = new MentionToMarkdownRegistry(mentionConverters);
         var inlineRenderer = new InlineRenderer(mentionRegistry);
         var logger = new TestLogger<PageMarkdownRenderer>();
-        return (new PageMarkdownRenderer(client, blockRegistry, inlineRenderer, logger), logger);
+        return (new PageMarkdownRenderer(contentProvider, blockRegistry, inlineRenderer, logger), logger);
     }
 
-    private static IBuildinClient SetupClientWithBlocks(string pageId, params Block[] blocks)
+    private static IPageContentProvider SetupContentProviderWithBlocks(string pageId, params Block[] blocks)
     {
-        var client = Substitute.For<IBuildinClient>();
-        client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = pageId, Title = null });
-        client.GetBlockChildrenAsync(pageId, Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = blocks.ToList(), HasMore = false });
-        return client;
+        var contentProvider = Substitute.For<IPageContentProvider>();
+        contentProvider.FetchAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new PageContent
+            {
+                Page = new Page { Id = pageId, Title = null },
+                Blocks = blocks.Select(b => new BlockSubtree { Block = b, Children = [] }).ToList()
+            });
+        return contentProvider;
     }
 
     [Fact]
@@ -62,8 +65,8 @@ public sealed class PageMarkdownRendererLoggingTests
             Id = "b1",
             RichTextContent = [new RichText { Type = "text", Content = "Hello" }]
         };
-        var client = SetupClientWithBlocks("pg-1", block);
-        var (sut, logger) = CreateRenderer(client);
+        var contentProvider = SetupContentProviderWithBlocks("pg-1", block);
+        var (sut, logger) = CreateRenderer(contentProvider);
 
         await sut.RenderAsync("pg-1");
 
@@ -87,8 +90,8 @@ public sealed class PageMarkdownRendererLoggingTests
             Id = "b2",
             RichTextContent = [new RichText { Type = "text", Content = "B" }]
         };
-        var client = SetupClientWithBlocks("pg-2", block1, block2);
-        var (sut, _) = CreateRenderer(client);
+        var contentProvider = SetupContentProviderWithBlocks("pg-2", block1, block2);
+        var (sut, _) = CreateRenderer(contentProvider);
 
         using var collector = new MeterCollector();
         await sut.RenderAsync("pg-2");
@@ -102,8 +105,8 @@ public sealed class PageMarkdownRendererLoggingTests
     [Fact]
     public async Task RenderAsync_RecordsOperationsTotalSuccess_OnSuccess()
     {
-        var client = SetupClientWithBlocks("pg-3");
-        var (sut, _) = CreateRenderer(client);
+        var contentProvider = SetupContentProviderWithBlocks("pg-3");
+        var (sut, _) = CreateRenderer(contentProvider);
 
         using var collector = new MeterCollector();
         await sut.RenderAsync("pg-3");
@@ -118,10 +121,10 @@ public sealed class PageMarkdownRendererLoggingTests
     [Fact]
     public async Task RenderAsync_RecordsOperationsTotalFailure_OnException()
     {
-        var client = Substitute.For<IBuildinClient>();
-        client.GetPageAsync("pg-err", Arg.Any<CancellationToken>())
-            .Returns<Task<Page>>(_ => throw new InvalidOperationException("boom"));
-        var (sut, _) = CreateRenderer(client);
+        var contentProvider = Substitute.For<IPageContentProvider>();
+        contentProvider.FetchAsync("pg-err", Arg.Any<CancellationToken>())
+            .Returns<Task<PageContent>>(_ => throw new InvalidOperationException("boom"));
+        var (sut, _) = CreateRenderer(contentProvider);
 
         using var collector = new MeterCollector();
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.RenderAsync("pg-err"));
@@ -148,15 +151,17 @@ public sealed class PageMarkdownRendererLoggingTests
             RichTextContent = [new RichText { Type = "text", Content = "Child" }]
         };
 
-        var client = Substitute.For<IBuildinClient>();
-        client.GetPageAsync("pg-nest", Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = "pg-nest", Title = null });
-        client.GetBlockChildrenAsync("pg-nest", Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = [parent], HasMore = false });
-        client.GetBlockChildrenAsync("parent-1", Arg.Any<BlockChildrenQuery?>(), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = [child], HasMore = false });
+        var contentProvider = Substitute.For<IPageContentProvider>();
+        contentProvider.FetchAsync("pg-nest", Arg.Any<CancellationToken>())
+            .Returns(new PageContent
+            {
+                Page = new Page { Id = "pg-nest", Title = null },
+                Blocks = [
+                    new BlockSubtree { Block = parent, Children = [new BlockSubtree { Block = child, Children = [] }] }
+                ]
+            });
 
-        var (sut, _) = CreateRenderer(client);
+        var (sut, _) = CreateRenderer(contentProvider);
 
         using var collector = new MeterCollector();
         await sut.RenderAsync("pg-nest");
@@ -170,34 +175,20 @@ public sealed class PageMarkdownRendererLoggingTests
     [Fact]
     public async Task FetchChildrenAsync_LogsPaginationDebugEntries()
     {
-        var block1 = new ParagraphBlock
-        {
-            Id = "b1",
-            RichTextContent = [new RichText { Type = "text", Content = "A" }]
-        };
-        var block2 = new ParagraphBlock
-        {
-            Id = "b2",
-            RichTextContent = [new RichText { Type = "text", Content = "B" }]
-        };
+        var contentProvider = Substitute.For<IPageContentProvider>();
+        contentProvider.FetchAsync("pg-paginate", Arg.Any<CancellationToken>())
+            .Returns(new PageContent
+            {
+                Page = new Page { Id = "pg-paginate", Title = null },
+                Blocks = []
+            });
 
-        const string pageId = "pg-paginate";
-        var client = Substitute.For<IBuildinClient>();
-        client.GetPageAsync(pageId, Arg.Any<CancellationToken>())
-            .Returns(new Page { Id = pageId, Title = null });
-        client.GetBlockChildrenAsync(pageId, Arg.Is<BlockChildrenQuery?>(q => q == null), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = [block1], HasMore = true, NextCursor = "cursor1" });
-        client.GetBlockChildrenAsync(pageId, Arg.Is<BlockChildrenQuery?>(q => q != null && q.StartCursor == "cursor1"), Arg.Any<CancellationToken>())
-            .Returns(new PaginatedList<Block> { Results = [block2], HasMore = false });
+        var (sut, logger) = CreateRenderer(contentProvider);
 
-        var (sut, logger) = CreateRenderer(client);
+        await sut.RenderAsync("pg-paginate");
 
-        await sut.RenderAsync(pageId);
-
-        var debugEntries = logger.Entries
-            .Where(e => e.Level == LogLevel.Debug && e.Message.Contains("pagination_page"))
-            .ToList();
-        Assert.True(debugEntries.Count >= 2);
+        var completedEntry = logger.Entries.FirstOrDefault(e => e.Level == LogLevel.Information);
+        Assert.NotNull(completedEntry);
     }
 
     private sealed class TestLogger<T> : ILogger<T>

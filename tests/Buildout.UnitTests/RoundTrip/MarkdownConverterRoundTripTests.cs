@@ -1,5 +1,6 @@
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.Markdown.Conversion;
@@ -39,7 +40,8 @@ public sealed class MarkdownConverterRoundTripTests
         var blockRegistry = new BlockToMarkdownRegistry(blockConverters);
         var mentionRegistry = new MentionToMarkdownRegistry(mentionConverters);
         var inlineRenderer = new InlineRenderer(mentionRegistry);
-        return new PageMarkdownRenderer(client, blockRegistry, inlineRenderer, Substitute.For<ILogger<PageMarkdownRenderer>>());
+        var contentProvider = Substitute.For<IPageContentProvider>();
+        return new PageMarkdownRenderer(contentProvider, blockRegistry, inlineRenderer, Substitute.For<ILogger<PageMarkdownRenderer>>());
     }
 
     private static MarkdownToBlocksParser CreateParser() => new();

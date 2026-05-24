@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown.Authoring;
 using Microsoft.Extensions.Logging;
@@ -12,11 +13,13 @@ namespace Buildout.Core.PageLifecycle;
 public sealed class PageLifecycle : IPageLifecycle
 {
     private readonly IBuildinClient _client;
+    private readonly IPageReadCache _cache;
     private readonly ILogger<PageLifecycle> _logger;
 
-    public PageLifecycle(IBuildinClient client, ILogger<PageLifecycle> logger)
+    public PageLifecycle(IBuildinClient client, IPageReadCache cache, ILogger<PageLifecycle> logger)
     {
         _client = client;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -64,6 +67,8 @@ public sealed class PageLifecycle : IPageLifecycle
                 Properties = new Dictionary<string, PropertyValue>(),
                 Archived = true
             }, cancellationToken);
+
+            _cache.Invalidate(pageId);
         }
         catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 404 })
         {
@@ -136,6 +141,8 @@ public sealed class PageLifecycle : IPageLifecycle
                 Properties = new Dictionary<string, PropertyValue>(),
                 Archived = false
             }, cancellationToken);
+
+            _cache.Invalidate(pageId);
         }
         catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 404 })
         {

@@ -1,6 +1,7 @@
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
+using Buildout.Core.Caching;
 using Buildout.Core.Markdown.Authoring;
 using Buildout.Core.PageLifecycle;
 using Microsoft.Extensions.Logging;
@@ -17,13 +18,14 @@ public sealed class PageLifecycleTests
 {
     private readonly IBuildinClient _client = Substitute.For<IBuildinClient>();
     private readonly TestLogger _logger = new();
+    private readonly IPageReadCache _cache = Substitute.For<IPageReadCache>();
     private readonly Buildout.Core.PageLifecycle.PageLifecycle _sut;
 
     private const string PageId = "test-page-id";
 
     public PageLifecycleTests()
     {
-        _sut = new Buildout.Core.PageLifecycle.PageLifecycle(_client, _logger);
+        _sut = new Buildout.Core.PageLifecycle.PageLifecycle(_client, _cache, _logger);
     }
 
     private static PageModel ActivePage() => new() { Id = PageId, Archived = false };
