@@ -78,7 +78,7 @@ public sealed class AdoNetAuditTrail : IAuditTrail
         command.Parameters.AddWithValue(entry.Id.ToString());
         command.Parameters.AddWithValue(entry.ToolName);
         command.Parameters.AddWithValue(entry.SessionId ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue(entry.Timestamp.UtcDateTime.ToString("o"));
+        command.Parameters.AddWithValue(entry.Timestamp.UtcDateTime); // DateTime(Utc) → timestamptz; string coercion removed in Npgsql 9+
         command.Parameters.AddWithValue(entry.Parameters);
         command.Parameters.AddWithValue((int)entry.Outcome);
         command.Parameters.AddWithValue((long)entry.Duration.TotalMilliseconds);
