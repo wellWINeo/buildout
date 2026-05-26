@@ -17,9 +17,6 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
-    <PackageReference Include="linq2db" Version="6.1.0" />
-    <PackageReference Include="linq2db.SQLite" Version="6.1.0" />
-    <PackageReference Include="linq2db.PostgreSQL" Version="6.1.0" />
     <PackageReference Include="FluentMigrator" Version="7.0.0" />
     <PackageReference Include="FluentMigrator.Runner.SQLite" Version="7.0.0" />
     <PackageReference Include="FluentMigrator.Runner.Postgres" Version="7.0.0" />

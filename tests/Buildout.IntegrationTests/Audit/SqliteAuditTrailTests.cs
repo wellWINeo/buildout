@@ -2,6 +2,7 @@ using System.Globalization;
 using Buildout.Core.Audit;
 using Buildout.Mcp.Audit;
 using FluentMigrator.Runner;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -11,45 +12,42 @@ namespace Buildout.IntegrationTests.Audit;
 public class SqliteAuditTrailTests
 {
     [Fact]
-    public async Task Linq2DbAuditTrail_PersistsEntry_AndRetrieves()
+    public async Task AdoNetAuditTrail_PersistsEntry_AndRetrieves()
     {
         var tempDb = Path.Combine(Path.GetTempPath(), $"audit_test_{Guid.NewGuid():N}.sqlite");
 
         try
         {
             var connectionString = $"Data Source={tempDb}";
-            
-            var services = new ServiceCollection();
-            services.AddFluentMigratorCore()
+
+            var serviceProvider = new ServiceCollection()
+                .AddFluentMigratorCore()
                 .ConfigureRunner(builder => builder
                     .AddSQLite()
                     .WithGlobalConnectionString(connectionString)
                     .ScanIn(typeof(Buildout.Mcp.Audit.Migrations.Migration_001_CreateAuditEntries).Assembly)
                     .For.Migrations())
-                .AddLogging(lb => lb.AddFluentMigratorConsole());
+                .AddLogging(lb => lb.AddFluentMigratorConsole())
+                .BuildServiceProvider();
 
-            var serviceProvider = services.BuildServiceProvider();
-            var runner = serviceProvider.GetRequiredService<IMigrationRunner>();
-            runner.MigrateUp();
+            using (var scope = serviceProvider.CreateScope())
+            {
+                scope.ServiceProvider.GetRequiredService<IMigrationRunner>().MigrateUp();
+            }
 
             var mockLogger = new MockLogger();
-            var auditTrail = new Linq2DbAuditTrail(connectionString, "sqlite", mockLogger);
+            var auditTrail = new AdoNetAuditTrail(connectionString, "sqlite", mockLogger);
 
             await auditTrail.RecordEntryAsync(new AuditEntry
             {
-                Id = Guid.NewGuid(),
                 ToolName = "test_tool",
                 SessionId = "session-123",
-                Timestamp = DateTimeOffset.UtcNow,
                 Parameters = "{}",
                 Outcome = AuditOutcome.Success,
                 Duration = TimeSpan.FromMilliseconds(100),
-                ErrorDetails = null
             });
 
-            await Task.Delay(100);
-
-            var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
+            using var connection = new SqliteConnection(connectionString);
             await connection.OpenAsync();
 
             using var command = connection.CreateCommand();
@@ -62,57 +60,49 @@ public class SqliteAuditTrailTests
         {
             if (File.Exists(tempDb))
             {
-                try
-                {
-                    File.Delete(tempDb);
-                }
-                catch
-                {
-                }
+                try { File.Delete(tempDb); } catch { }
             }
         }
     }
 
     [Fact]
-    public async Task Linq2DbAuditTrail_HandlesFailureWithErrorDetails()
+    public async Task AdoNetAuditTrail_HandlesFailureWithErrorDetails()
     {
         var tempDb = Path.Combine(Path.GetTempPath(), $"audit_test_{Guid.NewGuid():N}.sqlite");
 
         try
         {
             var connectionString = $"Data Source={tempDb}";
-            
-            var services = new ServiceCollection();
-            services.AddFluentMigratorCore()
+
+            var serviceProvider = new ServiceCollection()
+                .AddFluentMigratorCore()
                 .ConfigureRunner(builder => builder
                     .AddSQLite()
                     .WithGlobalConnectionString(connectionString)
                     .ScanIn(typeof(Buildout.Mcp.Audit.Migrations.Migration_001_CreateAuditEntries).Assembly)
                     .For.Migrations())
-                .AddLogging(lb => lb.AddFluentMigratorConsole());
+                .AddLogging(lb => lb.AddFluentMigratorConsole())
+                .BuildServiceProvider();
 
-            var serviceProvider = services.BuildServiceProvider();
-            var runner = serviceProvider.GetRequiredService<IMigrationRunner>();
-            runner.MigrateUp();
+            using (var scope = serviceProvider.CreateScope())
+            {
+                scope.ServiceProvider.GetRequiredService<IMigrationRunner>().MigrateUp();
+            }
 
             var mockLogger = new MockLogger();
-            var auditTrail = new Linq2DbAuditTrail(connectionString, "sqlite", mockLogger);
+            var auditTrail = new AdoNetAuditTrail(connectionString, "sqlite", mockLogger);
 
             await auditTrail.RecordEntryAsync(new AuditEntry
             {
-                Id = Guid.NewGuid(),
                 ToolName = "test_tool",
                 SessionId = "session-123",
-                Timestamp = DateTimeOffset.UtcNow,
                 Parameters = "{}",
                 Outcome = AuditOutcome.Failure,
                 Duration = TimeSpan.FromMilliseconds(50),
-                ErrorDetails = "Test error occurred"
+                ErrorDetails = "Test error occurred",
             });
 
-            await Task.Delay(100);
-
-            var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
+            using var connection = new SqliteConnection(connectionString);
             await connection.OpenAsync();
 
             using var command = connection.CreateCommand();
@@ -125,18 +115,12 @@ public class SqliteAuditTrailTests
         {
             if (File.Exists(tempDb))
             {
-                try
-                {
-                    File.Delete(tempDb);
-                }
-                catch
-                {
-                }
+                try { File.Delete(tempDb); } catch { }
             }
         }
     }
 
-    private sealed class MockLogger : ILogger<Linq2DbAuditTrail>
+    private sealed class MockLogger : ILogger<AdoNetAuditTrail>
     {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;

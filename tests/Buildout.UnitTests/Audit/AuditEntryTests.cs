@@ -49,7 +49,7 @@ public class AuditEntryTests
     }
 
     [Fact]
-    public void SerializeParameters_TruncatesLongParameters()
+    public void Truncate_TruncatesLongParameters()
     {
         var json = "{\"long\":\"" + new string('x', 15000) + "\"}";
         var result = AuditEntry.Truncate(json, 10000);
@@ -59,7 +59,7 @@ public class AuditEntryTests
     }
 
     [Fact]
-    public void SerializeParameters_PreservesShortParameters()
+    public void Truncate_PreservesShortParameters()
     {
         var json = "{\"test\":\"value\"}";
         var result = AuditEntry.Truncate(json, 100);

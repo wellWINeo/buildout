@@ -8,29 +8,26 @@ namespace Buildout.IntegrationTests.Audit;
 public class AuditFailureResilienceTests
 {
     [Fact]
-    public async Task RecordEntryAsync_Throws_DoesNotPropagateException()
+    public async Task RecordEntryAsync_WithInvalidConnectionString_LogsErrorAndDoesNotThrow()
     {
         var mockLogger = new MockLogger();
-        var auditTrail = new Linq2DbAuditTrail("invalid_connection_string", "sqlite", mockLogger);
+        var auditTrail = new AdoNetAuditTrail("invalid_connection_string", "sqlite", mockLogger);
 
         var entry = new AuditEntry
         {
-            Id = Guid.NewGuid(),
             ToolName = "test_tool",
             SessionId = "session-123",
-            Timestamp = DateTimeOffset.UtcNow,
             Parameters = "{}",
             Outcome = AuditOutcome.Success,
             Duration = TimeSpan.FromMilliseconds(100),
-            ErrorDetails = null
         };
 
         await auditTrail.RecordEntryAsync(entry);
-        
+
         Assert.True(mockLogger.ErrorLogged);
     }
 
-    private sealed class MockLogger : ILogger<Linq2DbAuditTrail>
+    private sealed class MockLogger : ILogger<AdoNetAuditTrail>
     {
         public bool ErrorLogged { get; private set; }
 

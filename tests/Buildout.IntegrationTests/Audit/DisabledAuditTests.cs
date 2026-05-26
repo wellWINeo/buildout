@@ -1,10 +1,7 @@
-using System.Globalization;
 using Buildout.Core.Audit;
 using Buildout.Mcp.Audit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Buildout.IntegrationTests.Audit;
@@ -12,63 +9,54 @@ namespace Buildout.IntegrationTests.Audit;
 public class DisabledAuditTests
 {
     [Fact]
-    public void AuditDisabled_NullAuditTrailRegistered()
+    public void AddAuditTrail_WhenDisabledWithStdioTransport_RegistersNullAuditTrail()
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Audit:Enabled"] = "false"
-            })
-            .Build();
-
+        var configuration = BuildConfiguration(enabled: false);
         var services = new ServiceCollection();
-        services.AddSingleton<ILogger<AuditTrailFilter>, NullLogger<AuditTrailFilter>>();
 
-        var auditOptions = new AuditOptions();
-        configuration.GetSection("Audit").Bind(auditOptions);
-        
-        if (!auditOptions.Enabled)
-        {
-            services.AddSingleton<IAuditTrail, NullAuditTrail>();
-        }
+        services.AddAuditTrail(configuration, isHttpTransport: false);
 
-        var serviceProvider = services.BuildServiceProvider();
-        var auditTrail = serviceProvider.GetRequiredService<IAuditTrail>();
-
-        Assert.IsType<NullAuditTrail>(auditTrail);
+        using var sp = services.BuildServiceProvider();
+        Assert.IsType<NullAuditTrail>(sp.GetRequiredService<IAuditTrail>());
     }
 
     [Fact]
-    public void AuditDisabled_HttpTransport_NullAuditTrailRegistered()
+    public void AddAuditTrail_WhenDisabledWithHttpTransport_RegistersNullAuditTrail()
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Audit:Enabled"] = "false"
-            })
-            .Build();
-
+        var configuration = BuildConfiguration(enabled: false);
         var services = new ServiceCollection();
-        services.AddSingleton<ILogger<AuditTrailFilter>, NullLogger<AuditTrailFilter>>();
 
-        var auditOptions = new AuditOptions();
-        configuration.GetSection("Audit").Bind(auditOptions);
-        
-        if (!auditOptions.Enabled)
-        {
-            services.AddSingleton<IAuditTrail, NullAuditTrail>();
-        }
+        services.AddAuditTrail(configuration, isHttpTransport: true);
 
-        var serviceProvider = services.BuildServiceProvider();
-        var auditTrail = serviceProvider.GetRequiredService<IAuditTrail>();
-
-        Assert.IsType<NullAuditTrail>(auditTrail);
+        using var sp = services.BuildServiceProvider();
+        Assert.IsType<NullAuditTrail>(sp.GetRequiredService<IAuditTrail>());
     }
 
-    private sealed class NullLogger<T> : ILogger<T>
+    [Fact]
+    public void AddAuditTrail_WhenEnabledWithStdioTransport_RegistersNullAuditTrail()
     {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => true;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+        // Audit is explicitly restricted to HTTP transport: even if Enabled=true,
+        // stdio transport must yield NullAuditTrail.
+        var configuration = BuildConfiguration(enabled: true, provider: "sqlite", sqlitePath: "/tmp/x.db");
+        var services = new ServiceCollection();
+
+        services.AddAuditTrail(configuration, isHttpTransport: false);
+
+        using var sp = services.BuildServiceProvider();
+        Assert.IsType<NullAuditTrail>(sp.GetRequiredService<IAuditTrail>());
+    }
+
+    private static IConfiguration BuildConfiguration(
+        bool enabled,
+        string? provider = null,
+        string? sqlitePath = null)
+    {
+        var values = new Dictionary<string, string?> { ["Audit:Enabled"] = enabled.ToString(System.Globalization.CultureInfo.InvariantCulture).ToLowerInvariant() };
+        if (provider is not null) values["Audit:Provider"] = provider;
+        if (sqlitePath is not null) values["Audit:SqlitePath"] = sqlitePath;
+
+        return new ConfigurationBuilder()
+            .AddInMemoryCollection(values)
+            .Build();
     }
 }

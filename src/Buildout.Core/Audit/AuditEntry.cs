@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace Buildout.Core.Audit;
 
 public enum AuditOutcome
@@ -19,6 +17,10 @@ public record AuditEntry
     public TimeSpan Duration { get; init; }
     public string? ErrorDetails { get; init; }
 
+    /// <summary>
+    /// Truncates <paramref name="value"/> to at most <paramref name="maxLength"/> characters,
+    /// appending "..." when truncation occurs. Returns "{}" for null/empty input.
+    /// </summary>
     public static string Truncate(string? value, int maxLength)
     {
         if (string.IsNullOrEmpty(value))
@@ -32,11 +34,5 @@ public record AuditEntry
         }
 
         return string.Concat(value.AsSpan(0, maxLength - 3), "...");
-    }
-
-    public static string SerializeParameters(Dictionary<string, JsonElement> parameters)
-    {
-        var json = JsonSerializer.Serialize(parameters);
-        return Truncate(json, 10000);
     }
 }
