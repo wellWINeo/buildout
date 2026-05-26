@@ -1,11 +1,13 @@
 using Buildout.Configuration;
 using Buildout.Core.DependencyInjection;
+using Buildout.Mcp.Audit;
 using Buildout.Mcp.Prompts;
 using Buildout.Mcp.Resources;
 using Buildout.Mcp.Tools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Server;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
@@ -54,12 +56,27 @@ try
                 .AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint + "/v1/logs")));
     }
 
-    builder.Services
+    var transportType = mergedConfig.GetValue<string>("Transport:Type") ?? "stdio";
+    var isHttpTransport = transportType == "http";
+
+    builder.Services.AddAuditTrail(mergedConfig, isHttpTransport);
+    
+    var mcpBuilder = builder.Services
         .AddMcpServer(options =>
         {
             options.ServerInstructions = PromptResourceLoader.Load("server-instructions");
-        })
-        .WithStdioServerTransport()
+        });
+
+    if (isHttpTransport)
+    {
+        mcpBuilder = mcpBuilder.WithHttpTransport();
+    }
+    else
+    {
+        mcpBuilder = mcpBuilder.WithStdioServerTransport();
+    }
+
+    mcpBuilder
         .WithResources<PageResourceHandler>()
         .WithPrompts<BuildoutPrompts>()
         .WithTools<SearchToolHandler>()

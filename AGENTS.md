@@ -1,7 +1,7 @@
 # Agent Guidelines
 
 ## Active Project Context
-- The active feature plan is located at `specs/003-search-pages/plan.md`.
+- The active feature plan is located at `specs/013-audit-trails/plan.md`.
 - For information regarding technologies, project structure, shell commands, and other context, refer to the plan and its sibling artifacts:
     - `research.md`
     - `data-model.md`

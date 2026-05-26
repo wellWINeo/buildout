@@ -37,6 +37,12 @@ Higher-numbered sources override lower-numbered sources for the same key. Enviro
 | `Limitations:LargeDeleteThreshold` | `int` | `10` | no | `>= 0` | `Buildout__Limitations__LargeDeleteThreshold` |
 | `Telemetry:Enabled` | `bool` | `false` | no | — | `Buildout__Telemetry__Enabled` |
 | `Telemetry:OtlpEndpoint` | URI string | `http://localhost:4318` | no | absolute URI; `http`/`https` scheme only | `Buildout__Telemetry__OtlpEndpoint` |
+| `Transport:Type` | `string` | `stdio` | no | `stdio` or `http` | `Buildout__Transport__Type` |
+| `Audit:Enabled` | `bool` | `false` | no | — | `Buildout__Audit__Enabled` |
+| `Audit:Provider` | `string` | — | yes if `Audit:Enabled=true` | `sqlite` or `postgresql` | `Buildout__Audit__Provider` |
+| `Audit:SqlitePath` | `string` | — | yes if `Provider=sqlite` | non-empty, valid file path | `Buildout__Audit__SqlitePath` |
+| `Audit:ConnectionString` | `string` | — | yes if `Provider=postgresql` | non-empty | `Buildout__Audit__ConnectionString` |
+| `Audit:MaxParameterLength` | `int` | `10000` | no | `> 0` | `Buildout__Audit__MaxParameterLength` |
 
 ### Examples by Channel
 
@@ -55,6 +61,16 @@ Higher-numbered sources override lower-numbered sources for the same key. Enviro
   "Telemetry": {
     "Enabled": false,
     "OtlpEndpoint": "http://localhost:4318"
+  },
+  "Transport": {
+    "Type": "stdio"
+  },
+  "Audit": {
+    "Enabled": false,
+    "Provider": null,
+    "SqlitePath": null,
+    "ConnectionString": null,
+    "MaxParameterLength": 10000
   }
 }
 ```
@@ -68,6 +84,12 @@ export Buildout__Http__UnsafeAllowInsecure="false"
 export Buildout__Limitations__LargeDeleteThreshold="20"
 export Buildout__Telemetry__Enabled="true"
 export Buildout__Telemetry__OtlpEndpoint="http://localhost:4318"
+export Buildout__Transport__Type="http"
+export Buildout__Audit__Enabled="true"
+export Buildout__Audit__Provider="sqlite"
+export Buildout__Audit__SqlitePath="/path/to/audit.db"
+export Buildout__Audit__ConnectionString=""
+export Buildout__Audit__MaxParameterLength="10000"
 ```
 
 **Command-line override:**
@@ -143,3 +165,63 @@ Environment variables use double underscore (`__`) as the section separator, not
 
 ### Env Var Case Sensitivity
 Environment variables are case-sensitive on most systems. Ensure your variable names exactly match the documented format (e.g., `Buildout__BotToken`, not `buildout__BotToken`).
+
+## Audit Trail Configuration
+
+Audit trails provide detailed logging of MCP tool invocations for compliance and monitoring purposes. This feature is opt-in and disabled by default.
+
+### Audit Configuration Keys
+
+| Key | Type | Default | Required | Validation | Env Var Form |
+|-----|------|---------|----------|------------|--------------|
+| `Audit:Enabled` | `bool` | `false` | no | — | `Buildout__Audit__Enabled` |
+| `Audit:Provider` | `string` | — | yes if `Audit:Enabled=true` | `sqlite` or `postgresql` | `Buildout__Audit__Provider` |
+| `Audit:SqlitePath` | `string` | — | yes if `Provider=sqlite` | non-empty, valid file path | `Buildout__Audit__SqlitePath` |
+| `Audit:ConnectionString` | `string` | — | yes if `Provider=postgresql` | non-empty | `Buildout__Audit__ConnectionString` |
+| `Audit:MaxParameterLength` | `int` | `10000` | no | `> 0` | `Buildout__Audit__MaxParameterLength` |
+
+### Audit Configuration Examples
+
+**SQLite audit trail:**
+```json
+{
+  "Audit": {
+    "Enabled": true,
+    "Provider": "sqlite",
+    "SqlitePath": "/path/to/audit.db",
+    "MaxParameterLength": 10000
+  }
+}
+```
+
+```bash
+export Buildout__Audit__Enabled="true"
+export Buildout__Audit__Provider="sqlite"
+export Buildout__Audit__SqlitePath="/path/to/audit.db"
+export Buildout__Audit__MaxParameterLength="10000"
+```
+
+**PostgreSQL audit trail:**
+```json
+{
+  "Audit": {
+    "Enabled": true,
+    "Provider": "postgresql",
+    "ConnectionString": "Host=localhost;Port=5432;Database=audit;Username=user;Password=pass",
+    "MaxParameterLength": 10000
+  }
+}
+```
+
+```bash
+export Buildout__Audit__Enabled="true"
+export Buildout__Audit__Provider="postgresql"
+export Buildout__Audit__ConnectionString="Host=localhost;Port=5432;Database=audit;Username=user;Password=pass"
+export Buildout__Audit__MaxParameterLength="10000"
+```
+
+**Important notes:**
+- Audit trails are only active when `Transport:Type=http` and `Audit:Enabled=true`
+- When disabled, audit recording has zero performance impact
+- Audit failures are logged but never block tool execution
+- Parameters and error details are truncated to `MaxParameterLength` characters
