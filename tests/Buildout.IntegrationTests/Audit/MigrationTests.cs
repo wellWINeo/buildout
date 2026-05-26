@@ -2,6 +2,8 @@ using FluentMigrator.Runner;
 using Microsoft.Extensions.DependencyInjection;
 using System.Data.SQLite;
 using Xunit;
+using System.Collections.Generic;
+using System;
 
 namespace Buildout.IntegrationTests.Audit;
 
@@ -48,13 +50,17 @@ public class MigrationTests
             Assert.Contains("VersionInfo", tables);
 
             using var indexCommand = connection.CreateCommand();
-            indexCommand.CommandText = "PRAGMA index_list(audit_entries);";
+            indexCommand.CommandText = "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='audit_entries' ORDER BY name;";
             var indexes = new List<string>();
             using (var indexReader = indexCommand.ExecuteReader())
             {
                 while (indexReader.Read())
                 {
-                    indexes.Add(indexReader.GetString(0));
+                    var indexName = indexReader.GetString(0);
+                    if (!string.IsNullOrEmpty(indexName) && !indexName.StartsWith("sqlite_", StringComparison.Ordinal))
+                    {
+                        indexes.Add(indexName);
+                    }
                 }
             }
 

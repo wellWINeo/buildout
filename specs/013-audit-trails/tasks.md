@@ -17,7 +17,8 @@
 
 **Purpose**: Add required NuGet package dependencies
 
-- [ ] T001 Add `linq2db`, `linq2db.SQLite`, `linq2db.PostgreSQL`, `FluentMigrator`, `FluentMigrator.Runner.SQLite`, `FluentMigrator.Runner.Postgres`, and `ModelContextProtocol.AspNetCore` NuGet packages to `src/Buildout.Mcp/Buildout.Mcp.csproj`; add `Testcontainers.PostgreSql` to `tests/Buildout.IntegrationTests/Buildout.IntegrationTests.csproj`
+
+- [x] T001 Add `linq2db`, `linq2db.SQLite`, `linq2db.PostgreSQL`, `FluentMigrator`, `FluentMigrator.Runner.SQLite`, `FluentMigrator.Runner.Postgres`, and `ModelContextProtocol.AspNetCore` NuGet packages to `src/Buildout.Mcp/Buildout.Mcp.csproj`; add `Testcontainers.PostgreSql` to `tests/Buildout.IntegrationTests/Buildout.IntegrationTests.csproj`
 
 ---
 
@@ -27,19 +28,32 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 [P] Create `AuditEntry` record and `AuditOutcome` enum in `src/Buildout.Core/Audit/AuditEntry.cs`
-- [ ] T003 [P] Create `IAuditTrail` interface in `src/Buildout.Core/Audit/IAuditTrail.cs`
-- [ ] T004 [P] Create `AuditOptions` configuration class in `src/Buildout.Core/Audit/AuditOptions.cs`
-- [ ] T005 [P] Create `AuditOptionsValidator` (`IValidateOptions<AuditOptions>`) in `src/Buildout.Core/Audit/AuditOptionsValidator.cs`
-- [ ] T006 [P] Create `NullAuditTrail` (no-op `IAuditTrail`) in `src/Buildout.Mcp/Audit/NullAuditTrail.cs`
-- [ ] T007 [P] Create `AuditEntryRecord` linq2db `[Table]` POCO mapping to `audit_entries` table in `src/Buildout.Mcp/Audit/AuditEntryRecord.cs`
-- [ ] T008 [P] Create `AuditDataConnection` (linq2db `DataConnection` subclass exposing `AuditEntries` table) in `src/Buildout.Mcp/Audit/AuditDataConnection.cs`
-- [ ] T009 [P] Create FluentMigrator migration `Migration_001_CreateAuditEntries` defining `audit_entries` table and indexes per data-model.md schema V1 in `src/Buildout.Mcp/Audit/Migrations/Migration_001_CreateAuditEntries.cs` — FluentMigrator's `VersionInfo` table tracks applied migrations implicitly, satisfying schema version detection for future evolution
-- [ ] T010 [P] Write unit tests for `AuditEntry` construction and `Truncate` helper in `tests/Buildout.UnitTests/Audit/AuditEntryTests.cs`
-- [ ] T011 [P] Write unit tests for `AuditOptionsValidator` validation rules in `tests/Buildout.UnitTests/Audit/AuditOptionsValidatorTests.cs`
-- [ ] T012 [P] Create `AuditTestFixture` — xUnit `IAsyncLifetime` fixture spinning up Testcontainers PostgreSQL via `Testcontainers.PostgreSql`, plus SQLite temp-file helper for shared test setup in `tests/Buildout.IntegrationTests/Audit/AuditTestFixture.cs`
-- [ ] T013 [P] Write integration test verifying FluentMigrator `Migration_001` creates correct schema in SQLite in `tests/Buildout.IntegrationTests/Audit/MigrationTests.cs`
-- [ ] T014 Add HTTP transport support to `src/Buildout.Mcp/Program.cs` — conditional `WithHttpTransport` based on `Transport:Type` config, `ModelContextProtocol.AspNetCore` integration
+
+- [x] T002 [P] Create `AuditEntry` record and `AuditOutcome` enum in `src/Buildout.Core/Audit/AuditEntry.cs`
+
+- [x] T003 [P] Create `IAuditTrail` interface in `src/Buildout.Core/Audit/IAuditTrail.cs`
+
+- [x] T004 [P] Create `AuditOptions` configuration class in `src/Buildout.Core/Audit/AuditOptions.cs`
+
+- [x] T005 [P] Create `AuditOptionsValidator` (`IValidateOptions<AuditOptions>`) in `src/Buildout.Core/Audit/AuditOptionsValidator.cs`
+
+- [x] T006 [P] Create `NullAuditTrail` (no-op `IAuditTrail`) in `src/Buildout.Mcp/Audit/NullAuditTrail.cs`
+
+- [x] T007 [P] Create `AuditEntryRecord` linq2db `[Table]` POCO mapping to `audit_entries` table in `src/Buildout.Mcp/Audit/AuditEntryRecord.cs`
+
+- [x] T008 [P] Create `AuditDataConnection` (linq2db `DataConnection` subclass exposing `AuditEntries` table) in `src/Buildout.Mcp/Audit/AuditDataConnection.cs`
+
+- [x] T009 [P] Create FluentMigrator migration `Migration_001_CreateAuditEntries` defining `audit_entries` table and indexes per data-model.md schema V1 in `src/Buildout.Mcp/Audit/Migrations/Migration_001_CreateAuditEntries.cs` — FluentMigrator's `VersionInfo` table tracks applied migrations implicitly, satisfying schema version detection for future evolution
+
+- [x] T010 [P] Write unit tests for `AuditEntry` construction and `Truncate` helper in `tests/Buildout.UnitTests/Audit/AuditEntryTests.cs`
+
+- [x] T011 [P] Write unit tests for `AuditOptionsValidator` validation rules in `tests/Buildout.UnitTests/Audit/AuditOptionsValidatorTests.cs`
+
+- [x] T012 [P] Create `AuditTestFixture` — xUnit `IAsyncLifetime` fixture spinning up Testcontainers PostgreSQL via `Testcontainers.PostgreSql`, plus SQLite temp-file helper for shared test setup in `tests/Buildout.IntegrationTests/Audit/AuditTestFixture.cs`
+
+- [x] T013 [P] Write integration test verifying FluentMigrator `Migration_001` creates correct schema in SQLite in `tests/Buildout.IntegrationTests/Audit/MigrationTests.cs`
+
+- [x] T014 Add HTTP transport support to `src/Buildout.Mcp/Program.cs` — conditional `WithHttpTransport` based on `Transport:Type` config, `ModelContextProtocol.AspNetCore` integration
 
 **Checkpoint**: Foundation ready — all core types exist, options validate, linq2db context and POCO mapping compile, migration class compiles, Testcontainers fixture compiles, HTTP transport available.
 
@@ -53,15 +67,21 @@
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Write integration test for SQLite audit trail persistence (write `AuditEntry` via `Linq2DbAuditTrail`, read back via linq2db query) using SQLite in-memory connection in `tests/Buildout.IntegrationTests/Audit/SqliteAuditTrailTests.cs`
-- [ ] T016 [P] [US1] Write integration test for audit trail filter exercising full MCP pipeline (invoke tool, verify audit entry in database) in `tests/Buildout.IntegrationTests/Audit/AuditTrailFilterTests.cs`
+
+- [x] T015 [P] [US1] Write integration test for SQLite audit trail persistence (write `AuditEntry` via `Linq2DbAuditTrail`, read back via linq2db query) using SQLite in-memory connection in `tests/Buildout.IntegrationTests/Audit/SqliteAuditTrailTests.cs`
+
+- [x] T016 [P] [US1] Write integration test for audit trail filter exercising full MCP pipeline (invoke tool, verify audit entry in database) in `tests/Buildout.IntegrationTests/Audit/AuditTrailFilterTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement `Linq2DbAuditTrail` using `AuditDataConnection.InsertAsync` with fire-and-forget writes via `Task.Run` in `src/Buildout.Mcp/Audit/Linq2DbAuditTrail.cs` — configure SQLite `BusyTimeout` (e.g., 5 s) on the connection to handle concurrent write contention gracefully
-- [ ] T018 [US1] Implement `AuditTrailFilter` as MCP `CallToolFilter` — capture tool name, session ID, parameters, stopwatch duration, outcome, error details; fire-and-forget `IAuditTrail.RecordEntryAsync` in `src/Buildout.Mcp/Audit/AuditTrailFilter.cs`
-- [ ] T019 [US1] Create `AuditMcpServiceExtensions.AddAuditTrail` DI registration method — options binding, validator, linq2db `DataConnection` with SQLite provider, FluentMigrator runner with `MigrateUp()`, `IAuditTrail` factory, filter wiring in `src/Buildout.Mcp/Audit/AuditMcpServiceExtensions.cs`
-- [ ] T020 [US1] Update `src/Buildout.Mcp/Program.cs` to call `AddAuditTrail` and register `AddCallToolFilter` when audit is enabled and HTTP transport is selected
+
+- [x] T017 [US1] Implement `Linq2DbAuditTrail` using `AuditDataConnection.InsertAsync` with fire-and-forget writes via `Task.Run` in `src/Buildout.Mcp/Audit/Linq2DbAuditTrail.cs` — configure SQLite `BusyTimeout` (e.g., 5 s) on the connection to handle concurrent write contention gracefully
+
+- [x] T018 [US1] Implement `AuditTrailFilter` as MCP `CallToolFilter` — capture tool name, session ID, parameters, stopwatch duration, outcome, error details; fire-and-forget `IAuditTrail.RecordEntryAsync` in `src/Buildout.Mcp/Audit/AuditTrailFilter.cs`
+
+- [x] T019 [US1] Create `AuditMcpServiceExtensions.AddAuditTrail` DI registration method — options binding, validator, linq2db `DataConnection` with SQLite provider, FluentMigrator runner with `MigrateUp()`, `IAuditTrail` factory, filter wiring in `src/Buildout.Mcp/Audit/AuditMcpServiceExtensions.cs`
+
+- [x] T020 [US1] Update `src/Buildout.Mcp/Program.cs` to call `AddAuditTrail` and register `AddCallToolFilter` when audit is enabled and HTTP transport is selected
 
 **Checkpoint**: US1 complete — tool invocations over HTTP are audit-recorded to SQLite via linq2db. Disabled path returns NullAuditTrail. Schema managed by FluentMigrator.
 
@@ -75,12 +95,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] Write integration test for PostgreSQL audit trail persistence (write `AuditEntry` via `Linq2DbAuditTrail`, read back via linq2db query) using Testcontainers PostgreSQL fixture from `AuditTestFixture` in `tests/Buildout.IntegrationTests/Audit/PostgresAuditTrailTests.cs`
-- [ ] T022 [P] [US2] Write integration test verifying FluentMigrator `Migration_001` creates correct schema in PostgreSQL using Testcontainers in `tests/Buildout.IntegrationTests/Audit/MigrationTests.cs`
+
+- [x] T021 [P] [US2] Write integration test for PostgreSQL audit trail persistence (write `AuditEntry` via `Linq2DbAuditTrail`, read back via linq2db query) using Testcontainers PostgreSQL fixture from `AuditTestFixture` in `tests/Buildout.IntegrationTests/Audit/PostgresAuditTrailTests.cs`
+
+- [x] T022 [P] [US2] Write integration test verifying FluentMigrator `Migration_001` creates correct schema in PostgreSQL using Testcontainers in `tests/Buildout.IntegrationTests/Audit/MigrationTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Update `AuditMcpServiceExtensions.AddAuditTrail` in `src/Buildout.Mcp/Audit/AuditMcpServiceExtensions.cs` to register linq2db `DataConnection` with PostgreSQL provider (`UsePostgreSQL`) and FluentMigrator PostgreSQL runner when `Provider=postgresql`
+
+- [x] T023 [US2] Update `AuditMcpServiceExtensions.AddAuditTrail` in `src/Buildout.Mcp/Audit/AuditMcpServiceExtensions.cs` to register linq2db `DataConnection` with PostgreSQL provider (`UsePostgreSQL`) and FluentMigrator PostgreSQL runner when `Provider=postgresql`
 
 **Checkpoint**: US2 complete — both SQLite and PostgreSQL backends selectable via configuration. Single `Linq2DbAuditTrail` implementation works with both providers.
 
@@ -94,10 +117,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Write unit test verifying `NullAuditTrail.RecordEntryAsync` completes synchronously with no side effects in `tests/Buildout.UnitTests/Audit/NullAuditTrailTests.cs`
-- [ ] T025 [US3] Write integration test verifying no audit filter is registered when `Audit:Enabled=false` in `tests/Buildout.IntegrationTests/Audit/DisabledAuditTests.cs`
-- [ ] T026 [US3] Write integration test verifying tool call succeeds when `IAuditTrail.RecordEntryAsync` throws (mock audit trail, verify tool result unmodified) in `tests/Buildout.IntegrationTests/Audit/AuditTrailFilterTests.cs`
-- [ ] T029 [P] [US1] Write integration test benchmarking tool call latency with audit enabled vs disabled, asserting <5ms average overhead (SC-002) in `tests/Buildout.IntegrationTests/Audit/AuditLatencyTests.cs`
+
+- [x] T024 [P] [US3] Write unit test verifying `NullAuditTrail.RecordEntryAsync` completes synchronously with no side effects in `tests/Buildout.UnitTests/Audit/NullAuditTrailTests.cs`
+
+- [x] T025 [US3] Write integration test verifying no audit filter is registered when `Audit:Enabled=false` in `tests/Buildout.IntegrationTests/Audit/DisabledAuditTests.cs`
+
+- [x] T026 [US3] Write integration test verifying tool call succeeds when `IAuditTrail.RecordEntryAsync` throws (mock audit trail, verify tool result unmodified) in `tests/Buildout.IntegrationTests/Audit/AuditTrailFilterTests.cs`
+
+- [x] T029 [P] [US1] Write integration test benchmarking tool call latency with audit enabled vs disabled, asserting <5ms average overhead (SC-002) in `tests/Buildout.IntegrationTests/Audit/AuditLatencyTests.cs`
 
 **Checkpoint**: US3 complete — disabled path is verified zero-overhead, audit failures never block tool calls.
 
@@ -105,8 +132,10 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T027 [P] Update `docs/configuration.md` with all 5 `Audit:*` configuration keys, types, defaults, validation rules, and `Buildout__Audit__*` env var forms
-- [ ] T028 Validate all 4 quickstart.md scenarios against the implemented feature (documentation verification — confirms quickstart accuracy, not a functional requirement)
+
+- [x] T027 [P] Update `docs/configuration.md` with all 5 `Audit:*` configuration keys, types, defaults, validation rules, and `Buildout__Audit__*` env var forms
+
+- [x] T028 Validate all 4 quickstart.md scenarios against the implemented feature (documentation verification — confirms quickstart accuracy, not a functional requirement)
 
 ---
 
