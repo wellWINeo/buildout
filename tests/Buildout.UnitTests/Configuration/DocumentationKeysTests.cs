@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using Buildout.Core.Audit;
 using Buildout.Core.Buildin;
 using Buildout.Core.Diagnostics;
 using Buildout.Core.Markdown.Editing;
@@ -97,6 +98,15 @@ public class DocumentationKeysTests
             var key = MapPropertyToConfigKey(prop.Name, "Limitations");
             keys.Add(key);
         }
+
+        var auditProps = typeof(AuditOptions).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        foreach (var prop in auditProps)
+        {
+            var key = MapPropertyToConfigKey(prop.Name, "Audit");
+            keys.Add(key);
+        }
+
+        keys.Add("Transport:Type");
 
         return keys;
     }
