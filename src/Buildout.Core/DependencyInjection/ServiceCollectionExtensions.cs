@@ -1,3 +1,4 @@
+using Buildout.Core.Auth;
 using Buildout.Core.Buildin;
 using Buildout.Core.Buildin.Authentication;
 using Buildout.Core.Caching;
@@ -38,7 +39,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAuthenticationProvider>(sp =>
         {
             var opts = sp.GetRequiredService<IOptions<BuildinClientOptions>>().Value;
-            return new BotTokenAuthenticationProvider(opts.BotToken);
+            return new ContextualTokenProvider(opts.BotToken);
         });
         services.AddSingleton(sp =>
         {
@@ -118,10 +119,14 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IValidateOptions<CacheOptions>, CacheOptionsValidator>();
 
+        var authModeEnum = configuration.GetValue<string>("Auth:Mode");
+        var authMode = string.IsNullOrEmpty(authModeEnum) ? AuthMode.None : Enum.Parse<AuthMode>(authModeEnum, true);
+
         services.AddSingleton<IPageReadCache>(sp =>
         {
             var opts = sp.GetRequiredService<IOptions<CacheOptions>>().Value;
-            return opts.Enabled ? new PageReadCache(opts) : new NullPageReadCache();
+            var disableCache = authMode is AuthMode.Passthrough or AuthMode.Mapped;
+            return (opts.Enabled && !disableCache) ? new PageReadCache(opts) : new NullPageReadCache();
         });
 
         services.AddSingleton<IPageContentProvider>(sp =>

@@ -94,5 +94,7 @@ The token store is accessed by CLI commands (not MCP tools):
 | `auth token list` | `ListTokensAsync` |
 | `auth token revoke --id <guid>` | `RevokeTokenAsync` |
 | `auth token map --token-id <guid> --key-id <guid>` | `MapTokenAsync` |
+| `auth key create --name <name> --key <value>` | `CreateBuildinKeyAsync` |
+| `auth key list` | `ListBuildinKeysAsync` |
 
 CLI commands are only applicable when `Auth:Mode` is `proxy` or `mapped`. When mode is `none` or `passthrough`, the commands inform the user and exit.

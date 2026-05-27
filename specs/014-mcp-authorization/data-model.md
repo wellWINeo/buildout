@@ -43,6 +43,11 @@ Resolves authentication for an incoming MCP request.
 | `TokenIdentity` | `string?` | Human-readable identity of the authenticated MCP token (for audit trail). Null for `none`/`passthrough` modes. |
 | `ErrorMessage` | `string?` | Error description if authentication failed. Null if successful. |
 
+**Factory methods**:
+
+- `Success(string botToken, string? identity)` → `AuthResult` with `IsAuthenticated = true`.
+- `Failure(string error)` → `AuthResult` with `IsAuthenticated = false`.
+
 ### McpToken (database entity)
 
 An operator-issued credential used by MCP clients to authenticate.

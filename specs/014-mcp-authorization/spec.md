@@ -119,9 +119,8 @@ As an operator using proxy or mapped mode, I want to create, list, and revoke MC
 
 ### Key Entities
 
-- **MCP Token**: An operator-issued credential used by MCP clients to authenticate. Has a name/label, a hashed secret, a creation timestamp, a revocation flag, and optional metadata. Unique by its hashed value.
-- **Buildin Bot API Key**: A Buildin platform credential used for outbound API calls. Has a name/label, the key value (stored in plaintext — must be retrievable to send as Bearer token), and a creation timestamp.
-- **Token-Key Mapping**: A link between an MCP Token and a Buildin Bot API Key. Used in `mapped` mode to determine which Buildin key to use for each authenticated request. One MCP token maps to exactly one Buildin Bot API Key. Multiple MCP tokens may map to the same Buildin Bot API Key (true N:N).
+- **MCP Token**: An operator-issued credential used by MCP clients to authenticate. Has a name/label, a hashed secret, a creation timestamp, a revocation flag, and optional metadata. Unique by its hashed value. In `mapped` mode, each token carries a nullable FK (`BuildinKeyId`) linking it to a `Buildin Bot API Key`.
+- **Buildin Bot API Key**: A Buildin platform credential used for outbound API calls. Has a name/label, the key value (stored in plaintext — must be retrievable to send as Bearer token), and a creation timestamp. Multiple MCP tokens may map to the same Buildin Bot API Key (N:1 via the FK on `mcp_tokens`).
 
 ## Success Criteria *(mandatory)*
 

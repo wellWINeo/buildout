@@ -56,7 +56,7 @@ specs/014-mcp-authorization/
 src/
   Buildout.Core/
     Auth/
-      IRequestAuthenticator.cs          # Interface: AuthenticateAsync(HttpContext) → AuthResult
+      IRequestAuthenticator.cs          # Interface: AuthenticateAsync(string? authorizationHeader) → Task<AuthResult>
       AuthResult.cs                     # record: IsAuthenticated, ResolvedBotToken, TokenIdentity, ErrorMessage
       AuthMode.cs                       # enum: None, Passthrough, Proxy, Mapped
       AuthOptions.cs                    # Options class: Mode, Provider, SqlitePath, ConnectionString
@@ -72,7 +72,7 @@ src/
       AuthFilter.cs                     # MCP CallToolFilter: authenticates request, swaps IAuthenticationProvider
       AuthMcpServiceExtensions.cs       # DI registration: authenticator, token store, FluentMigrator, filter
       Migrations/
-        Migration_002_CreateAuthTables.cs  # FluentMigrator: mcp_tokens, buildin_keys, token_key_mappings
+        Migration_002_CreateAuthTables.cs  # FluentMigrator: mcp_tokens, buildin_keys; nullable FK buildin_key_id on mcp_tokens
 
   Buildout.Cli/
     Commands/
@@ -81,6 +81,16 @@ src/
       AuthTokenListCommand.cs           # `auth token list`
       AuthTokenRevokeCommand.cs         # `auth token revoke`
       AuthTokenMapCommand.cs            # `auth token map`
+      AuthKeyCreateCommand.cs           # `auth key create`
+      AuthKeyListCommand.cs             # `auth key list`
+    Skills/
+      Auth/                             # Skill files per Principle VIII
+        token-create/SKILL.md
+        token-list/SKILL.md
+        token-revoke/SKILL.md
+        token-map/SKILL.md
+        key-create/SKILL.md
+        key-list/SKILL.md
 
 tests/
   Buildout.UnitTests/
@@ -99,6 +109,7 @@ tests/
       AuthModeEndToEndTests.cs          # Full MCP pipeline test: all four modes
       MigrationTests.cs                 # Migration 002 verification (SQLite + PostgreSQL)
       CliAuthTokenTests.cs              # CLI auth token command tests
+      AuthPerformanceTests.cs           # Performance benchmarks (SC-003, SC-004)
 ```
 
 **Structure Decision**: Follows the established project layout. Interface + options + enum in `Buildout.Core` (per Principle I), implementations in `Buildout.Mcp`, CLI commands in `Buildout.Cli`. Auth tables share the same database as audit entries (feature 013). FluentMigrator migration numbered `002` to follow the existing `001_CreateAuditEntries`.
