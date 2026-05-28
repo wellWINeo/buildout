@@ -148,10 +148,10 @@ public sealed class SqliteTokenStoreTests : IDisposable
     [Fact]
     public async Task ValidateTokenAsync_RevokedToken_ReturnsNull()
     {
-        var (created, _) = await _tokenStore.CreateTokenAsync("test-token");
+        var (created, rawToken) = await _tokenStore.CreateTokenAsync("test-token");
         await _tokenStore.RevokeTokenAsync(created.Id);
 
-        var validated = await _tokenStore.ValidateTokenAsync(created.TokenHash);
+        var validated = await _tokenStore.ValidateTokenAsync(rawToken);
 
         Assert.Null(validated);
     }

@@ -215,15 +215,15 @@ public sealed class AdoNetTokenStore : ITokenStore
         using var reader = await command.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            var buildinKeyId = reader.IsDBNull(3) ? (Guid?)null : reader.GetGuid(3);
-            var revokedAt = reader.IsDBNull(5) ? (DateTimeOffset?)null : reader.GetDateTime(5);
+            var buildinKeyId = reader.IsDBNull(3) ? (Guid?)null : Guid.Parse(reader.GetString(3));
+            var revokedAt = reader.IsDBNull(5) ? (DateTimeOffset?)null : DateTimeOffset.Parse(reader.GetString(5), CultureInfo.InvariantCulture);
 
             tokens.Add(new McpTokenRecord(
-                reader.GetGuid(0),
+                Guid.Parse(reader.GetString(0)),
                 reader.GetString(1),
                 reader.GetString(2),
                 buildinKeyId,
-                reader.GetDateTime(4),
+                DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture),
                 revokedAt));
         }
 
@@ -267,7 +267,8 @@ public sealed class AdoNetTokenStore : ITokenStore
         command.CommandText = @"
             SELECT id, name, token_hash, buildin_key_id, created_at, revoked_at
             FROM mcp_tokens
-            WHERE token_hash = @tokenHash";
+            WHERE token_hash = @tokenHash
+            AND revoked_at IS NULL";
         command.Parameters.AddWithValue("@tokenHash", tokenHash);
 
         using var reader = await command.ExecuteReaderAsync(ct);
@@ -297,21 +298,22 @@ public sealed class AdoNetTokenStore : ITokenStore
         command.CommandText = @"
             SELECT id, name, token_hash, buildin_key_id, created_at, revoked_at
             FROM mcp_tokens
-            WHERE token_hash = $1";
+            WHERE token_hash = $1
+            AND revoked_at IS NULL";
         command.Parameters.AddWithValue(tokenHash);
 
         using var reader = await command.ExecuteReaderAsync(ct);
         if (await reader.ReadAsync(ct))
         {
-            var buildinKeyId = reader.IsDBNull(3) ? (Guid?)null : reader.GetGuid(3);
-            var revokedAt = reader.IsDBNull(5) ? (DateTimeOffset?)null : reader.GetDateTime(5);
+            var buildinKeyId = reader.IsDBNull(3) ? (Guid?)null : Guid.Parse(reader.GetString(3));
+            var revokedAt = reader.IsDBNull(5) ? (DateTimeOffset?)null : DateTimeOffset.Parse(reader.GetString(5), CultureInfo.InvariantCulture);
 
             return new McpTokenRecord(
-                reader.GetGuid(0),
+                Guid.Parse(reader.GetString(0)),
                 reader.GetString(1),
                 reader.GetString(2),
                 buildinKeyId,
-                reader.GetDateTime(4),
+                DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture),
                 revokedAt);
         }
 
@@ -411,10 +413,10 @@ public sealed class AdoNetTokenStore : ITokenStore
         while (await reader.ReadAsync(ct))
         {
             keys.Add(new BuildinKeyRecord(
-                reader.GetGuid(0),
+                Guid.Parse(reader.GetString(0)),
                 reader.GetString(1),
                 reader.GetString(2),
-                reader.GetDateTime(3)));
+                DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture)));
         }
 
         return keys;
