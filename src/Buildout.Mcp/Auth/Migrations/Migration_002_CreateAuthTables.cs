@@ -8,10 +8,6 @@ public class Migration_002_CreateAuthTables : Migration
 {
     public override void Up()
     {
-        IfDatabase("Postgres").Execute.Sql(@"
-            CREATE TYPE buildout_auth_mode AS ENUM ('none', 'passthrough', 'proxy', 'mapped');
-        ");
-
         Execute.Sql(@"
             CREATE TABLE IF NOT EXISTS buildin_keys (
                 id TEXT NOT NULL PRIMARY KEY,
@@ -62,9 +58,5 @@ public class Migration_002_CreateAuthTables : Migration
 
         Execute.Sql("DROP INDEX IF EXISTS idx_buildin_keys_name;");
         Execute.Sql("DROP TABLE IF EXISTS buildin_keys;");
-
-        IfDatabase("Postgres").Execute.Sql(@"
-            DROP TYPE IF EXISTS buildout_auth_mode;
-        ");
     }
 }
