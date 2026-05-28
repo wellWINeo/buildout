@@ -21,6 +21,12 @@ public sealed class PassthroughAuthenticator : IRequestAuthenticator
         }
 
         var token = authorizationHeader["Bearer ".Length..].Trim();
+        if (string.IsNullOrEmpty(token))
+        {
+            _logger.LogWarning("Authorization header contains empty token value");
+            return Task.FromResult(AuthResult.Failure("Authorization header contains empty token value"));
+        }
+
         return Task.FromResult(AuthResult.Success(token, null));
     }
 }

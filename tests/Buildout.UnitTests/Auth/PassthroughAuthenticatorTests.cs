@@ -100,4 +100,16 @@ public sealed class PassthroughAuthenticatorTests
         Assert.Null(result.TokenIdentity);
         Assert.Equal("Authorization header is required", result.ErrorMessage);
     }
+
+    [Fact]
+    public async Task AuthenticateAsync_WithBearerPrefixAndNoToken_ReturnsFailure()
+    {
+        var logger = Substitute.For<ILogger<PassthroughAuthenticator>>();
+        var authenticator = new PassthroughAuthenticator(logger);
+
+        var result = await authenticator.AuthenticateAsync("Bearer ");
+
+        Assert.False(result.IsAuthenticated);
+        Assert.Equal("Authorization header contains empty token value", result.ErrorMessage);
+    }
 }
