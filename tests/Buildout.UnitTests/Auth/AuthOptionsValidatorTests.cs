@@ -1,3 +1,6 @@
+using Buildout.Mcp.Auth;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Microsoft.Extensions.Options;
 
@@ -113,5 +116,68 @@ public sealed class AuthOptionsValidatorTests
         var result = _validator.Validate(nameof(AuthOptions), options);
 
         Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void AddAuth_ProxyMode_DoesNotThrow()
+    {
+        var inMemoryConfig = new Dictionary<string, string?>
+        {
+            ["BotToken"] = "test-token",
+            ["Auth:Mode"] = "proxy",
+            ["Auth:Provider"] = "sqlite",
+            ["Auth:SqlitePath"] = "/tmp/test.db"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(inMemoryConfig)
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        var ex = Record.Exception(() => services.AddAuth(configuration, isHttpTransport: true));
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void AddAuth_ProxyMode_UppercaseProvider_DoesNotThrow()
+    {
+        var inMemoryConfig = new Dictionary<string, string?>
+        {
+            ["BotToken"] = "test-token",
+            ["Auth:Mode"] = "proxy",
+            ["Auth:Provider"] = "SQLite",
+            ["Auth:SqlitePath"] = "/tmp/test.db"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(inMemoryConfig)
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        var ex = Record.Exception(() => services.AddAuth(configuration, isHttpTransport: true));
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void AddAuth_MappedMode_DoesNotThrow()
+    {
+        var inMemoryConfig = new Dictionary<string, string?>
+        {
+            ["BotToken"] = "test-token",
+            ["Auth:Mode"] = "mapped",
+            ["Auth:Provider"] = "sqlite",
+            ["Auth:SqlitePath"] = "/tmp/test.db"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(inMemoryConfig)
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        var ex = Record.Exception(() => services.AddAuth(configuration, isHttpTransport: true));
+        Assert.Null(ex);
     }
 }

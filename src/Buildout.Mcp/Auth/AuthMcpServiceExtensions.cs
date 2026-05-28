@@ -1,10 +1,8 @@
-using Buildout.Core.Audit;
 using Buildout.Core.Auth;
-using Buildout.Mcp.Audit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Buildout.Mcp.Auth;
 
@@ -19,51 +17,56 @@ public static class AuthMcpServiceExtensions
             .Bind(configuration.GetSection("Auth"))
             .ValidateOnStart();
 
-        services.AddSingleton<IValidateOptions<AuthOptions>, Buildout.Core.Auth.AuthOptionsValidator>();
+        services.AddSingleton<IValidateOptions<AuthOptions>, AuthOptionsValidator>();
 
-        var authModeEnum = configuration.GetValue<string>("Auth:Mode");
-        var authMode = string.IsNullOrEmpty(authModeEnum) ? AuthMode.None : Enum.Parse<AuthMode>(authModeEnum, true);
+        if (!isHttpTransport)
+            return services;
 
-        if (isHttpTransport)
+        services.AddHttpContextAccessor();
+
+        var authModeStr = configuration.GetValue<string>("Auth:Mode");
+        var authMode = string.IsNullOrEmpty(authModeStr)
+            ? AuthMode.None
+            : Enum.Parse<AuthMode>(authModeStr, true);
+
+        var provider = configuration.GetValue<string>("Auth:Provider")?.ToLowerInvariant();
+
+        if (authMode is AuthMode.Proxy or AuthMode.Mapped)
         {
-            services.AddHttpContextAccessor();
-
-            IRequestAuthenticator authenticator = authMode switch
+            if (provider == "sqlite")
             {
-                AuthMode.None => new NoneAuthenticator(configuration, services.BuildServiceProvider().GetRequiredService<ILogger<NoneAuthenticator>>()),
-                AuthMode.Passthrough => new PassthroughAuthenticator(services.BuildServiceProvider().GetRequiredService<ILogger<PassthroughAuthenticator>>()),
-                _ => throw new InvalidOperationException("Proxy and Mapped modes require database initialization")
-            };
-
-            services.AddSingleton(authenticator);
-            services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<ModelContextProtocol.Server.McpServerOptions>, AuthFilter>();
-
-            if (authMode is AuthMode.Proxy or AuthMode.Mapped)
+                var sqlitePath = configuration.GetValue<string>("Auth:SqlitePath");
+                var cs = $"Data Source={sqlitePath}";
+                services.AddSingleton<ITokenStore>(sp =>
+                    new AdoNetTokenStore(cs, "sqlite",
+                        sp.GetRequiredService<ILogger<AdoNetTokenStore>>()));
+            }
+            else if (provider == "postgresql")
             {
-                var provider = configuration.GetValue<string>("Auth:Provider");
-                var serviceProvider = services.BuildServiceProvider();
-                var logger = serviceProvider.GetRequiredService<ILogger<AdoNetTokenStore>>();
-
-                if (provider == "sqlite")
-                {
-                    var sqlitePath = configuration.GetValue<string>("Auth:SqlitePath");
-                    var connectionString = $"Data Source={sqlitePath}";
-                    services.AddSingleton<ITokenStore>(new AdoNetTokenStore(connectionString, "sqlite", logger));
-                }
-                else if (provider == "postgresql")
-                {
-                    var connectionString = configuration.GetValue<string>("Auth:ConnectionString");
-                    services.AddSingleton<ITokenStore>(new AdoNetTokenStore(connectionString!, "postgresql", logger));
-                }
-
-                authenticator = authMode == AuthMode.Proxy
-                    ? new ProxyAuthenticator(configuration, serviceProvider.GetRequiredService<ITokenStore>(), serviceProvider.GetRequiredService<ILogger<ProxyAuthenticator>>())
-                    : new MappedAuthenticator(serviceProvider.GetRequiredService<ITokenStore>(), serviceProvider.GetRequiredService<ILogger<MappedAuthenticator>>());
-
-                services.AddSingleton(authenticator);
+                var cs = configuration.GetValue<string>("Auth:ConnectionString")!;
+                services.AddSingleton<ITokenStore>(sp =>
+                    new AdoNetTokenStore(cs, "postgresql",
+                        sp.GetRequiredService<ILogger<AdoNetTokenStore>>()));
             }
         }
 
+        switch (authMode)
+        {
+            case AuthMode.Passthrough:
+                services.AddSingleton<IRequestAuthenticator, PassthroughAuthenticator>();
+                break;
+            case AuthMode.Proxy:
+                services.AddSingleton<IRequestAuthenticator, ProxyAuthenticator>();
+                break;
+            case AuthMode.Mapped:
+                services.AddSingleton<IRequestAuthenticator, MappedAuthenticator>();
+                break;
+            default:
+                services.AddSingleton<IRequestAuthenticator, NoneAuthenticator>();
+                break;
+        }
+
+        services.AddSingleton<IConfigureOptions<ModelContextProtocol.Server.McpServerOptions>, AuthFilter>();
         return services;
     }
 
