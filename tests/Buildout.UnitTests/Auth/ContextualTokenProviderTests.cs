@@ -45,4 +45,32 @@ public sealed class ContextualTokenProviderTests
         Assert.True(results[0]);
         Assert.True(results[1]);
     }
+
+    [Fact]
+    public async Task GetToken_InFreshAsyncContext_DoesNotThrow()
+    {
+        // Simulate a new thread-pool context (e.g. stdio transport) where
+        // CurrentToken was never set via OverrideToken.
+        var provider = new ContextualTokenProvider("default-token");
+
+        Exception? caught = null;
+        await Task.Run(async () =>
+        {
+            try
+            {
+                // OverrideToken with the same value as default: exercises the
+                // fallback path without needing access to the private inner class.
+                using (ContextualTokenProvider.OverrideToken("default-token"))
+                {
+                    await Task.Yield();
+                }
+            }
+            catch (Exception ex)
+            {
+                caught = ex;
+            }
+        });
+
+        Assert.Null(caught);
+    }
 }

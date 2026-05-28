@@ -9,6 +9,13 @@ public sealed class ContextualTokenProvider : BaseBearerTokenAuthenticationProvi
 
     private sealed class ContextualTokenAccessProvider : IAccessTokenProvider
     {
+        private readonly string _defaultToken;
+
+        public ContextualTokenAccessProvider(string defaultToken)
+        {
+            _defaultToken = defaultToken;
+        }
+
         public AllowedHostsValidator AllowedHostsValidator { get; } = new();
 
         public Task<string> GetAuthorizationTokenAsync(
@@ -16,31 +23,28 @@ public sealed class ContextualTokenProvider : BaseBearerTokenAuthenticationProvi
             Dictionary<string, object>? additionalAuthenticationContext = null,
             CancellationToken cancellationToken = default)
         {
-            var token = CurrentToken.Value;
-            return Task.FromResult(token ?? throw new InvalidOperationException("No token is available"));
+            return Task.FromResult(CurrentToken.Value ?? _defaultToken);
         }
     }
 
     public ContextualTokenProvider(string defaultBotToken)
-        : base(new ContextualTokenAccessProvider())
+        : base(new ContextualTokenAccessProvider(defaultBotToken))
     {
         _defaultToken = defaultBotToken;
-        CurrentToken.Value = defaultBotToken;
     }
 
     public static IDisposable OverrideToken(string token)
     {
-        var previousToken = CurrentToken.Value ?? string.Empty;
+        var previousToken = CurrentToken.Value;
         CurrentToken.Value = token;
-
         return new TokenScope(previousToken);
     }
 
     private sealed class TokenScope : IDisposable
     {
-        private readonly string _previousToken;
+        private readonly string? _previousToken;
 
-        public TokenScope(string previousToken)
+        public TokenScope(string? previousToken)
         {
             _previousToken = previousToken;
         }
