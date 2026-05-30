@@ -17,6 +17,8 @@ using Buildout.Core.Markdown.Editing;
 using Buildout.Core.Markdown.Internal;
 using Buildout.Core.PageLifecycle;
 using PageLifecycleService = Buildout.Core.PageLifecycle.PageLifecycle;
+using Buildout.Core.PageTree;
+using Buildout.Core.PageTree.Rendering;
 using Buildout.Core.Search;
 using Buildout.Core.Search.Internal;
 using Microsoft.Extensions.Configuration;
@@ -156,6 +158,15 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPageEditor, PageEditor>();
         services.AddSingleton<IPageLifecycle, PageLifecycleService>();
+
+        services.AddSingleton<ITreeRenderer, AsciiTreeRenderer>();
+        services.AddSingleton<ITreeRenderer, JsonTreeRenderer>();
+        services.AddSingleton<IReadOnlyDictionary<TreeFormat, ITreeRenderer>>(sp =>
+        {
+            var renderers = sp.GetServices<ITreeRenderer>();
+            return renderers.ToDictionary(r => r.Format);
+        });
+        services.AddSingleton<IPageTreeService, PageTreeService>();
 
         return services;
     }

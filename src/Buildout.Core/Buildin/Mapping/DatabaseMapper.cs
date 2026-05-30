@@ -32,6 +32,7 @@ internal static class DatabaseMapper
         if (gen is null) return new QueryDatabaseResult();
 
         var rows = new List<Dictionary<string, PropertyValue>>();
+        var pages = new List<QueryDatabasePage>();
         if (gen.Results is UntypedArray array)
         {
             foreach (var item in array.GetValue())
@@ -43,12 +44,25 @@ internal static class DatabaseMapper
                     continue;
 
                 rows.Add(MapPropertyValues(propsEl));
+
+                var pageId = element.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? string.Empty : string.Empty;
+                var pageUrl = element.TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
+                string? pageTitle = null;
+                if (propsEl.TryGetProperty("title", out var titlePropEl) &&
+                    titlePropEl.TryGetProperty("title", out var titleArrayEl) &&
+                    titleArrayEl.ValueKind == JsonValueKind.Array)
+                {
+                    pageTitle = string.Concat(titleArrayEl.EnumerateArray()
+                        .Select(rt => rt.TryGetProperty("plain_text", out var ptEl) ? ptEl.GetString() ?? string.Empty : string.Empty));
+                }
+                pages.Add(new QueryDatabasePage { Id = pageId, Url = pageUrl, Title = pageTitle });
             }
         }
 
         return new QueryDatabaseResult
         {
             Results = rows,
+            Pages = pages,
             HasMore = gen.HasMore ?? false,
             NextCursor = gen.NextCursor
         };
