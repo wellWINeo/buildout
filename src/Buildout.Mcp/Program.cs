@@ -1,6 +1,7 @@
 using Buildout.Configuration;
 using Buildout.Core.DependencyInjection;
 using Buildout.Mcp.Audit;
+using Buildout.Mcp.Auth;
 using Buildout.Mcp.Prompts;
 using Buildout.Mcp.Resources;
 using Buildout.Mcp.Tools;
@@ -63,6 +64,7 @@ try
     mergedConfig.GetSection("Audit").Bind(auditOptions);
 
     builder.Services.AddAuditTrail(mergedConfig, isHttpTransport);
+    builder.Services.AddAuth(mergedConfig, isHttpTransport);
     
     var mcpBuilder = builder.Services
         .AddMcpServer(options =>
@@ -92,9 +94,9 @@ try
 
     var host = builder.Build();
 
-    // Run FluentMigrator migrations after the DI container is fully built.
-    // This avoids calling BuildServiceProvider() inside AddAuditTrail (anti-pattern).
-    if (isHttpTransport && auditOptions.Enabled)
+    var authNeedsDb = AuthMcpServiceExtensions.AuthNeedsDb(mergedConfig);
+
+    if (isHttpTransport && (auditOptions.Enabled || authNeedsDb))
     {
         using var scope = host.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<FluentMigrator.Runner.IMigrationRunner>().MigrateUp();

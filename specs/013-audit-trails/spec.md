@@ -67,7 +67,7 @@ A workspace operator runs the MCP server without audit trails (the default). Eve
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST record an audit entry for every MCP tool invocation over HTTP transport when audit trails are enabled, capturing: tool name, `Mcp-Session-Id`, timestamp (UTC), invocation parameters, outcome (success or failure), duration, and error details on failure.
+- **FR-001**: The system MUST record an audit entry for every MCP tool invocation over HTTP transport when audit trails are enabled, capturing: tool name, `Mcp-Session-Id`, timestamp (UTC), invocation parameters, outcome (success or failure), duration, error details on failure, and the authenticated MCP token identity (when authorization is enabled; empty when authorization is `none` or `passthrough`).
 - **FR-002**: Audit trail recording MUST NOT alter the tool's return value, error behavior, or observable latency characteristics when enabled.
 - **FR-003**: The system MUST support two persistence backends: SQLite (file-based) and PostgreSQL (connection-string-based), selectable via configuration.
 - **FR-004**: The system MUST create the required database schema automatically on startup when audit trails are enabled — no manual database setup required.
@@ -85,7 +85,7 @@ A workspace operator runs the MCP server without audit trails (the default). Eve
 
 ### Key Entities
 
-- **AuditEntry**: Represents a single tool invocation record. Attributes: unique identifier, tool name, `Mcp-Session-Id` (from the protocol-native HTTP header), timestamp (UTC), invocation parameters (serialized, truncated), outcome (success/failure), duration, error details (on failure).
+- **AuditEntry**: Represents a single tool invocation record. Attributes: unique identifier, tool name, `Mcp-Session-Id` (from the protocol-native HTTP header), authenticated token identity (MCP token name/label when authorization is enabled; empty otherwise), timestamp (UTC), invocation parameters (serialized, truncated), outcome (success/failure), duration, error details (on failure).
 - **AuditOptions**: Configuration shape for the Audit section. Attributes: Enabled flag, Provider selection (sqlite/postgresql), SqlitePath, ConnectionString (for PostgreSQL), MaxParameterLength.
 
 ## Success Criteria *(mandatory)*
@@ -105,6 +105,7 @@ A workspace operator runs the MCP server without audit trails (the default). Eve
 - Q: The spec claims "tamper-evident records" but no functional requirement backs this. Remove the claim or add tamper-evidence requirements? → A: Remove "tamper-evident"; records are standard database rows. Tamper-proofing can be added in a future iteration if needed.
 - Q: What constitutes an MCP "session" for session identification, and does this apply to stdio? → A: This is an HTTP-only feature; no audit trails for stdio/local deployments. The session identifier is the protocol-native `Mcp-Session-Id` HTTP header, assigned by the server during initialization and echoed by the client on all subsequent requests.
 - Q: Should the async (fire-and-forget) write model be explicit in the spec, or left as an implementation detail implied by FR-002 and FR-006? → A: Make it explicit — add a requirement that audit writes MUST be asynchronous relative to tool execution, ensuring tool responses are never delayed by audit persistence.
+- Q: Should audit entries reference the MCP token used for authentication? → A: Yes. Each audit entry must include the MCP token identity (token name/label) when authorization is enabled. This provides traceability to the authenticated caller, not the Buildin API key used behind the scenes.
 
 ## Assumptions
 

@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Buildout.Configuration\Buildout.Configuration.csproj" />
     <ProjectReference Include="..\Buildout.Core\Buildout.Core.csproj" />
+    <ProjectReference Include="..\Buildout.Mcp\Buildout.Mcp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

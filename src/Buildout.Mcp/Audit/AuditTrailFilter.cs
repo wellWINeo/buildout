@@ -73,11 +73,13 @@ public sealed class AuditTrailFilter : IConfigureOptions<McpServerOptions>
                 var sessionId = _httpContextAccessor.HttpContext?
                     .Request.Headers["Mcp-Session-Id"]
                     .FirstOrDefault();
+                var authIdentity = _httpContextAccessor.HttpContext?.Items["AuthIdentity"] as string;
                 var parametersJson = JsonSerializer.Serialize(context.Params?.Arguments);
                 var entry = new AuditEntry
                 {
                     ToolName = context.Params?.Name ?? string.Empty,
                     SessionId = sessionId,
+                    AuthIdentity = authIdentity,
                     Parameters = AuditEntry.Truncate(parametersJson, maxLen),
                     Outcome = outcome,
                     Duration = stopwatch.Elapsed,
