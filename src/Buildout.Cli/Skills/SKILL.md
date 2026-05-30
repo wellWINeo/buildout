@@ -18,6 +18,7 @@ CLI for buildin.ai — a Notion-like workspace. Manages pages (read, create, upd
 | `restore <page_id>` | Un-archive a page |
 | `search <query>` | Search pages by keyword |
 | `db view <database_id>` | Render a database view |
+| `tree <page_id>` | Map a page or database hierarchy as ASCII tree or JSON |
 
 ## Global Option
 
@@ -41,3 +42,4 @@ CLI for buildin.ai — a Notion-like workspace. Manages pages (read, create, upd
 | [restore.md](restore.md) | Un-archive pages |
 | [search.md](search.md) | Search pages by keyword |
 | [database-views.md](database-views.md) | Render database views in terminal |
+| [tree.md](tree.md) | Map a page or database hierarchy as ASCII tree or JSON |

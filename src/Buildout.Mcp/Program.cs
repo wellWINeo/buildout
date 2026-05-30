@@ -90,7 +90,8 @@ try
         .WithTools<GetPageMarkdownToolHandler>()
         .WithTools<UpdatePageToolHandler>()
         .WithTools<DeletePageToolHandler>()
-        .WithTools<RestorePageToolHandler>();
+        .WithTools<RestorePageToolHandler>()
+        .WithTools<TreeToolHandler>();
 
     var host = builder.Build();
 

@@ -24,7 +24,7 @@ public class SkillsCommandIntegrationTests
     }
 
     [Fact]
-    public async Task Install_Claude_Local_WritesFourteenSkillFiles()
+    public async Task Install_Claude_Local_WritesFifteenSkillFiles()
     {
         using var tempDir = FileSystemFixture.CreateTempDirectory();
         var originalDir = Directory.GetCurrentDirectory();
@@ -36,7 +36,7 @@ public class SkillsCommandIntegrationTests
             Assert.Equal(0, exitCode);
             var skillsDir = Path.Combine(tempDir.Path, ".claude", "skills", "buildout-cli");
             Assert.True(Directory.Exists(skillsDir), $"Expected directory: {skillsDir}");
-            Assert.Equal(14, Directory.GetFiles(skillsDir).Length);
+            Assert.Equal(15, Directory.GetFiles(skillsDir).Length);
         }
         finally
         {
@@ -57,7 +57,7 @@ public class SkillsCommandIntegrationTests
             Assert.Equal(0, exitCode);
             var skillsDir = Path.Combine(tempDir.Path, ".opencode", "skills", "buildout-cli");
             Assert.True(Directory.Exists(skillsDir));
-            Assert.Equal(14, Directory.GetFiles(skillsDir).Length);
+            Assert.Equal(15, Directory.GetFiles(skillsDir).Length);
         }
         finally
         {

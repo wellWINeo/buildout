@@ -22,7 +22,7 @@ public class SkillsInstallCommandTests
     }
 
     [Fact]
-    public async Task Install_Local_Claude_WritesFourteenFiles()
+    public async Task Install_Local_Claude_WritesFifteenFiles()
     {
         using var tempDir = new UnitTestTempDirectory();
 
@@ -31,7 +31,7 @@ public class SkillsInstallCommandTests
         Assert.Equal(0, exitCode);
         var target = Path.Combine(tempDir.Path, ".claude", "skills", "buildout-cli");
         Assert.True(Directory.Exists(target));
-        Assert.Equal(14, Directory.GetFiles(target).Length);
+        Assert.Equal(15, Directory.GetFiles(target).Length);
     }
 
     [Fact]

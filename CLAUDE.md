@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Active feature plan: [specs/014-mcp-authorization/plan.md](./specs/014-mcp-authorization/plan.md)
+Active feature plan: [specs/015-tree-command/plan.md](./specs/015-tree-command/plan.md)
 
 For technologies, project structure, shell commands, and other context, read
 that plan and its sibling artifacts (`research.md`, `data-model.md`,
