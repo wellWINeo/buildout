@@ -227,7 +227,10 @@ public sealed class BotBuildinClient : IBuildinClient
         return await WrapAsync(async () =>
         {
             var guid = Guid.Parse(blockId);
-            var body = new Gen.AppendBlockChildrenRequest();
+            var body = new Gen.AppendBlockChildrenRequest
+            {
+                Children = request.Children.Select(BlockMapper.MapToAppendChild).ToList()
+            };
             var result = await _apiClient.V1.Blocks[guid].Children.PatchAsync(body, cancellationToken: cancellationToken);
             return new AppendBlockChildrenResult();
         });

@@ -50,6 +50,41 @@ internal static class BlockMapper
         };
     }
 
+    public static Gen.AppendBlockChildrenRequest_children MapToAppendChild(Block block)
+    {
+        var (type, data) = block switch
+        {
+            ParagraphBlock b        => (Gen.AppendBlockChildrenRequest_children_type.Paragraph,         MakeData(b.RichTextContent)),
+            Heading1Block b         => (Gen.AppendBlockChildrenRequest_children_type.Heading_1,         MakeData(b.RichTextContent)),
+            Heading2Block b         => (Gen.AppendBlockChildrenRequest_children_type.Heading_2,         MakeData(b.RichTextContent)),
+            Heading3Block b         => (Gen.AppendBlockChildrenRequest_children_type.Heading_3,         MakeData(b.RichTextContent)),
+            BulletedListItemBlock b => (Gen.AppendBlockChildrenRequest_children_type.Bulleted_list_item, MakeData(b.RichTextContent)),
+            NumberedListItemBlock b => (Gen.AppendBlockChildrenRequest_children_type.Numbered_list_item, MakeData(b.RichTextContent)),
+            ToDoBlock b             => (Gen.AppendBlockChildrenRequest_children_type.To_do,             MakeData(b.RichTextContent, @checked: b.Checked)),
+            QuoteBlock b            => (Gen.AppendBlockChildrenRequest_children_type.Quote,             MakeData(b.RichTextContent)),
+            ToggleBlock b           => (Gen.AppendBlockChildrenRequest_children_type.Toggle,            MakeData(b.RichTextContent)),
+            CodeBlock b             => (Gen.AppendBlockChildrenRequest_children_type.Code,              MakeData(b.RichTextContent, language: b.Language)),
+            DividerBlock            => (Gen.AppendBlockChildrenRequest_children_type.Divider,           new Gen.BlockData()),
+            ImageBlock b            => (Gen.AppendBlockChildrenRequest_children_type.Image,             new Gen.BlockData { Url = b.Url }),
+            EmbedBlock b            => (Gen.AppendBlockChildrenRequest_children_type.Embed,             new Gen.BlockData { Url = b.Url }),
+            _ => throw new ArgumentException($"Block type {block.GetType().Name} cannot be appended")
+        };
+        return new Gen.AppendBlockChildrenRequest_children { Type = type, Data = data };
+    }
+
+    private static Gen.BlockData MakeData(
+        IReadOnlyList<RichText>? richText,
+        bool? @checked = null,
+        string? language = null)
+    {
+        return new Gen.BlockData
+        {
+            RichText = richText?.Select(RichTextMapper.MapToGen).ToList(),
+            Checked = @checked,
+            Language = language
+        };
+    }
+
     public static PaginatedList<Block> MapChildrenResponse(Gen.GetBlockChildrenResponse? gen)
     {
         if (gen is null) return new PaginatedList<Block>();

@@ -54,6 +54,16 @@ internal static class RichTextMapper
         };
     }
 
+    public static Gen.RichTextItem MapToGen(RichText rt)
+    {
+        return new Gen.RichTextItem
+        {
+            Type = Gen.RichTextItem_type.Text,
+            PlainText = rt.Content,
+            Text = new Gen.RichTextItem_text { Content = rt.Content }
+        };
+    }
+
     public static List<RichText> ParseRichTextArray(JsonElement el, string fieldName)
     {
         var items = new List<RichText>();
