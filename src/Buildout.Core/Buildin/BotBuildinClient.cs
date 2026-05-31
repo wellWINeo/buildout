@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Kiota.Abstractions;
 using Microsoft.Kiota.Abstractions.Authentication;
+using Microsoft.Kiota.Abstractions.Serialization;
 using Microsoft.Kiota.Http.HttpClientLibrary;
 using KiotaApiException = Microsoft.Kiota.Abstractions.ApiException;
 
@@ -56,10 +57,104 @@ public sealed class BotBuildinClient : IBuildinClient
     {
         return await WrapAsync(async () =>
         {
-            var body = new Gen.CreatePageRequest();
+            var body = new Gen.CreatePageRequest
+            {
+                Parent = MapParent(request.Parent),
+                Properties = MapProperties(request.Properties),
+            };
             var result = await _apiClient.V1.Pages.PostAsync(body, cancellationToken: cancellationToken);
             return PageMapper.Map(result ?? throw new InvalidOperationException("CreatePage returned null"));
         });
+    }
+
+    private static Gen.Parent MapParent(Parent parent)
+    {
+        return parent switch
+        {
+            ParentDatabase db => new Gen.Parent { ParentDatabaseId = new Gen.ParentDatabaseId { DatabaseId = Guid.Parse(db.Id), Type = "database_id" } },
+            ParentPage page => new Gen.Parent { ParentPageId = new Gen.ParentPageId { PageId = Guid.Parse(page.Id), Type = "page_id" } },
+            ParentBlock block => new Gen.Parent { ParentBlockId = new Gen.ParentBlockId { BlockId = Guid.Parse(block.Id), Type = "block_id" } },
+            _ => throw new ArgumentException($"Unsupported parent type: {parent.GetType().Name}")
+        };
+    }
+
+    private static Gen.CreatePageRequest_properties MapProperties(Dictionary<string, PropertyValue> properties)
+    {
+        var result = new Gen.CreatePageRequest_properties();
+        foreach (var (key, value) in properties)
+        {
+            result.AdditionalData[key] = MapPropertyValue(value);
+        }
+        return result;
+    }
+
+    private static UntypedObject MapPropertyValue(PropertyValue value)
+    {
+        return value switch
+        {
+            TitlePropertyValue title => new UntypedObject(new Dictionary<string, UntypedNode>
+            {
+                ["type"] = new UntypedString("title"),
+                ["title"] = new UntypedArray(
+                    (title.Title ?? []).Select(rt => (UntypedNode)new UntypedObject(new Dictionary<string, UntypedNode>
+                    {
+                        ["type"] = new UntypedString("text"),
+                        ["text"] = new UntypedObject(new Dictionary<string, UntypedNode> { ["content"] = new UntypedString(rt.Content) }),
+                        ["plain_text"] = new UntypedString(rt.Content)
+                    })).ToList())
+            }),
+            RichTextPropertyValue richText => new UntypedObject(new Dictionary<string, UntypedNode>
+            {
+                ["type"] = new UntypedString("rich_text"),
+                ["rich_text"] = new UntypedArray(
+                    (richText.RichText ?? []).Select(rt => (UntypedNode)new UntypedObject(new Dictionary<string, UntypedNode>
+                    {
+                        ["type"] = new UntypedString("text"),
+                        ["text"] = new UntypedObject(new Dictionary<string, UntypedNode> { ["content"] = new UntypedString(rt.Content) }),
+                        ["plain_text"] = new UntypedString(rt.Content)
+                    })).ToList())
+            }),
+            NumberPropertyValue number => new UntypedObject(new Dictionary<string, UntypedNode>
+            {
+                ["type"] = new UntypedString("number"),
+                ["number"] = number.Number.HasValue ? (UntypedNode)new UntypedDouble(number.Number.Value) : new UntypedNull()
+            }),
+            CheckboxPropertyValue checkbox => new UntypedObject(new Dictionary<string, UntypedNode>
+            {
+                ["type"] = new UntypedString("checkbox"),
+                ["checkbox"] = new UntypedBoolean(checkbox.Checkbox ?? false)
+            }),
+            SelectPropertyValue select => new UntypedObject(new Dictionary<string, UntypedNode>
+            {
+                ["type"] = new UntypedString("select"),
+                ["select"] = select.Select is not null
+                    ? (UntypedNode)new UntypedObject(new Dictionary<string, UntypedNode> { ["name"] = new UntypedString(select.Select.Name) })
+                    : new UntypedNull()
+            }),
+            MultiSelectPropertyValue multiSelect => new UntypedObject(new Dictionary<string, UntypedNode>
+            {
+                ["type"] = new UntypedString("multi_select"),
+                ["multi_select"] = new UntypedArray(
+                    (multiSelect.MultiSelect ?? []).Select(o => (UntypedNode)new UntypedObject(new Dictionary<string, UntypedNode> { ["name"] = new UntypedString(o.Name) })).ToList())
+            }),
+            UrlPropertyValue url => new UntypedObject(new Dictionary<string, UntypedNode>
+            {
+                ["type"] = new UntypedString("url"),
+                ["url"] = url.Url is not null ? (UntypedNode)new UntypedString(url.Url) : new UntypedNull()
+            }),
+            DatePropertyValue date => new UntypedObject(new Dictionary<string, UntypedNode>
+            {
+                ["type"] = new UntypedString("date"),
+                ["date"] = date.Date is not null
+                    ? (UntypedNode)new UntypedObject(new Dictionary<string, UntypedNode>
+                    {
+                        ["start"] = new UntypedString(date.Date.Start ?? string.Empty),
+                        ["end"] = date.Date.End is not null ? (UntypedNode)new UntypedString(date.Date.End) : new UntypedNull()
+                    })
+                    : new UntypedNull()
+            }),
+            _ => new UntypedObject(new Dictionary<string, UntypedNode> { ["type"] = new UntypedString(value.Type) })
+        };
     }
 
     public async Task<Page> UpdatePageAsync(string pageId, UpdatePageRequest request, CancellationToken cancellationToken = default)
