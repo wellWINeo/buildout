@@ -43,7 +43,7 @@ public sealed class GetPageMarkdownToolHandler
             }
             catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 404 })
             {
-                throw new McpProtocolException($"Page not found: {page_id}", McpErrorCode.InvalidParams);
+                throw new McpProtocolException($"Page not found: {page_id}", McpErrorCode.ResourceNotFound);
             }
             catch (BuildinApiException ex) when (ex.Error is ApiError { StatusCode: 401 or 403 })
             {

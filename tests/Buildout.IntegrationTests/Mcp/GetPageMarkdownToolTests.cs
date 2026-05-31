@@ -175,7 +175,7 @@ public sealed class GetPageMarkdownToolTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PageNotFound_ThrowsMcpInvalidParams()
+    public async Task PageNotFound_ThrowsMcpResourceNotFound()
     {
         const string PageId = "nonexistent-page";
 
@@ -190,7 +190,7 @@ public sealed class GetPageMarkdownToolTests : IAsyncLifetime
                 ["page_id"] = PageId,
             }));
 
-        Assert.Equal(McpErrorCode.InvalidParams, ex.ErrorCode);
+        Assert.Equal(McpErrorCode.ResourceNotFound, ex.ErrorCode);
         Assert.Contains(PageId, ex.Message);
     }
 
