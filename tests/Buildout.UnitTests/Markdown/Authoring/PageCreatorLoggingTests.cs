@@ -38,6 +38,9 @@ public sealed class PageCreatorLoggingTests : IDisposable
         _parser.Parse(Arg.Any<string>())
             .Returns(new AuthoredDocument { Title = "Test Page", Body = [] });
 
+        _client.AppendBlockChildrenAsync(Arg.Any<string>(), Arg.Any<AppendBlockChildrenRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AppendBlockChildrenResult());
+
         _meterListener = new MeterListener();
         _meterListener.InstrumentPublished = (instrument, listener) =>
         {

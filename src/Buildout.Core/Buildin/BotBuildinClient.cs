@@ -186,7 +186,7 @@ public sealed class BotBuildinClient : IBuildinClient
         return await WrapAsync(async () =>
         {
             var guid = Guid.Parse(blockId);
-            var body = new Gen.UpdateBlockRequest();
+            var body = BlockMapper.MapToUpdateRequest(request);
             var result = await _apiClient.V1.Blocks[guid].PatchAsync(body, cancellationToken: cancellationToken);
             return BlockMapper.Map(result ?? throw new InvalidOperationException("UpdateBlock returned null"));
         });

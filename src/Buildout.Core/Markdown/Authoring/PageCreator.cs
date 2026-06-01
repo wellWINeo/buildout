@@ -91,7 +91,6 @@ public sealed class PageCreator : IPageCreator
         }
 
         var allBatches = AppendBatcher.BatchTopLevel(document.Body);
-        var firstBatch = allBatches.Count > 0 ? allBatches[0] : null;
 
         var parent = parentKind switch
         {
@@ -104,7 +103,6 @@ public sealed class PageCreator : IPageCreator
         {
             Parent = parent,
             Properties = properties,
-            Children = (IReadOnlyList<Block>?)firstBatch ?? []
         };
 
         Page page;
@@ -189,22 +187,12 @@ public sealed class PageCreator : IPageCreator
 
     private async Task<CreatePageOutcome?> AppendBlocksAsync(Page page, AuthoredDocument document, IReadOnlyList<IReadOnlyList<Block>> allBatches, CancellationToken cancellationToken)
     {
-        var firstBatch = allBatches.Count > 0 ? allBatches[0] : null;
-        var remainingBatches = allBatches.Skip(1).ToArray();
         var idMap = new Dictionary<BlockSubtreeWrite, string>();
-
-        var firstChunkSubtrees = document.Body.Take(firstBatch?.Count ?? 0).ToList();
-        if (firstBatch is { Count: > 0 } && firstChunkSubtrees.Any(s => s.Children.Count > 0))
-        {
-            var resp = await _client.GetBlockChildrenAsync(page.Id, null, cancellationToken);
-            for (int i = 0; i < firstChunkSubtrees.Count && i < resp.Results.Count; i++)
-                idMap[firstChunkSubtrees[i]] = resp.Results[i].Id;
-        }
 
         try
         {
-            int offset = firstBatch?.Count ?? 0;
-            foreach (var batch in remainingBatches)
+            int offset = 0;
+            foreach (var batch in allBatches)
             {
                 var batchSubtrees = document.Body.Skip(offset).Take(batch.Count).ToList();
                 var appendResult = await _client.AppendBlockChildrenAsync(page.Id,

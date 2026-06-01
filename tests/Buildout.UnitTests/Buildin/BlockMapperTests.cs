@@ -98,4 +98,56 @@ public sealed class BlockMapperTests
 
         Assert.Null(result.Data?.RichText);
     }
+
+
+    [Fact]
+    public void MapToUpdateRequest_ParagraphBlock_MapsTypeAndRichText()
+    {
+        var request = new UpdateBlockRequest
+        {
+            Type = "paragraph",
+            RichTextContent = [new RichText { Type = "text", Content = "Hello" }]
+        };
+
+        var result = BlockMapper.MapToUpdateRequest(request);
+
+        Assert.Equal(Gen.UpdateBlockRequest_type.Paragraph, result.Type);
+        Assert.Single(result.Data!.RichText!);
+        Assert.Equal("Hello", result.Data!.RichText![0].PlainText);
+    }
+
+    [Fact]
+    public void MapToUpdateRequest_CodeBlock_MapsLanguage()
+    {
+        var request = new UpdateBlockRequest
+        {
+            Type = "code",
+            RichTextContent = [new RichText { Type = "text", Content = "x = 1" }],
+            Language = "python"
+        };
+
+        var result = BlockMapper.MapToUpdateRequest(request);
+
+        Assert.Equal(Gen.UpdateBlockRequest_type.Code, result.Type);
+        Assert.Equal("python", result.Data?.Language);
+    }
+
+    [Fact]
+    public void MapToUpdateRequest_ToDoBlock_MapsChecked()
+    {
+        var request = new UpdateBlockRequest { Type = "to_do", Checked = true };
+
+        var result = BlockMapper.MapToUpdateRequest(request);
+
+        Assert.Equal(Gen.UpdateBlockRequest_type.To_do, result.Type);
+        Assert.True(result.Data?.Checked);
+    }
+
+    [Fact]
+    public void MapToUpdateRequest_UnknownType_Throws()
+    {
+        var request = new UpdateBlockRequest { Type = "unknown_xyz" };
+
+        Assert.Throws<ArgumentException>(() => BlockMapper.MapToUpdateRequest(request));
+    }
 }

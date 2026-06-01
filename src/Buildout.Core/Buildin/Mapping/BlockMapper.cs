@@ -72,6 +72,42 @@ internal static class BlockMapper
         return new Gen.AppendBlockChildrenRequest_children { Type = type, Data = data };
     }
 
+
+    public static Gen.UpdateBlockRequest MapToUpdateRequest(UpdateBlockRequest request)
+    {
+        return new Gen.UpdateBlockRequest
+        {
+            Type = MapUpdateType(request.Type),
+            Data = new Gen.BlockData
+            {
+                RichText = request.RichTextContent?.Select(RichTextMapper.MapToGen).ToList(),
+                Checked = request.Checked,
+                Language = request.Language,
+                Url = request.Url
+            },
+            Archived = request.Archived
+        };
+    }
+
+    private static Gen.UpdateBlockRequest_type MapUpdateType(string type) => type switch
+    {
+        "paragraph"          => Gen.UpdateBlockRequest_type.Paragraph,
+        "heading_1"          => Gen.UpdateBlockRequest_type.Heading_1,
+        "heading_2"          => Gen.UpdateBlockRequest_type.Heading_2,
+        "heading_3"          => Gen.UpdateBlockRequest_type.Heading_3,
+        "bulleted_list_item" => Gen.UpdateBlockRequest_type.Bulleted_list_item,
+        "numbered_list_item" => Gen.UpdateBlockRequest_type.Numbered_list_item,
+        "to_do"              => Gen.UpdateBlockRequest_type.To_do,
+        "quote"              => Gen.UpdateBlockRequest_type.Quote,
+        "toggle"             => Gen.UpdateBlockRequest_type.Toggle,
+        "code"               => Gen.UpdateBlockRequest_type.Code,
+        "divider"            => Gen.UpdateBlockRequest_type.Divider,
+        "image"              => Gen.UpdateBlockRequest_type.Image,
+        "embed"              => Gen.UpdateBlockRequest_type.Embed,
+        _ => throw new ArgumentException($"Unknown block type for update: {type}")
+    };
+
+
     private static Gen.BlockData MakeData(
         IReadOnlyList<RichText>? richText,
         bool? @checked = null,
