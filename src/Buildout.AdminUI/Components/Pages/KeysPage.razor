@@ -1,0 +1,26 @@
+@page "/keys"
+@inject IApiKeyService ApiKeyService
+
+@if (_keys.Count == 0)
+{
+    <MudText>No API keys found.</MudText>
+}
+else
+{
+    <MudDataGrid Items="_keys" T="ApiKey" Filterable="false" ShowColumnOptions="false">
+        <Columns>
+            <PropertyColumn Property="k => k.Name" Title="Name" />
+            <PropertyColumn Property="k => k.Status.ToString()" Title="Status" />
+            <PropertyColumn Property="k => k.CreatedAt" Title="Creation Date" />
+        </Columns>
+    </MudDataGrid>
+}
+
+@code {
+    private IReadOnlyList<ApiKey> _keys = [];
+
+    protected override void OnInitialized()
+    {
+        _keys = ApiKeyService.GetAll();
+    }
+}

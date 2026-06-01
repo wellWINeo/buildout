@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Active feature plan: [specs/015-tree-command/plan.md](./specs/015-tree-command/plan.md)
+Active feature plan: [specs/016-admin-ui-skeleton/plan.md](./specs/016-admin-ui-skeleton/plan.md)
 
 For technologies, project structure, shell commands, and other context, read
 that plan and its sibling artifacts (`research.md`, `data-model.md`,

@@ -1,0 +1,29 @@
+@page "/audit"
+@inject IAuditLogService AuditLogService
+
+@if (_entries.Count == 0)
+{
+    <MudText>No audit log entries found.</MudText>
+}
+else
+{
+    <MudDataGrid Items="_entries" T="AuditLogEntry" Filterable="false" ShowColumnOptions="false">
+        <Columns>
+            <PropertyColumn Property="e => e.Actor" Title="Actor" />
+            <PropertyColumn Property="e => e.Action" Title="Action" />
+            <PropertyColumn Property="e => e.Resource" Title="Resource" />
+            <PropertyColumn Property="e => e.Timestamp" Title="Timestamp" />
+        </Columns>
+    </MudDataGrid>
+}
+
+@code {
+    private IReadOnlyList<AuditLogEntry> _entries = [];
+
+    protected override void OnInitialized()
+    {
+        _entries = AuditLogService.GetAll()
+            .OrderByDescending(e => e.Timestamp)
+            .ToList();
+    }
+}

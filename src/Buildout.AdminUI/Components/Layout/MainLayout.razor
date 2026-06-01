@@ -1,0 +1,43 @@
+@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudMainContent>
+        <MudTabs ActivePanelIndex="@_activeTab" ActivePanelIndexChanged="OnTabChanged">
+            <MudTabPanel Text="Keys Management" />
+            <MudTabPanel Text="Audit Logs" />
+        </MudTabs>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private int _activeTab;
+
+    protected override void OnInitialized()
+    {
+        _activeTab = NavigationManager.Uri.Contains("/audit") ? 1 : 0;
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _activeTab = e.Location.Contains("/audit") ? 1 : 0;
+        StateHasChanged();
+    }
+
+    private void OnTabChanged(int index)
+    {
+        NavigationManager.NavigateTo(index == 0 ? "/keys" : "/audit");
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

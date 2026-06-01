@@ -24,10 +24,10 @@ description: "Task list for Management UI Skeleton implementation"
 
 **Purpose**: Create the two new projects and wire them into the solution. No user story work can begin before both projects compile.
 
-- [ ] T001 Create `src/Buildout.AdminUI/Buildout.AdminUI.csproj` as a Blazor Server web app targeting net10.0 with MudBlazor v8, nullable enabled, warnings-as-errors
-- [ ] T002 Create `tests/Buildout.AdminUITests/Buildout.AdminUITests.csproj` referencing xunit.v3 3.2.2, bUnit 2.x, and the AdminUI project; nullable enabled, warnings-as-errors
-- [ ] T003 [P] Add both projects to `Buildout.sln` via `dotnet sln add`
-- [ ] T004 [P] Add `src/Buildout.AdminUI/wwwroot/.gitkeep` placeholder and confirm `dotnet build src/Buildout.AdminUI` and `dotnet build tests/Buildout.AdminUITests` both succeed with zero warnings
+- [X] T001 Create `src/Buildout.AdminUI/Buildout.AdminUI.csproj` as a Blazor Server web app targeting net10.0 with MudBlazor v8, nullable enabled, warnings-as-errors
+- [X] T002 Create `tests/Buildout.AdminUITests/Buildout.AdminUITests.csproj` referencing xunit.v3 3.2.2, bUnit 2.x, and the AdminUI project; nullable enabled, warnings-as-errors
+- [X] T003 [P] Add both projects to `Buildout.sln` via `dotnet sln add`
+- [X] T004 [P] Add `src/Buildout.AdminUI/wwwroot/.gitkeep` placeholder and confirm `dotnet build src/Buildout.AdminUI` and `dotnet build tests/Buildout.AdminUITests` both succeed with zero warnings
 
 ---
 
@@ -37,16 +37,16 @@ description: "Task list for Management UI Skeleton implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T005 Create `src/Buildout.AdminUI/Models/ApiKeyStatus.cs` with `enum ApiKeyStatus { Active, Revoked }`
-- [ ] T006 [P] Create `src/Buildout.AdminUI/Models/ApiKey.cs` with fields: `Guid Id`, `string Name`, `ApiKeyStatus Status`, `DateTimeOffset CreatedAt`, `DateTimeOffset? LastUsedAt`
-- [ ] T007 [P] Create `src/Buildout.AdminUI/Models/AuditLogEntry.cs` with fields: `Guid Id`, `string Actor`, `string Action`, `string Resource`, `DateTimeOffset Timestamp`, `string? Details`
-- [ ] T008 Create `src/Buildout.AdminUI/Services/IApiKeyService.cs` with `IReadOnlyList<ApiKey> GetAll()`
-- [ ] T009 [P] Create `src/Buildout.AdminUI/Services/IAuditLogService.cs` with `IReadOnlyList<AuditLogEntry> GetAll()`
-- [ ] T010 Create `src/Buildout.AdminUI/Services/MockApiKeyService.cs` implementing `IApiKeyService`; return ≥5 hardcoded `ApiKey` records covering both `Active` and `Revoked` statuses with varied `CreatedAt` dates
-- [ ] T011 [P] Create `src/Buildout.AdminUI/Services/MockAuditLogService.cs` implementing `IAuditLogService`; return ≥10 hardcoded `AuditLogEntry` records spanning the past 30 days with several distinct `Action` values
-- [ ] T012 Create `src/Buildout.AdminUI/Components/App.razor` and `src/Buildout.AdminUI/Components/Routes.razor` with standard Blazor Server bootstrapping
-- [ ] T013 Create `src/Buildout.AdminUI/Program.cs` registering MudBlazor services, `MockApiKeyService` as `IApiKeyService` (Singleton), and `MockAuditLogService` as `IAuditLogService` (Singleton); set `builder.WebHost.UseUrls("http://localhost:5200")` as the default binding, overridable by the `ASPNETCORE_URLS` environment variable
-- [ ] T014 [P] Create `src/Buildout.AdminUI/Components/_Imports.razor` with `@using` statements for MudBlazor, the project's Models and Services namespaces
+- [X] T005 Create `src/Buildout.AdminUI/Models/ApiKeyStatus.cs` with `enum ApiKeyStatus { Active, Revoked }`
+- [X] T006 [P] Create `src/Buildout.AdminUI/Models/ApiKey.cs` with fields: `Guid Id`, `string Name`, `ApiKeyStatus Status`, `DateTimeOffset CreatedAt`, `DateTimeOffset? LastUsedAt`
+- [X] T007 [P] Create `src/Buildout.AdminUI/Models/AuditLogEntry.cs` with fields: `Guid Id`, `string Actor`, `string Action`, `string Resource`, `DateTimeOffset Timestamp`, `string? Details`
+- [X] T008 Create `src/Buildout.AdminUI/Services/IApiKeyService.cs` with `IReadOnlyList<ApiKey> GetAll()`
+- [X] T009 [P] Create `src/Buildout.AdminUI/Services/IAuditLogService.cs` with `IReadOnlyList<AuditLogEntry> GetAll()`
+- [X] T010 Create `src/Buildout.AdminUI/Services/MockApiKeyService.cs` implementing `IApiKeyService`; return ≥5 hardcoded `ApiKey` records covering both `Active` and `Revoked` statuses with varied `CreatedAt` dates
+- [X] T011 [P] Create `src/Buildout.AdminUI/Services/MockAuditLogService.cs` implementing `IAuditLogService`; return ≥10 hardcoded `AuditLogEntry` records spanning the past 30 days with several distinct `Action` values
+- [X] T012 Create `src/Buildout.AdminUI/Components/App.razor` and `src/Buildout.AdminUI/Components/Routes.razor` with standard Blazor Server bootstrapping
+- [X] T013 Create `src/Buildout.AdminUI/Program.cs` registering MudBlazor services, `MockApiKeyService` as `IApiKeyService` (Singleton), and `MockAuditLogService` as `IAuditLogService` (Singleton); set `builder.WebHost.UseUrls("http://localhost:5200")` as the default binding, overridable by the `ASPNETCORE_URLS` environment variable
+- [X] T014 [P] Create `src/Buildout.AdminUI/Components/_Imports.razor` with `@using` statements for MudBlazor, the project's Models and Services namespaces
 
 **Checkpoint**: Foundation ready — `dotnet build` clean, services registered, no user story implementation yet.
 
@@ -62,13 +62,13 @@ description: "Task list for Management UI Skeleton implementation"
 
 > **Write these tests FIRST — they must FAIL before component implementation.**
 
-- [ ] T015 [US1] Write bUnit tests in `tests/Buildout.AdminUITests/NavigationTests.cs` verifying: (a) MainLayout renders exactly two MudTab items labelled "Keys Management" and "Audit Logs"; (b) navigating to `/keys` makes the Keys tab active — use `ctx.Services.GetRequiredService<FakeNavigationManager>().NavigateTo("/keys")` and assert the rendered markup shows the Keys tab as active; (c) navigating to `/audit` makes the Audit Logs tab active using the same approach
+- [X] T015 [US1] Write bUnit tests in `tests/Buildout.AdminUITests/NavigationTests.cs` verifying: (a) MainLayout renders exactly two MudTab items labelled "Keys Management" and "Audit Logs"; (b) navigating to `/keys` makes the Keys tab active — use `ctx.Services.GetRequiredService<FakeNavigationManager>().NavigateTo("/keys")` and assert the rendered markup shows the Keys tab as active; (c) navigating to `/audit` makes the Audit Logs tab active using the same approach
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Create `src/Buildout.AdminUI/Components/Layout/MainLayout.razor` with a `MudLayout` shell containing a `MudTabs` bar with two tabs — "Keys Management" linking to `/keys` and "Audit Logs" linking to `/audit`; use `@Body` to render the active tab content
-- [ ] T017 [US1] Create `src/Buildout.AdminUI/Components/Pages/Home.razor` with `@page "/"` that redirects to `/keys` on `OnInitialized` using `NavigationManager`
-- [ ] T018 [US1] Update `src/Buildout.AdminUI/Components/Routes.razor` to set `DefaultLayout` pointing at `MainLayout`; confirm `@page "/"` is in `Home.razor`, `@page "/keys"` is in `KeysPage.razor`, and `@page "/audit"` is in `AuditPage.razor` (Blazor Server routes are declared via `@page` directives on each component, not in `Routes.razor`)
+- [X] T016 [US1] Create `src/Buildout.AdminUI/Components/Layout/MainLayout.razor` with a `MudLayout` shell containing a `MudTabs` bar with two tabs — "Keys Management" linking to `/keys` and "Audit Logs" linking to `/audit`; use `@Body` to render the active tab content
+- [X] T017 [US1] Create `src/Buildout.AdminUI/Components/Pages/Home.razor` with `@page "/"` that redirects to `/keys` on `OnInitialized` using `NavigationManager`
+- [X] T018 [US1] Update `src/Buildout.AdminUI/Components/Routes.razor` to set `DefaultLayout` pointing at `MainLayout`; confirm `@page "/"` is in `Home.razor`, `@page "/keys"` is in `KeysPage.razor`, and `@page "/audit"` is in `AuditPage.razor` (Blazor Server routes are declared via `@page` directives on each component, not in `Routes.razor`)
 
 **Checkpoint**: US1 complete — two-tab navigation shell is functional and tested.
 
@@ -84,11 +84,11 @@ description: "Task list for Management UI Skeleton implementation"
 
 > **Write these tests FIRST — they must FAIL before component implementation.**
 
-- [ ] T019 [US2] Write bUnit tests in `tests/Buildout.AdminUITests/KeysPageTests.cs` verifying: (a) `KeysPage` renders a `MudDataGrid` with columns Name, Status, and Creation Date; (b) all mock keys returned by `IApiKeyService.GetAll()` appear as rows; (c) status values display as "Active" or "Revoked"; (d) when the service returns an empty list, the text "No API keys found." is shown instead of an empty table
+- [X] T019 [US2] Write bUnit tests in `tests/Buildout.AdminUITests/KeysPageTests.cs` verifying: (a) `KeysPage` renders a `MudDataGrid` with columns Name, Status, and Creation Date; (b) all mock keys returned by `IApiKeyService.GetAll()` appear as rows; (c) status values display as "Active" or "Revoked"; (d) when the service returns an empty list, the text "No API keys found." is shown instead of an empty table
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Create `src/Buildout.AdminUI/Components/Pages/KeysPage.razor` with `@page "/keys"` injecting `IApiKeyService`; render a `MudDataGrid` with columns for Name, Status, and Creation Date; render a `MudText` with content "No API keys found." when the list is empty
+- [X] T020 [US2] Create `src/Buildout.AdminUI/Components/Pages/KeysPage.razor` with `@page "/keys"` injecting `IApiKeyService`; render a `MudDataGrid` with columns for Name, Status, and Creation Date; render a `MudText` with content "No API keys found." when the list is empty
 
 **Checkpoint**: US2 complete — Keys Management tab shows mock data; independently testable without Audit Logs.
 
@@ -104,11 +104,11 @@ description: "Task list for Management UI Skeleton implementation"
 
 > **Write these tests FIRST — they must FAIL before component implementation.**
 
-- [ ] T021 [US3] Write bUnit tests in `tests/Buildout.AdminUITests/AuditPageTests.cs` verifying: (a) `AuditPage` renders a `MudDataGrid` with columns Actor, Action, Resource, and Timestamp; (b) all mock entries returned by `IAuditLogService.GetAll()` appear as rows; (c) entries are ordered by Timestamp descending (newest first); (d) when the service returns an empty list, the text "No audit log entries found." is shown instead of an empty table
+- [X] T021 [US3] Write bUnit tests in `tests/Buildout.AdminUITests/AuditPageTests.cs` verifying: (a) `AuditPage` renders a `MudDataGrid` with columns Actor, Action, Resource, and Timestamp; (b) all mock entries returned by `IAuditLogService.GetAll()` appear as rows; (c) entries are ordered by Timestamp descending (newest first); (d) when the service returns an empty list, the text "No audit log entries found." is shown instead of an empty table
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Create `src/Buildout.AdminUI/Components/Pages/AuditPage.razor` with `@page "/audit"` injecting `IAuditLogService`; render a `MudDataGrid` ordered by `Timestamp` descending with columns for Actor, Action, Resource, and Timestamp; render a `MudText` with content "No audit log entries found." when the list is empty
+- [X] T022 [US3] Create `src/Buildout.AdminUI/Components/Pages/AuditPage.razor` with `@page "/audit"` injecting `IAuditLogService`; render a `MudDataGrid` ordered by `Timestamp` descending with columns for Actor, Action, Resource, and Timestamp; render a `MudText` with content "No audit log entries found." when the list is empty
 
 **Checkpoint**: All three user stories complete — both tabs show mock data; each independently testable.
 
@@ -118,10 +118,10 @@ description: "Task list for Management UI Skeleton implementation"
 
 **Purpose**: Error boundaries, viewport conformance, and quickstart validation.
 
-- [ ] T023 [P] Add a Blazor `<ErrorBoundary>` wrapper around the `<Router>` in `src/Buildout.AdminUI/Components/App.razor` so unhandled component exceptions render a user-facing error message without dropping the SignalR circuit
-- [ ] T024 [P] Confirm all mandatory columns (name, status, creation date for keys; actor, action, resource, timestamp for logs) are visible without horizontal scrolling at 1280 px viewport width; adjust `MudDataGrid` column widths if needed in `KeysPage.razor` and `AuditPage.razor`
-- [ ] T025 Run quickstart validation: `dotnet run --project src/Buildout.AdminUI`, navigate to `http://localhost:5200/`, `/keys`, and `/audit`; confirm each loads with mock data and tab switching requires no full-page reload; run `dotnet test tests/Buildout.AdminUITests` and confirm all tests pass
-- [ ] T026 [P] Run `dotnet test tests/Buildout.UnitTests tests/Buildout.IntegrationTests` and confirm all existing tests remain green (constitution merge gate — existing suites must not regress)
+- [X] T023 [P] Add a Blazor `<ErrorBoundary>` wrapper around the `<Router>` in `src/Buildout.AdminUI/Components/App.razor` so unhandled component exceptions render a user-facing error message without dropping the SignalR circuit
+- [X] T024 [P] Confirm all mandatory columns (name, status, creation date for keys; actor, action, resource, timestamp for logs) are visible without horizontal scrolling at 1280 px viewport width; adjust `MudDataGrid` column widths if needed in `KeysPage.razor` and `AuditPage.razor`
+- [X] T025 Run quickstart validation: `dotnet run --project src/Buildout.AdminUI`, navigate to `http://localhost:5200/`, `/keys`, and `/audit`; confirm each loads with mock data and tab switching requires no full-page reload; run `dotnet test tests/Buildout.AdminUITests` and confirm all tests pass
+- [X] T026 [P] Run `dotnet test tests/Buildout.UnitTests tests/Buildout.IntegrationTests` and confirm all existing tests remain green (constitution merge gate — existing suites must not regress)
 
 ---
 
