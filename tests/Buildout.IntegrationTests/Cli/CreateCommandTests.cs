@@ -162,7 +162,13 @@ public sealed class CreateCommandTests
             url = $"https://api.buildin.ai/pages/{NewPageId}",
             properties = new { title = new { type = "title", title = Array.Empty<object>() } }
         });
-        BuildinStubs.RegisterGetBlockChildren(_fixture.Server);
+        BuildinStubs.RegisterAppendBlockChildren(_fixture.Server, NewPageId, new
+        {
+            @object = "list",
+            results = Array.Empty<object>(),
+            has_more = false,
+            next_cursor = (string?)null
+        });
 
         var client = _fixture.CreateClient();
         var (app, console) = CreateCliApp(client);
@@ -204,7 +210,13 @@ public sealed class CreateCommandTests
             url = $"https://api.buildin.ai/pages/{NewPageId}",
             properties = new { title = new { type = "title", title = Array.Empty<object>() } }
         });
-        BuildinStubs.RegisterGetBlockChildren(_fixture.Server);
+        BuildinStubs.RegisterAppendBlockChildren(_fixture.Server, NewPageId, new
+        {
+            @object = "list",
+            results = Array.Empty<object>(),
+            has_more = false,
+            next_cursor = (string?)null
+        });
 
         var client = _fixture.CreateClient();
         var (app, console) = CreateCliApp(client);
@@ -249,7 +261,13 @@ public sealed class CreateCommandTests
             url = $"https://api.buildin.ai/pages/{NewPageId}",
             properties = new { title = new { type = "title", title = Array.Empty<object>() } }
         });
-        BuildinStubs.RegisterGetBlockChildren(_fixture.Server);
+        BuildinStubs.RegisterAppendBlockChildren(_fixture.Server, NewPageId, new
+        {
+            @object = "list",
+            results = Array.Empty<object>(),
+            has_more = false,
+            next_cursor = (string?)null
+        });
 
         var client = _fixture.CreateClient();
         var (app, console) = CreateCliApp(client);

@@ -54,6 +54,14 @@ public sealed class CreatePageIdEquivalenceTests
             url = $"https://api.buildin.ai/pages/{NewPageId}",
             properties = new { title = new { type = "title", title = new[] { new { type = "text", plain_text = "Test Page" } } } }
         });
+
+        BuildinStubs.RegisterAppendBlockChildren(_fixture.Server, NewPageId, new
+        {
+            @object = "list",
+            results = Array.Empty<object>(),
+            has_more = false,
+            next_cursor = (string?)null
+        });
     }
 
     private static (CommandApp app, TestConsole console) CreateCliApp(IBuildinClient client)

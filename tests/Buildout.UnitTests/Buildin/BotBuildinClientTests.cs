@@ -144,6 +144,100 @@ public sealed class BotBuildinClientTests
     }
 
     [Fact]
+    public async Task CreatePageAsync_SendsParentAndPropertiesInRequestBody()
+    {
+        _adapter.SerializationWriterFactory.Returns(new JsonSerializationWriterFactory());
+
+        var generatedResponse = new Gen.CreatePageResponse
+        {
+            Id = Guid.Parse("44444444-4444-4444-4444-444444444444"),
+            Url = "https://api.buildin.ai/pages/44444444"
+        };
+
+        RequestInformation? captured = null;
+        _adapter.SendAsync(
+                Arg.Do<RequestInformation>(ri => captured = ri),
+                Arg.Any<ParsableFactory<Gen.CreatePageResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.CreatePageResponse?>(generatedResponse));
+
+        var request = new CreatePageRequest
+        {
+            Parent = new ParentPage("33333333-3333-3333-3333-333333333333"),
+            Properties = new Dictionary<string, PropertyValue>
+            {
+                ["title"] = new TitlePropertyValue { Title = [new RichText { Type = "text", Content = "My Title" }] }
+            }
+        };
+
+        await _client.CreatePageAsync(request);
+
+        Assert.NotNull(captured?.Content);
+        captured.Content.Position = 0;
+        using var doc = await JsonDocument.ParseAsync(captured.Content);
+        var root = doc.RootElement;
+
+        // parent must be present and reference the correct page ID
+        var pageId = root.GetProperty("parent").GetProperty("page_id").GetString();
+        Assert.Equal("33333333-3333-3333-3333-333333333333", pageId);
+
+        // properties must be present and contain the title key
+        Assert.True(root.GetProperty("properties").TryGetProperty("title", out var titleProp));
+        // title property carries the rich text content
+        var titleContent = titleProp
+            .GetProperty("title")[0]
+            .GetProperty("text")
+            .GetProperty("content")
+            .GetString();
+        Assert.Equal("My Title", titleContent);
+    }
+
+    [Fact]
+    public async Task AppendBlockChildrenAsync_SendsChildrenInRequestBody()
+    {
+        _adapter.SerializationWriterFactory.Returns(new JsonSerializationWriterFactory());
+
+        _adapter.SendNoContentAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        // PatchAsync on children returns the list response; stub it
+        var listResponse = new Gen.AppendBlockChildrenResponse();
+        RequestInformation? captured = null;
+        _adapter.SendAsync(
+                Arg.Do<RequestInformation>(ri => captured = ri),
+                Arg.Any<ParsableFactory<Gen.AppendBlockChildrenResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.AppendBlockChildrenResponse?>(listResponse));
+
+        var request = new AppendBlockChildrenRequest
+        {
+            Children =
+            [
+                new ParagraphBlock { RichTextContent = [new RichText { Type = "text", Content = "Hello" }] },
+                new Heading1Block { RichTextContent = [new RichText { Type = "text", Content = "Title" }] }
+            ]
+        };
+
+        await _client.AppendBlockChildrenAsync("11111111-1111-1111-1111-111111111111", request);
+
+        Assert.NotNull(captured?.Content);
+        captured.Content.Position = 0;
+        using var doc = await JsonDocument.ParseAsync(captured.Content);
+        var children = doc.RootElement.GetProperty("children");
+
+        Assert.Equal(2, children.GetArrayLength());
+        Assert.Equal("paragraph", children[0].GetProperty("type").GetString());
+        Assert.Equal("Hello", children[0].GetProperty("data").GetProperty("rich_text")[0].GetProperty("plain_text").GetString());
+        Assert.Equal("heading_1", children[1].GetProperty("type").GetString());
+        Assert.Equal("Title", children[1].GetProperty("data").GetProperty("rich_text")[0].GetProperty("plain_text").GetString());
+    }
+
+    [Fact]
     public async Task SearchAsync_MapsSearchResult_ToSearchResults()
     {
         var generatedResult = new Gen.SearchResult

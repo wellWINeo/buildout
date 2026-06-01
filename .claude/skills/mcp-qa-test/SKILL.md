@@ -31,19 +31,22 @@ also fail).
 
 Before any other test, find real workspace content to use.
 
-**Step 0.1 — List accessible pages**
+**Step 0.1 — Find a known page to use as the test target**
 
-Call `search` with an empty query to enumerate what the bot can see.
+The `search` tool rejects empty queries (FR-008). Either use a known page ID
+supplied by the user, or call `search` with a broad keyword you expect to match
+a page title in the workspace.
 
 ```
 tool: search
-query: ""
+query: "<known keyword or page title>"
 ```
 
 Expected: returns a tab-separated list with at least one `page` or `database`
 entry. Save the first page_id as `$PAGE_ID` and the first database_id (if any)
-as `$DB_ID`. If nothing is returned the workspace is empty — skip all read tests
-and proceed only with the create/delete/restore suite.
+as `$DB_ID`. If nothing is returned with your keyword, try another term or ask
+the user to supply `$PAGE_ID` directly — then skip all read tests and proceed
+only with the create/delete/restore suite.
 
 **Step 0.2 — Note a non-existent ID**
 
@@ -55,12 +58,12 @@ Use `00000000-0000-0000-0000-000000000000` as `$MISSING_ID` throughout.
 
 | # | Input | Expected |
 |---|-------|----------|
-| 1.1 | `query=""` (repeat from 0.1) | Non-error response; `has_more` field or empty body acceptable |
-| 1.2 | `query="<known keyword from 0.1 title>"` | At least one result matching that title |
+| 1.1 | `query=""` | MCP error `-32602: Query must be non-empty` — correct behaviour per spec FR-008 |
+| 1.2 | `query="<known keyword from 0.1 title>"` | At least one result matching that title. Note: results depend on Buildin's upstream search algorithm; untitled pages or pages matched only by body content may not appear even if the keyword is present |
 | 1.3 | `query="xyzzy_nonexistent_12345"` | Empty body (no error) |
-| 1.4 | `query=""` with `page_id=$PAGE_ID` | Results scoped to descendants of that page (may be empty) |
-| 1.5 | `query=""` with `page_id=$MISSING_ID` | `ResourceNotFound` MCP error |
-| 1.6 | `query=""` (no page_id) | Empty string body is acceptable; no exception |
+| 1.4 | `query="<known keyword>"` with `page_id=$PAGE_ID` | Results scoped to descendants of that page (may be empty) |
+| 1.5 | `query="<any keyword>"` with `page_id=$MISSING_ID` | Empty result (no error) — correct behaviour; the scope filter treats missing ancestor pages as out-of-scope and returns no matches rather than erroring (by design) |
+| 1.6 | `query=""` (no page_id) | MCP error `-32602: Query must be non-empty` — same as 1.1 |
 
 ---
 
@@ -70,7 +73,7 @@ Use `00000000-0000-0000-0000-000000000000` as `$MISSING_ID` throughout.
 |---|-------|----------|
 | 2.1 | `page_id=$PAGE_ID` | JSON with `Markdown` (string), `Revision` (non-empty string), `UnknownBlockIds` (array) |
 | 2.2 | Inspect `Markdown` from 2.1 | Starts with `<!-- buildin:root -->` or a `# Title` heading; contains `<!-- buildin:block:` anchors |
-| 2.3 | `page_id=$MISSING_ID` | `InvalidParams` MCP error; message mentions the ID |
+| 2.3 | `page_id=$MISSING_ID` | `ResourceNotFound` MCP error; message mentions the ID |
 
 Save `$REVISION` from test 2.1 for the update suite.
 
@@ -87,7 +90,7 @@ Save `$REVISION` from test 2.1 for the update suite.
 | 3.5 | `page_id=$PAGE_ID`, `format="ascii"`, `depth=0` | `InvalidParams`; message mentions valid range |
 | 3.6 | `page_id=$PAGE_ID`, `format="ascii"`, `depth=8` | `InvalidParams` |
 | 3.7 | `page_id=$PAGE_ID`, `format="xml"` | `InvalidParams`; message contains `xml` |
-| 3.8 | `page_id=$MISSING_ID`, `format="ascii"` | `InvalidParams`; message mentions the ID |
+| 3.8 | `page_id=$MISSING_ID`, `format="ascii"` | MCP error `-32002` (ResourceNotFound); message mentions the ID. Note: uses `-32002` not `-32602` (InvalidParams) — different error type than depth/format validation errors |
 
 ---
 
@@ -108,7 +111,7 @@ Skip this phase if `$DB_ID` was not found in Phase 0.
 
 | # | Action | Expected |
 |---|--------|----------|
-| 5.1 | Read resource `buildin://$PAGE_ID` | Text content with `text/markdown` MIME type; body matches the `Markdown` field from test 2.1 |
+| 5.1 | Read resource `buildin://$PAGE_ID` | Text content with `text/markdown` MIME type; body is clean markdown (page title + content blocks). The body intentionally differs from `get_page_markdown` output — the resource handler uses a plain renderer while the tool uses an anchored renderer for patch targeting. Do not expect `<!-- buildin:root -->` or `<!-- buildin:block: -->` anchors here |
 | 5.2 | Read resource `buildin://$MISSING_ID` | MCP resource error (not-found code) |
 
 ---
