@@ -3,9 +3,7 @@ using Buildout.Cli.Rendering;
 using Buildout.Configuration;
 using Buildout.Core.Buildin;
 using Buildout.Core.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 
 // Extract --config/-c before Spectre sees the args; Spectre doesn't know about this flag.
@@ -36,23 +34,6 @@ try
     services.AddSingleton<MarkdownTerminalRenderer>();
     services.AddSingleton<SearchResultStyledRenderer>();
 
-    var authProvider = config.GetValue<string>("Auth:Provider")?.ToLowerInvariant();
-    if (authProvider == "sqlite")
-    {
-        var sqlitePath = config.GetValue<string>("Auth:SqlitePath");
-        var authCs = $"Data Source={sqlitePath}";
-        services.AddSingleton<Buildout.Mcp.Auth.ITokenStore>(sp =>
-            new Buildout.Mcp.Auth.AdoNetTokenStore(authCs, "sqlite",
-                sp.GetRequiredService<ILogger<Buildout.Mcp.Auth.AdoNetTokenStore>>()));
-    }
-    else if (authProvider == "postgresql")
-    {
-        var authCs = config.GetValue<string>("Auth:ConnectionString")!;
-        services.AddSingleton<Buildout.Mcp.Auth.ITokenStore>(sp =>
-            new Buildout.Mcp.Auth.AdoNetTokenStore(authCs, "postgresql",
-                sp.GetRequiredService<ILogger<Buildout.Mcp.Auth.AdoNetTokenStore>>()));
-    }
-
     var registrar = new TypeRegistrar(services);
     var app = new CommandApp(registrar);
 
@@ -73,21 +54,6 @@ try
         {
             skills.AddCommand<SkillsInstallCommand>("install");
             skills.AddCommand<SkillsRemoveCommand>("remove");
-        });
-        config.AddBranch<AuthSettings>("auth", auth =>
-        {
-            auth.AddBranch<AuthSettings>("token", token =>
-            {
-                token.AddCommand<AuthTokenCreateCommand>("create");
-                token.AddCommand<AuthTokenListCommand>("list");
-                token.AddCommand<AuthTokenRevokeCommand>("revoke");
-                token.AddCommand<AuthTokenMapCommand>("map");
-            });
-            auth.AddBranch<AuthSettings>("key", key =>
-            {
-                key.AddCommand<AuthKeyCreateCommand>("create");
-                key.AddCommand<AuthKeyListCommand>("list");
-            });
         });
     });
 
