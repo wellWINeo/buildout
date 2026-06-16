@@ -11,7 +11,6 @@ public record AuditEntry
     public Guid Id { get; init; } = Guid.NewGuid();
     public required string ToolName { get; init; }
     public string? SessionId { get; init; }
-    public string? AuthIdentity { get; init; }
     public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.UtcNow;
     public required string Parameters { get; init; }
     public AuditOutcome Outcome { get; init; }
