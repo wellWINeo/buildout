@@ -1,6 +1,5 @@
 using Buildout.Configuration;
 using Buildout.Core.DependencyInjection;
-using Buildout.Mcp.Audit;
 using Buildout.Mcp.Prompts;
 using Buildout.Mcp.Resources;
 using Buildout.Mcp.Tools;
@@ -59,11 +58,6 @@ try
     var transportType = mergedConfig.GetValue<string>("Transport:Type") ?? "stdio";
     var isHttpTransport = transportType == "http";
 
-    var auditOptions = new Buildout.Core.Audit.AuditOptions();
-    mergedConfig.GetSection("Audit").Bind(auditOptions);
-
-    builder.Services.AddAuditTrail(mergedConfig, isHttpTransport);
-
     var mcpBuilder = builder.Services
         .AddMcpServer(options =>
         {
@@ -91,15 +85,7 @@ try
         .WithTools<RestorePageToolHandler>()
         .WithTools<TreeToolHandler>();
 
-    var host = builder.Build();
-
-    if (isHttpTransport && auditOptions.Enabled)
-    {
-        using var scope = host.Services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<FluentMigrator.Runner.IMigrationRunner>().MigrateUp();
-    }
-
-    await host.RunAsync();
+    await builder.Build().RunAsync();
 }
 catch (BuildoutConfigurationException ex)
 {
