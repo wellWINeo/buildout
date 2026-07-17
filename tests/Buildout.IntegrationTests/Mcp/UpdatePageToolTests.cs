@@ -194,6 +194,26 @@ public sealed class UpdatePageToolTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PartialPatch_MessagePinsUnderlyingErrorWithoutDoublingPrefix()
+    {
+        _editor.UpdateAsync(Arg.Any<UpdatePageInput>(), Arg.Any<CancellationToken>())
+            .Returns<Task<ReconciliationSummary>>(_ =>
+                throw new PartialPatchException("rev-partial", 1, new InvalidOperationException("buildin error")));
+
+        var ex = await Assert.ThrowsAsync<McpProtocolException>(async () =>
+            await _client.CallToolAsync("update_page", new Dictionary<string, object?>
+            {
+                ["page_id"] = "page-partial",
+                ["revision"] = "rev-001",
+                ["operations"] = """[{"op":"search_replace","old_str":"A","new_str":"B"},{"op":"search_replace","old_str":"C","new_str":"D"}]""",
+            }));
+
+        Assert.EndsWith(
+            "Patch partially applied: 1 operation(s) committed before failure. Underlying error: buildin error",
+            ex.Message);
+    }
+
+    [Fact]
     public async Task PageNotFound_ReturnsInvalidParams()
     {
         const string PageId = "nonexistent-page";

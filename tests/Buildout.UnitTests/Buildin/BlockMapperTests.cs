@@ -1,6 +1,9 @@
+using System.Text.Json;
 using Buildout.Core.Buildin.Mapping;
 using Buildout.Core.Buildin.Models;
 using Gen = Buildout.Core.Buildin.Generated.Models;
+using Microsoft.Kiota.Abstractions.Serialization;
+using Microsoft.Kiota.Serialization.Json;
 using Xunit;
 
 namespace Buildout.UnitTests.Buildin;
@@ -149,5 +152,46 @@ public sealed class BlockMapperTests
         var request = new UpdateBlockRequest { Type = "unknown_xyz" };
 
         Assert.Throws<ArgumentException>(() => BlockMapper.MapToUpdateRequest(request));
+    }
+
+    [Fact]
+    public void MapAppendResponse_NullResponse_ReturnsEmptyResult()
+    {
+        var result = BlockMapper.MapAppendResponse(null);
+
+        Assert.Empty(result.Results);
+    }
+
+    [Fact]
+    public void MapAppendResponse_MapsBlocksFromResults()
+    {
+        var json = """
+        [
+            {
+                "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "type": "bulleted_list_item",
+                "has_children": true,
+                "data": {
+                    "rich_text": [{"plain_text": "Parent item", "type": "text"}]
+                }
+            }
+        ]
+        """;
+        var doc = JsonDocument.Parse(json);
+        var parseNode = new JsonParseNode(doc.RootElement);
+        var resultsUntyped = parseNode.GetObjectValue(UntypedNode.CreateFromDiscriminatorValue);
+
+        var response = new Gen.AppendBlockChildrenResponse
+        {
+            HasMore = false,
+            Results = resultsUntyped
+        };
+
+        var result = BlockMapper.MapAppendResponse(response);
+
+        var block = Assert.Single(result.Results);
+        var listItem = Assert.IsType<BulletedListItemBlock>(block);
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", listItem.Id);
+        Assert.True(listItem.HasChildren);
     }
 }
