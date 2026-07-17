@@ -169,6 +169,31 @@ public sealed class PageEditorTests
     }
 
     [Fact]
+    public async Task UpdateAsync_PartialFailure_MessagePinsCommittedCountAndUnderlyingError()
+    {
+        var (snapshot, pageId) = await SetupSingleParagraphPageAsync();
+
+        _client.UpdateBlockAsync("p1", Arg.Any<UpdateBlockRequest>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("API error"));
+
+        var input = new UpdatePageInput
+        {
+            PageId = pageId,
+            Revision = snapshot.Revision,
+            Operations =
+            [
+                new ReplaceBlockOperation { Anchor = "p1", Markdown = "New content" }
+            ]
+        };
+
+        var ex = await Assert.ThrowsAsync<PartialPatchException>(() => _sut.UpdateAsync(input));
+
+        Assert.Equal(
+            "Patch partially applied: 0 operation(s) committed before failure. Underlying error: API error",
+            ex.Message);
+    }
+
+    [Fact]
     public async Task UpdateAsync_PatchRejected_CallsRecorderFailWithPatchErrorClass()
     {
         var (_, pageId) = await SetupSingleParagraphPageAsync("p1", "Hello");

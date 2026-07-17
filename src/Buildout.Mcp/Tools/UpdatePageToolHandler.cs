@@ -86,7 +86,7 @@ public sealed class UpdatePageToolHandler
             }
             catch (PartialPatchException ex)
             {
-                throw new McpProtocolException($"Patch partially applied: {ex.Message}", McpErrorCode.InternalError);
+                throw new McpProtocolException(ex.Message, McpErrorCode.InternalError);
             }
             catch (PatchRejectedException ex)
             {

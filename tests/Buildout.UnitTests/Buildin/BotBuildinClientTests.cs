@@ -238,6 +238,52 @@ public sealed class BotBuildinClientTests
     }
 
     [Fact]
+    public async Task AppendBlockChildrenAsync_MapsAppendResponse_ToNonEmptyResult()
+    {
+        var json = """
+        [
+            {
+                "id": "99999999-9999-9999-9999-999999999999",
+                "type": "bulleted_list_item",
+                "has_children": true,
+                "data": {
+                    "rich_text": [{"plain_text": "Parent item", "type": "text"}]
+                }
+            }
+        ]
+        """;
+        var doc = JsonDocument.Parse(json);
+        var parseNode = new JsonParseNode(doc.RootElement);
+        var resultsUntyped = parseNode.GetObjectValue(UntypedNode.CreateFromDiscriminatorValue);
+
+        var generatedResponse = new Gen.AppendBlockChildrenResponse
+        {
+            HasMore = false,
+            Results = resultsUntyped
+        };
+
+        _adapter.SendAsync(
+                Arg.Any<RequestInformation>(),
+                Arg.Any<ParsableFactory<Gen.AppendBlockChildrenResponse>>(),
+                Arg.Any<Dictionary<string, ParsableFactory<IParsable>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Gen.AppendBlockChildrenResponse?>(generatedResponse));
+
+        var request = new AppendBlockChildrenRequest
+        {
+            Children = [new BulletedListItemBlock { RichTextContent = [new RichText { Type = "text", Content = "Parent item" }] }]
+        };
+
+        var result = await _client.AppendBlockChildrenAsync("11111111-1111-1111-1111-111111111111", request);
+
+        Assert.NotNull(result);
+        var block = Assert.Single(result.Results);
+        var listItem = Assert.IsType<BulletedListItemBlock>(block);
+        Assert.Equal("99999999-9999-9999-9999-999999999999", listItem.Id);
+        Assert.True(listItem.HasChildren);
+    }
+
+    [Fact]
     public async Task SearchAsync_MapsSearchResult_ToSearchResults()
     {
         var generatedResult = new Gen.SearchResult

@@ -147,4 +147,26 @@ internal static class BlockMapper
             NextCursor = gen.NextCursor
         };
     }
+
+    public static AppendBlockChildrenResult MapAppendResponse(Gen.AppendBlockChildrenResponse? gen)
+    {
+        if (gen is null) return new AppendBlockChildrenResult();
+
+        var blocks = new List<Block>();
+        if (gen.Results is UntypedArray array)
+        {
+            foreach (var item in array.GetValue())
+            {
+                if (item is null) continue;
+
+                var element = MappingHelpers.SerializeToElement(item);
+                var node = new JsonParseNode(element);
+                var genBlock = node.GetObjectValue(Gen.Block.CreateFromDiscriminatorValue);
+                if (genBlock is not null)
+                    blocks.Add(Map(genBlock));
+            }
+        }
+
+        return new AppendBlockChildrenResult { Results = blocks };
+    }
 }

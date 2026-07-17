@@ -4,7 +4,7 @@ public sealed class PartialPatchException : PatchRejectedException
 {
     public PartialPatchException(string partialRevision, int committedOpIndex, Exception buildinError)
         : base("patch.partial",
-            $"Patch partially applied: {committedOpIndex} operation(s) committed before failure.",
+            BuildMessage(committedOpIndex, buildinError),
             buildinError,
             new Dictionary<string, object>
             {
@@ -14,4 +14,8 @@ public sealed class PartialPatchException : PatchRejectedException
             })
     {
     }
+
+    private static string BuildMessage(int committedOpIndex, Exception buildinError) =>
+        $"Patch partially applied: {committedOpIndex} operation(s) committed before failure. " +
+        $"Underlying error: {buildinError.Message}";
 }
