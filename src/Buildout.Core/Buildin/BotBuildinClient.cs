@@ -232,7 +232,7 @@ public sealed class BotBuildinClient : IBuildinClient
                 Children = request.Children.Select(BlockMapper.MapToAppendChild).ToList()
             };
             var result = await _apiClient.V1.Blocks[guid].Children.PatchAsync(body, cancellationToken: cancellationToken);
-            return new AppendBlockChildrenResult();
+            return BlockMapper.MapAppendResponse(result);
         });
     }
 
