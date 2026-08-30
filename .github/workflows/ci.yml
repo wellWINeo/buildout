@@ -97,11 +97,11 @@ jobs:
           restore-keys: nuget-
       - run: dotnet publish src/Buildout.Cli -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --output publish/cli
       - run: dotnet publish src/Buildout.Mcp -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true --output publish/mcp
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: buildout-cli-${{ matrix.rid }}
           path: publish/cli/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: buildout-mcp-${{ matrix.rid }}
           path: publish/mcp/
@@ -130,11 +130,11 @@ jobs:
           fail-on-cache-miss: true
       - run: dotnet publish src/Buildout.Cli -c Release --no-build --output publish/cli
       - run: dotnet publish src/Buildout.Mcp -c Release --no-build --output publish/mcp
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: buildout-cli-fdd
           path: publish/cli/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: buildout-mcp-fdd
           path: publish/mcp/
