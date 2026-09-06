@@ -10,7 +10,7 @@
       "rollForward": false
     },
     "ilspycmd": {
-      "version": "10.0.1.8346",
+      "version": "11.0.0.9375",
       "commands": [
         "ilspycmd"
       ],
