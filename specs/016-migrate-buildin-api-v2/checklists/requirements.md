@@ -31,6 +31,8 @@
 
 ## Notes
 
-- Validation pass 1 completed on 2026-09-05: all items pass.
+- Validation pass 4 completed on 2026-09-06 after accepted lifecycle removal, V2-native naming, credential migration, and native-header corrections: all items pass.
 - References to V2, bearer authentication, scopes, routes, and response fields define the external compatibility contract required by the feature; language, framework, class, and code-structure choices are intentionally deferred to planning.
-- The migration boundary is explicit: V2-only capabilities are excluded, while page archive/restore and block deletion remain temporary V1 compatibility operations because the supplied V2 contract has no equivalent.
+- The migration boundary is explicit: all production calls use V2; block removal uses V2 DELETE; page lifecycle surfaces and their supporting core slice are removed; a one-action reviewed overlay supplies only block DELETE.
+- Native safety is endpoint-scoped: page creation uses `Idempotency-Key`, editing reads supply opaque ETag revisions, and block writes do not claim undocumented `If-Match` support or atomicity.
+- `AccessToken` is primary, `BotToken` is a warned compatibility fallback, and precedence/secret-safe warning channels are specified.
