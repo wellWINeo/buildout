@@ -14,9 +14,15 @@ public sealed class BuildinClientOptions
     public Uri BaseUrl { get; set; } = new("https://api.buildin.ai/");
 
     /// <summary>
-    /// Gets or sets the bot token for authentication.
+    /// Gets or sets the primary opaque bearer token for authentication.
     /// </summary>
-    public string BotToken { get; set; } = string.Empty;
+    public string AccessToken { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the deprecated compatibility token setting.
+    /// </summary>
+    [Obsolete("Use AccessToken instead.")]
+    public string? BotToken { get; set; }
 
     /// <summary>
     /// Gets or sets the HTTP-related configuration options.

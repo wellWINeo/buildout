@@ -16,18 +16,18 @@ using KiotaApiException = Microsoft.Kiota.Abstractions.ApiException;
 
 namespace Buildout.Core.Buildin;
 
-public sealed class BotBuildinClient : IBuildinClient
+public class LegacyBuildinClient : IBuildinClient
 {
     private readonly Generated.BuildinApiClient _apiClient;
-    private readonly ILogger<BotBuildinClient> _logger;
+    private readonly ILogger _logger;
 
-    public BotBuildinClient(IRequestAdapter requestAdapter, IOptions<BuildinClientOptions> options, ILogger<BotBuildinClient> logger)
+    public LegacyBuildinClient(IRequestAdapter requestAdapter, IOptions<BuildinClientOptions> options, ILogger logger)
     {
         _apiClient = new Generated.BuildinApiClient(requestAdapter);
         _logger = logger;
     }
 
-    public BotBuildinClient(HttpClient httpClient, IAuthenticationProvider authProvider, IOptions<BuildinClientOptions> options, ILogger<BotBuildinClient> logger)
+    public LegacyBuildinClient(HttpClient httpClient, IAuthenticationProvider authProvider, IOptions<BuildinClientOptions> options, ILogger logger)
     {
         var adapter = new HttpClientRequestAdapter(authProvider, httpClient: httpClient);
         _apiClient = new Generated.BuildinApiClient(adapter);
@@ -52,6 +52,9 @@ public sealed class BotBuildinClient : IBuildinClient
             return PageMapper.Map(result ?? throw new InvalidOperationException("GetPage returned null"));
         });
     }
+
+    public async Task<VersionedPage> GetVersionedPageAsync(string pageId, CancellationToken cancellationToken = default)
+        => new() { Page = await GetPageAsync(pageId, cancellationToken), ETag = null };
 
     public async Task<Page> CreatePageAsync(CreatePageRequest request, CancellationToken cancellationToken = default)
     {
@@ -155,20 +158,6 @@ public sealed class BotBuildinClient : IBuildinClient
             }),
             _ => new UntypedObject(new Dictionary<string, UntypedNode> { ["type"] = new UntypedString(value.Type) })
         };
-    }
-
-    public async Task<Page> UpdatePageAsync(string pageId, UpdatePageRequest request, CancellationToken cancellationToken = default)
-    {
-        return await WrapAsync(async () =>
-        {
-            var guid = Guid.Parse(pageId);
-            var body = new Gen.UpdatePageRequest
-            {
-                Archived = request.Archived,
-            };
-            var result = await _apiClient.V1.Pages[guid].PatchAsync(body, cancellationToken: cancellationToken);
-            return PageMapper.Map(result ?? throw new InvalidOperationException("UpdatePage returned null"));
-        });
     }
 
     public async Task<Block> GetBlockAsync(string blockId, CancellationToken cancellationToken = default)

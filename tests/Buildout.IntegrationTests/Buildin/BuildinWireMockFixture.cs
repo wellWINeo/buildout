@@ -34,6 +34,13 @@ public sealed class BuildinWireMockFixture : IDisposable
         BuildinStubs.RegisterAll(Server);
     }
 
+    public IReadOnlyList<string> RequestPaths() => BuildinStubs.RequestJournal(Server);
+
+    public void AssertV2Only()
+    {
+        Assert.DoesNotContain(RequestPaths(), path => path.StartsWith("/v1", StringComparison.Ordinal));
+    }
+
     public void Dispose()
     {
         Server.Dispose();

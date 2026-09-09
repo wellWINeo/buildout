@@ -9,6 +9,27 @@ namespace Buildout.IntegrationTests.Buildin;
 
 public static class BuildinStubs
 {
+    public static readonly string[] ThreePageCursors = ["cursor-1", "cursor-2"];
+
+    public static object PageResponse(string id, bool inTrash = false) => new
+    {
+        id, @object = "page", created_at = "2025-01-15T10:30:00Z", last_edited_at = "2025-01-16T14:00:00Z",
+        in_trash = inTrash, url = $"https://api.buildin.ai/pages/{id}", properties = new { }
+    };
+
+    public static object CursorResponse(IEnumerable<object> results, bool hasMore, string? nextCursor, string? etag = null)
+        => new { @object = "list", results = results.ToArray(), has_more = hasMore, next_cursor = nextCursor, etag };
+
+    public static void RegisterV2PageWithEtag(WireMockServer server, string pageId, string etag, object? body = null)
+    {
+        server.Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
+                .WithHeader("ETag", etag).WithBodyAsJson(body ?? PageResponse(pageId)));
+    }
+
+    public static IReadOnlyList<string> RequestJournal(WireMockServer server)
+        => server.LogEntries.Select(entry => entry.RequestMessage.Path ?? string.Empty).ToArray();
+
     public static void RegisterAll(WireMockServer server)
     {
         RegisterGetMe(server);
@@ -20,7 +41,7 @@ public static class BuildinStubs
     public static void RegisterGetMe(WireMockServer server, object? responseBody = null, int statusCode = 200)
     {
         server
-            .Given(Request.Create().WithPath("/v1/users/me").UsingGet())
+            .Given(Request.Create().WithPath("/v2/users/me").UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
                 .WithHeader("Content-Type", "application/json")
@@ -38,7 +59,7 @@ public static class BuildinStubs
     {
         server
             .Given(Request.Create()
-                .WithPath(new RegexMatcher("^/v1/pages/[0-9a-f-]+$"))
+                .WithPath(new RegexMatcher("^/v2/pages/[0-9a-f-]+$"))
                 .UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
@@ -65,7 +86,7 @@ public static class BuildinStubs
     {
         server
             .Given(Request.Create()
-                .WithPath(new RegexMatcher("^/v1/blocks/[0-9a-f-]+/children$"))
+                .WithPath(new RegexMatcher("^/v2/blocks/[0-9a-f-]+/children$"))
                 .UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
@@ -83,7 +104,7 @@ public static class BuildinStubs
     {
         server
             .Given(Request.Create()
-                .WithPath("/v1/search")
+                .WithPath("/v2/search")
                 .UsingPost())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
@@ -101,7 +122,7 @@ public static class BuildinStubs
     {
         server
             .Given(Request.Create()
-                .WithPath($"/v1/databases/{databaseId}")
+                .WithPath($"/v2/databases/{databaseId}")
                 .UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
@@ -113,7 +134,7 @@ public static class BuildinStubs
     {
         server
             .Given(Request.Create()
-                .WithPath($"/v1/databases/{databaseId}/query")
+                .WithPath($"/v2/databases/{databaseId}/query")
                 .UsingPost())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
@@ -124,7 +145,7 @@ public static class BuildinStubs
     public static void RegisterPageProbe(WireMockServer server, string pageId, object responseBody)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
@@ -134,7 +155,7 @@ public static class BuildinStubs
     public static void RegisterPageProbeNotFound(WireMockServer server, string pageId)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(404)
                 .WithHeader("Content-Type", "application/json")
@@ -144,7 +165,7 @@ public static class BuildinStubs
     public static void RegisterDatabaseProbeNotFound(WireMockServer server, string databaseId)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/databases/{databaseId}").UsingGet())
+            .Given(Request.Create().WithPath($"/v2/databases/{databaseId}").UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(404)
                 .WithHeader("Content-Type", "application/json")
@@ -154,7 +175,7 @@ public static class BuildinStubs
     public static void RegisterCreatePage(WireMockServer server, Func<object, object> respond)
     {
         server
-            .Given(Request.Create().WithPath("/v1/pages").UsingPost())
+            .Given(Request.Create().WithPath("/v2/pages").UsingPost())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
@@ -177,7 +198,7 @@ public static class BuildinStubs
     public static void RegisterCreatePage(WireMockServer server, object responseBody)
     {
         server
-            .Given(Request.Create().WithPath("/v1/pages").UsingPost())
+            .Given(Request.Create().WithPath("/v2/pages").UsingPost())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
@@ -188,7 +209,7 @@ public static class BuildinStubs
     {
         server
             .Given(Request.Create()
-                .WithPath($"/v1/blocks/{parentBlockId}/children")
+                .WithPath($"/v2/blocks/{parentBlockId}/children")
                 .UsingPatch())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
@@ -200,7 +221,7 @@ public static class BuildinStubs
     {
         server
             .Given(Request.Create()
-                .WithPath($"/v1/blocks/{parentBlockId}/children")
+                .WithPath($"/v2/blocks/{parentBlockId}/children")
                 .UsingPatch())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
@@ -211,7 +232,7 @@ public static class BuildinStubs
     public static void RegisterUpdateBlock(WireMockServer server, string blockId, object updatedBlock)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/blocks/{blockId}").UsingPatch())
+            .Given(Request.Create().WithPath($"/v2/blocks/{blockId}").UsingPatch())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
@@ -221,7 +242,7 @@ public static class BuildinStubs
     public static void RegisterDeleteBlock(WireMockServer server, string blockId)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/blocks/{blockId}").UsingDelete())
+            .Given(Request.Create().WithPath($"/v2/blocks/{blockId}").UsingDelete())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
@@ -231,7 +252,7 @@ public static class BuildinStubs
     public static void RegisterUpdateBlockFailure(WireMockServer server, string blockId, int statusCode)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/blocks/{blockId}").UsingPatch())
+            .Given(Request.Create().WithPath($"/v2/blocks/{blockId}").UsingPatch())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
                 .WithHeader("Content-Type", "application/json")
@@ -241,7 +262,7 @@ public static class BuildinStubs
     public static void RegisterGetPageArchived(WireMockServer server, string pageId, bool archived)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
@@ -266,7 +287,7 @@ public static class BuildinStubs
     public static void RegisterUpdatePageToggleArchived(WireMockServer server, string pageId)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingPatch())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingPatch())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
@@ -305,7 +326,7 @@ public static class BuildinStubs
     public static void RegisterGetPageNotFound(WireMockServer server, string pageId)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(404)
                 .WithHeader("Content-Type", "application/json")
@@ -315,7 +336,7 @@ public static class BuildinStubs
     public static void RegisterPatchPageNotFound(WireMockServer server, string pageId)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingPatch())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingPatch())
             .RespondWith(Response.Create()
                 .WithStatusCode(404)
                 .WithHeader("Content-Type", "application/json")
@@ -325,7 +346,7 @@ public static class BuildinStubs
     public static void RegisterPatchPageAuthFailure(WireMockServer server, string pageId, int statusCode = 401)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingPatch())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingPatch())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
                 .WithHeader("Content-Type", "application/json")
@@ -335,7 +356,7 @@ public static class BuildinStubs
     public static void RegisterPatchPageServerError(WireMockServer server, string pageId, int statusCode = 500)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingPatch())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingPatch())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
                 .WithHeader("Content-Type", "application/json")
@@ -345,7 +366,7 @@ public static class BuildinStubs
     public static void RegisterGetPageAuthFailure(WireMockServer server, string pageId, int statusCode = 401)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
                 .WithHeader("Content-Type", "application/json")
@@ -355,7 +376,7 @@ public static class BuildinStubs
     public static void RegisterGetPageServerError(WireMockServer server, string pageId, int statusCode = 500)
     {
         server
-            .Given(Request.Create().WithPath($"/v1/pages/{pageId}").UsingGet())
+            .Given(Request.Create().WithPath($"/v2/pages/{pageId}").UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
                 .WithHeader("Content-Type", "application/json")

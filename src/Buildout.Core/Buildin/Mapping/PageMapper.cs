@@ -20,7 +20,7 @@ internal static class PageMapper
             Cover = gen.Cover?.External?.Url,
             Icon = ParentIconMapper.MapIcon(gen.Icon),
             Parent = ParentIconMapper.MapParent(gen.Parent),
-            Archived = gen.Archived ?? false,
+            InTrash = gen.InTrash ?? gen.Archived ?? false,
             Url = gen.Url,
             Title = ExtractTitle(gen.Properties)
         };
@@ -33,7 +33,7 @@ internal static class PageMapper
             Id = gen.Id?.ToString() ?? string.Empty,
             CreatedAt = gen.CreatedAt,
             LastEditedAt = gen.UpdatedAt,
-            Archived = gen.Archived ?? false,
+            InTrash = gen.InTrash ?? gen.Archived ?? false,
             Url = gen.Url
         };
     }

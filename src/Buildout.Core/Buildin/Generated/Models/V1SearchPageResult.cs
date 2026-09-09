@@ -16,6 +16,7 @@ namespace Buildout.Core.Buildin.Generated.Models
         public IDictionary<string, object> AdditionalData { get; set; }
         /// <summary>页面是否已归档</summary>
         public bool? Archived { get; set; }
+        public bool? InTrash { get; set; }
         /// <summary>页面创建时间</summary>
         public DateTimeOffset? CreatedTime { get; set; }
         /// <summary>页面的唯一标识符</summary>
@@ -72,6 +73,7 @@ namespace Buildout.Core.Buildin.Generated.Models
             return new Dictionary<string, Action<IParseNode>>
             {
                 { "archived", n => { Archived = n.GetBoolValue(); } },
+                { "in_trash", n => { InTrash = n.GetBoolValue(); } },
                 { "created_time", n => { CreatedTime = n.GetDateTimeOffsetValue(); } },
                 { "id", n => { Id = n.GetGuidValue(); } },
                 { "last_edited_time", n => { LastEditedTime = n.GetDateTimeOffsetValue(); } },
@@ -88,6 +90,7 @@ namespace Buildout.Core.Buildin.Generated.Models
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
             writer.WriteBoolValue("archived", Archived);
+            writer.WriteBoolValue("in_trash", InTrash);
             writer.WriteDateTimeOffsetValue("created_time", CreatedTime);
             writer.WriteGuidValue("id", Id);
             writer.WriteDateTimeOffsetValue("last_edited_time", LastEditedTime);

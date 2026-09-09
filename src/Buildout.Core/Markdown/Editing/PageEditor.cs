@@ -61,7 +61,8 @@ public sealed class PageEditor : IPageEditor
             var roots = content.Blocks;
 
             var (markdown, unknownBlockIds) = _anchoredRenderer.Render(roots);
-            var revision = RevisionTokenComputer.Compute(markdown);
+            var revision = (await _client.GetVersionedPageAsync(pageId, cancellationToken).ConfigureAwait(false)).ETag
+                ?? RevisionTokenComputer.Compute(markdown);
 
             recorder.SetTag("page_id", pageId);
             recorder.SetTag("block_count", CountBlocks(roots));
@@ -106,7 +107,8 @@ public sealed class PageEditor : IPageEditor
             var roots = content.Blocks;
 
             var (currentMarkdown, _) = _anchoredRenderer.Render(roots);
-            var currentRevision = RevisionTokenComputer.Compute(currentMarkdown);
+            var currentRevision = (await _client.GetVersionedPageAsync(input.PageId, cancellationToken).ConfigureAwait(false)).ETag
+                ?? RevisionTokenComputer.Compute(currentMarkdown);
 
             if (input.Revision != currentRevision)
                 throw new StaleRevisionException(currentRevision);

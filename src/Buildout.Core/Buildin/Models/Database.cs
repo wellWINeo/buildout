@@ -13,6 +13,8 @@ public sealed record Database
     public IReadOnlyList<RichText>? Title { get; init; }
     public Dictionary<string, PropertySchema>? Properties { get; init; }
     public bool? IsInline { get; init; }
-    public bool Archived { get; init; }
+    public bool InTrash { get; init; }
+    [Obsolete("Use InTrash instead.")]
+    public bool Archived => InTrash;
     public string? Url { get; init; }
 }

@@ -29,9 +29,9 @@ description: "Implementation tasks for the Buildin Developer API V2 migration"
 
 **Purpose**: Establish the V2-specific, mock-only fixtures and task-facing documentation without changing a runtime route.
 
-- [ ] T001 [P] Add V2 response builders, three-page cursor fixtures, ETag fixtures, and request-journal helpers in `tests/Buildout.IntegrationTests/Buildin/BuildinStubs.cs`
-- [ ] T002 [P] Add the V2 route assertions and isolated generated-artifact comparison helpers in `tests/Buildout.IntegrationTests/Buildin/BuildinWireMockFixture.cs` and `tests/Buildout.IntegrationTests/Buildin/FileSystemFixture.cs`
-- [ ] T003 Record the reviewed V2 snapshot identity, one-operation overlay boundary, and pinned Kiota invocation in `specs/016-migrate-buildin-api-v2/contracts/regeneration.md`
+- [X] T001 [P] Add V2 response builders, three-page cursor fixtures, ETag fixtures, and request-journal helpers in `tests/Buildout.IntegrationTests/Buildin/BuildinStubs.cs`
+- [X] T002 [P] Add the V2 route assertions and isolated generated-artifact comparison helpers in `tests/Buildout.IntegrationTests/Buildin/BuildinWireMockFixture.cs` and `tests/Buildout.IntegrationTests/Buildin/FileSystemFixture.cs`
+- [X] T003 Record the reviewed V2 snapshot identity, one-operation overlay boundary, and pinned Kiota invocation in `specs/016-migrate-buildin-api-v2/contracts/regeneration.md`
 
 ---
 
@@ -41,13 +41,13 @@ description: "Implementation tasks for the Buildin Developer API V2 migration"
 
 **⚠️ CRITICAL**: Complete this phase before implementing any user story.
 
-- [ ] T004 Add the reviewed block-DELETE-only OpenAPI overlay in `scripts/openapi.buildout-overlay.json`
-- [ ] T005 Add deterministic overlay application, V2 union naming, discriminator normalization, and collision validation in `scripts/normalize-buildin-openapi.cs`
-- [ ] T006 Update V2-only fetch validation and atomic snapshot replacement in `scripts/fetch_openapi.sh`
-- [ ] T007 Update the shell and PowerShell generation entry points for the normalized V2 input and `Generated/V2` output in `scripts/regenerate-buildin-client.sh` and `scripts/regenerate-buildin-client.ps1`
-- [ ] T008 Regenerate the disposable V2-only Kiota client and generation metadata in `openapi.json`, `src/Buildout.Core/Buildin/Generated/V2/`, `src/Buildout.Core/Buildin/Generated/_README.md`, and `src/Buildout.Core/Buildin/Generated/kiota-lock.json`
-- [ ] T009 Replace V1-specific facade types with the V2-ready interface, opaque versioned-page result, native write context, and `InTrash` domain fields in `src/Buildout.Core/Buildin/IBuildinClient.cs`, `src/Buildout.Core/Buildin/Models/VersionedPage.cs`, `src/Buildout.Core/Buildin/Models/NativeWriteContext.cs`, `src/Buildout.Core/Buildin/Models/Page.cs`, `src/Buildout.Core/Buildin/Models/Database.cs`, and `src/Buildout.Core/Buildin/Models/Block.cs`
-- [ ] T010 Wire the V2 client, generic authentication provider, and shared configuration resolution through the core composition root in `src/Buildout.Core/DependencyInjection/ServiceCollectionExtensions.cs`
+- [X] T004 Add the reviewed block-DELETE-only OpenAPI overlay in `scripts/openapi.buildout-overlay.json`
+- [X] T005 Add deterministic overlay application, V2 union naming, discriminator normalization, and collision validation in `scripts/normalize-buildin-openapi.cs`
+- [X] T006 Update V2-only fetch validation and atomic snapshot replacement in `scripts/fetch_openapi.sh`
+- [X] T007 Update the shell and PowerShell generation entry points for the normalized V2 input and `Generated/V2` output in `scripts/regenerate-buildin-client.sh` and `scripts/regenerate-buildin-client.ps1`
+- [X] T008 Regenerate the disposable V2-only Kiota client and generation metadata in `openapi.json`, `src/Buildout.Core/Buildin/Generated/V2/`, `src/Buildout.Core/Buildin/Generated/_README.md`, and `src/Buildout.Core/Buildin/Generated/kiota-lock.json`
+- [X] T009 Replace V1-specific facade types with the V2-ready interface, opaque versioned-page result, native write context, and `InTrash` domain fields in `src/Buildout.Core/Buildin/IBuildinClient.cs`, `src/Buildout.Core/Buildin/Models/VersionedPage.cs`, `src/Buildout.Core/Buildin/Models/NativeWriteContext.cs`, `src/Buildout.Core/Buildin/Models/Page.cs`, `src/Buildout.Core/Buildin/Models/Database.cs`, and `src/Buildout.Core/Buildin/Models/Block.cs`
+- [X] T010 Wire the V2 client, generic authentication provider, and shared configuration resolution through the core composition root in `src/Buildout.Core/DependencyInjection/ServiceCollectionExtensions.cs`
 
 **Checkpoint**: The project compiles against a V2-only generated boundary; presentation projects still call only `IBuildinClient`.
 
@@ -100,11 +100,11 @@ description: "Implementation tasks for the Buildin Developer API V2 migration"
 
 ### Implementation for User Story 2
 
-- [ ] T031 [US2] Introduce primary AccessToken resolution with deprecated BotToken fallback and once-per-process safe warnings in `src/Buildout.Core/Buildin/AccessTokenResolver.cs`, `src/Buildout.Core/Buildin/BuildinClientOptions.cs`, and `src/Buildout.Core/Buildin/BuildinClientOptionsValidator.cs`
-- [ ] T032 [US2] Replace bot-specific authentication with configured-host generic bearer authentication in `src/Buildout.Core/Buildin/Authentication/AccessTokenAuthenticationProvider.cs` and `src/Buildout.Core/DependencyInjection/ServiceCollectionExtensions.cs`
-- [ ] T033 [US2] Preserve V2 status, code, request ID, details, retry metadata, and distinct failure categories without sensitive data in `src/Buildout.Core/Buildin/Errors/BuildinError.cs`, `src/Buildout.Core/Buildin/Errors/BuildinApiException.cs`, and `src/Buildout.Core/Buildin/BuildinClientLog.cs`
+- [X] T031 [US2] Introduce primary AccessToken resolution with deprecated BotToken fallback and once-per-process safe warnings in `src/Buildout.Core/Buildin/AccessTokenResolver.cs`, `src/Buildout.Core/Buildin/BuildinClientOptions.cs`, and `src/Buildout.Core/Buildin/BuildinClientOptionsValidator.cs`
+- [X] T032 [US2] Replace bot-specific authentication with configured-host generic bearer authentication in `src/Buildout.Core/Buildin/Authentication/AccessTokenAuthenticationProvider.cs` and `src/Buildout.Core/DependencyInjection/ServiceCollectionExtensions.cs`
+- [X] T033 [US2] Preserve V2 status, code, request ID, details, retry metadata, and distinct failure categories without sensitive data in `src/Buildout.Core/Buildin/Errors/BuildinError.cs`, `src/Buildout.Core/Buildin/Errors/BuildinApiException.cs`, and `src/Buildout.Core/Buildin/BuildinClientLog.cs`
 - [ ] T034 [US2] Map classified core failures to established CLI exit/error behavior and MCP error envelopes without writing warnings to protocol stdout in `src/Buildout.Cli/Program.cs`, `src/Buildout.Mcp/Program.cs`, `src/Buildout.Mcp/Resources/PageResourceHandler.cs`, and `src/Buildout.Mcp/Tools/UpdatePageToolHandler.cs`
-- [ ] T035 [US2] Document dual-channel AccessToken configuration, BotToken precedence/deprecation, bearer safety, operation scopes, and error guidance in `docs/configuration.md`, `docs/configuration.example.json`, and `specs/016-migrate-buildin-api-v2/contracts/scope-matrix.md`
+- [X] T035 [US2] Document dual-channel AccessToken configuration, BotToken precedence/deprecation, bearer safety, operation scopes, and error guidance in `docs/configuration.md`, `docs/configuration.example.json`, and `specs/016-migrate-buildin-api-v2/contracts/scope-matrix.md`
 
 **Checkpoint**: Both credential types are treated identically as bearer tokens, legacy configuration remains safe and visible, and callers can act on classified failures without credential exposure.
 
@@ -124,10 +124,10 @@ description: "Implementation tasks for the Buildin Developer API V2 migration"
 
 ### Implementation for User Story 3
 
-- [ ] T039 [US3] Enforce snapshot title/version/hash/path validation, V1 rejection, metadata reporting, and no-op unchanged refresh behavior in `scripts/fetch_openapi.sh`
-- [ ] T040 [US3] Enforce overlay hash/absence preconditions, canonical UTF-8/LF effective output, stable union normalization, and failure-on-guess behavior in `scripts/normalize-buildin-openapi.cs`
-- [ ] T041 [US3] Make both regeneration scripts use the identical pinned Kiota arguments, clean V2 output, and stable generated README marker in `scripts/regenerate-buildin-client.sh`, `scripts/regenerate-buildin-client.ps1`, and `src/Buildout.Core/Buildin/Generated/_README.md`
-- [ ] T042 [US3] Publish the V2 support inventory, accepted removals, native header limits, overlay removal procedure, and mock-only refresh instructions in `docs/buildin-api-v2.md` and `specs/016-migrate-buildin-api-v2/contracts/api-routing.md`
+- [X] T039 [US3] Enforce snapshot title/version/hash/path validation, V1 rejection, metadata reporting, and no-op unchanged refresh behavior in `scripts/fetch_openapi.sh`
+- [X] T040 [US3] Enforce overlay hash/absence preconditions, canonical UTF-8/LF effective output, stable union normalization, and failure-on-guess behavior in `scripts/normalize-buildin-openapi.cs`
+- [X] T041 [US3] Make both regeneration scripts use the identical pinned Kiota arguments, clean V2 output, and stable generated README marker in `scripts/regenerate-buildin-client.sh`, `scripts/regenerate-buildin-client.ps1`, and `src/Buildout.Core/Buildin/Generated/_README.md`
+- [X] T042 [US3] Publish the V2 support inventory, accepted removals, native header limits, overlay removal procedure, and mock-only refresh instructions in `docs/buildin-api-v2.md` and `specs/016-migrate-buildin-api-v2/contracts/api-routing.md`
 
 **Checkpoint**: A maintainer can reproduce generation offline, review only V2 artifacts, and is stopped before a stale overlay or V1 source can enter the codebase.
 

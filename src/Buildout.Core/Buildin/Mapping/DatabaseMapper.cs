@@ -22,7 +22,7 @@ internal static class DatabaseMapper
             Title = gen.Title?.Select(RichTextMapper.Map).ToList(),
             Properties = MapProperties(gen.Properties),
             IsInline = gen.IsInline,
-            Archived = gen.Archived ?? false,
+            InTrash = gen.InTrash ?? gen.Archived ?? false,
             Url = gen.Url
         };
     }

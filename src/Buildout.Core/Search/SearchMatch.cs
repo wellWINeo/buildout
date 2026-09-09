@@ -14,5 +14,7 @@ public sealed record SearchMatch
     public required SearchObjectType ObjectType { get; init; }
     public required string DisplayTitle { get; init; }
     public Parent? Parent { get; init; }
-    public bool Archived { get; init; }
+    public bool InTrash { get; init; }
+    [Obsolete("Use InTrash instead.")]
+    public bool Archived => InTrash;
 }

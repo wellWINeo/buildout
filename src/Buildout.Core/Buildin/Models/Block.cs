@@ -7,6 +7,9 @@ public abstract record Block
     public DateTimeOffset? CreatedAt { get; init; }
     public DateTimeOffset? LastEditedAt { get; init; }
     public bool HasChildren { get; init; }
+    public bool InTrash { get; init; }
+    [Obsolete("Use InTrash instead.")]
+    public bool Archived => InTrash;
     public Parent? Parent { get; init; }
 
     private protected Block(string type) => Type = type;

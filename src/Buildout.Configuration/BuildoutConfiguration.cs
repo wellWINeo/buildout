@@ -49,12 +49,13 @@ public static class BuildoutConfiguration
 
         var configRoot = (IConfigurationRoot)builder.Build();
 
+        var accessToken = configRoot["AccessToken"];
         var botToken = configRoot["BotToken"];
-        if (string.IsNullOrWhiteSpace(botToken))
+        if (string.IsNullOrWhiteSpace(accessToken) && string.IsNullOrWhiteSpace(botToken))
         {
             var filePathStr = !string.IsNullOrEmpty(configPath) ? configPath
                 : (!string.IsNullOrEmpty(options.DefaultFilePath) ? options.DefaultFilePath : "no configuration file");
-            var message = $"BotToken is required. Set the {options.Prefix}BotToken environment variable, or provide it in {filePathStr}";
+            var message = $"AccessToken is required. Set the {options.Prefix}AccessToken environment variable, or provide it in {filePathStr}";
             throw new BuildoutConfigurationException(message, !string.IsNullOrEmpty(configPath) ? configPath : null);
         }
 

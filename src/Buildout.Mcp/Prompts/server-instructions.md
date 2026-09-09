@@ -6,12 +6,10 @@ prior knowledge. Buildin page URLs: `https://buildin.ai/<uuid>`.
 
 ## Available Tools
 
-- **get_page_markdown** — Fetch a page as anchored Markdown with a revision token.
+- **get_page_markdown** — Fetch a page as anchored Markdown with an opaque V2 ETag revision.
 - **search** — Search pages by keyword. Returns page_id, object_type, title.
 - **create_page** — Create a new page from Markdown.
 - **update_page** — Apply patch operations to an existing page. Requires revision token.
-- **delete_page** — Archive (soft-delete) a page. Reversible via `restore_page`.
-- **restore_page** — Restore a previously archived page.
 - **database_view** — Retrieve all records from a database as plain text.
 
 ## Best Practices
