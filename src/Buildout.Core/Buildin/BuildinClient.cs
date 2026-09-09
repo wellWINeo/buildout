@@ -21,7 +21,7 @@ public sealed class BuildinClient : IBuildinClient
     public BuildinClient(HttpClient httpClient, AccessTokenResolver tokenResolver, IOptions<BuildinClientOptions> options, ILogger<BuildinClient> logger)
     {
         _httpClient = httpClient;
-        _httpClient.BaseAddress = options.Value.BaseUrl;
+        _httpClient.BaseAddress = GetV2BaseAddress(options.Value.BaseUrl);
         _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenResolver.Resolve());
         _logger = logger;
     }
@@ -220,6 +220,14 @@ public sealed class BuildinClient : IBuildinClient
         return id.ToString();
     }
 
+    private static Uri GetV2BaseAddress(Uri configuredBaseAddress)
+    {
+        var path = configuredBaseAddress.AbsolutePath.TrimEnd('/');
+        return path.EndsWith("/v2", StringComparison.OrdinalIgnoreCase)
+            ? new Uri(configuredBaseAddress.ToString().TrimEnd('/') + "/")
+            : new Uri(configuredBaseAddress, "v2/");
+    }
+
     private static object MapParent(Parent parent) => parent switch
     {
         ParentDatabase x => new { type = "database_id", database_id = x.Id },
@@ -276,9 +284,14 @@ public sealed class BuildinClient : IBuildinClient
     }
 
     private static RichText[] MapRichText(JsonElement value, string type)
-        => value.TryGetProperty(type, out var content) && content.TryGetProperty("rich_text", out var texts)
+    {
+        var content = value.TryGetProperty(type, out var typedContent)
+            ? typedContent
+            : value.TryGetProperty("data", out var dataContent) ? dataContent : default;
+        return content.ValueKind != JsonValueKind.Undefined && content.TryGetProperty("rich_text", out var texts)
             ? texts.EnumerateArray().Select(x => new RichText { Type = String(x, "type") ?? "text", Content = x.TryGetProperty("plain_text", out var plain) ? plain.GetString() ?? string.Empty : string.Empty }).ToArray()
             : [];
+    }
 
     private static string? String(JsonDocument value, string name, string? alternate = null) => String(value.RootElement, name, alternate);
     private static string? String(JsonElement value, string name, string? alternate = null)
