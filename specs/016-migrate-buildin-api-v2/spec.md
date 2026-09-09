@@ -2,7 +2,7 @@
 
 **Feature Branch**: `016-migrate-buildin-api-v2`  
 **Created**: 2026-09-05  
-**Status**: Draft  
+**Status**: Ready for implementation
 **Input**: User description: "Migrate to Buildin API V2. Documentation: https://buildin.ai/developer-api/v2/getting-started/authentication-and-scopes. OpenAPI: https://api.buildin.ai/v2/openapi.json"
 
 ## User Scenarios & Testing *(mandatory)*
