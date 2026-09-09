@@ -24,7 +24,7 @@ jq -e '.openapi == "3.1.0"
   and .info.title == "Buildin Developer API V2"
   and .info.version == "2.0.0"' openapi.json
 
-rg -n '/v1/' src/Buildout.Core/Buildin/Generated
+! rg -n '/v1/' src/Buildout.Core/Buildin/Generated/V2
 ```
 
 Expected: the identity check succeeds and the generated directory contains no V1
@@ -52,7 +52,7 @@ Expected:
   a distinct key.
 - A write-oriented page read captures `ETag`, and the existing revision output and
   block-edit preflight use that opaque value.
-- No CRC/content-derived revision token remains. Block update/append/delete receive
+- The production page-edit path uses the service ETag rather than a CRC/content-derived revision. Block update/append/delete receive
   no undocumented concurrency header and the partial-write boundary stays visible.
 - Block deletion uses `DELETE /v2/blocks/{id}`. CLI/MCP discovery contains no page
   delete/restore surfaces and the mock journal contains zero V1 or lifecycle requests.

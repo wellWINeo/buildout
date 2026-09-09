@@ -9,7 +9,7 @@ prior knowledge. Buildin page URLs: `https://buildin.ai/<uuid>`.
 - **get_page_markdown** — Fetch a page as anchored Markdown with an opaque V2 ETag revision.
 - **search** — Search pages by keyword. Returns page_id, object_type, title.
 - **create_page** — Create a new page from Markdown.
-- **update_page** — Apply patch operations to an existing page. Requires revision token.
+- **update_page** — Apply patch operations to an existing page. Requires an opaque ETag revision.
 - **database_view** — Retrieve all records from a database as plain text.
 
 ## Best Practices

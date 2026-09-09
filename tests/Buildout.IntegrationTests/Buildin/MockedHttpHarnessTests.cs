@@ -56,7 +56,7 @@ public sealed class MockedHttpHarnessTests
 
         Assert.Equal("22222222-2222-2222-2222-222222222222", result.Id);
         Assert.Equal(new DateTimeOffset(2025, 1, 15, 10, 30, 0, TimeSpan.Zero), result.CreatedAt);
-        Assert.False(result.Archived);
+        Assert.False(result.InTrash);
         Assert.Equal("https://api.buildin.ai/pages/22222222", result.Url);
         Assert.Equal("https://example.com/cover.png", result.Cover);
     }

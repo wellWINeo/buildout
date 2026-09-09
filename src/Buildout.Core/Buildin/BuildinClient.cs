@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Net;
 using System.Text.Json;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Models;
@@ -41,10 +42,9 @@ public sealed class BuildinClient : IBuildinClient
 
     public async Task<Page> CreatePageAsync(CreatePageRequest request, CancellationToken cancellationToken = default)
     {
-        using var message = new HttpRequestMessage(HttpMethod.Post, "pages");
-        message.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
-        message.Content = JsonContent.Create(new { parent = MapParent(request.Parent), properties = request.Properties }, options: JsonOptions);
-        using var response = await SendAsync(message, cancellationToken);
+        var key = Guid.NewGuid().ToString("N");
+        var body = JsonSerializer.Serialize(new { parent = MapParent(request.Parent), properties = request.Properties }, JsonOptions);
+        using var response = await SendCreatePageAsync(key, body, cancellationToken);
         return MapPage(await ReadJsonAsync(response, cancellationToken));
     }
 
@@ -61,7 +61,8 @@ public sealed class BuildinClient : IBuildinClient
 
     public async Task<PaginatedList<Block>> GetBlockChildrenAsync(string blockId, BlockChildrenQuery? query = null, CancellationToken cancellationToken = default)
     {
-        var suffix = query is null ? string.Empty : $"?page_size={query.PageSize}&start_cursor={Uri.EscapeDataString(query.StartCursor ?? string.Empty)}";
+        ValidatePageSize(query?.PageSize);
+        var suffix = query is null ? string.Empty : BuildCursorSuffix(query.PageSize, query.StartCursor);
         var json = await SendAsync($"blocks/{ValidateId(blockId)}/children{suffix}", HttpMethod.Get, null, cancellationToken);
         return MapBlocks(json);
     }
@@ -83,6 +84,7 @@ public sealed class BuildinClient : IBuildinClient
 
     public async Task<QueryDatabaseResult> QueryDatabaseAsync(string databaseId, QueryDatabaseRequest request, CancellationToken cancellationToken = default)
     {
+        ValidatePageSize(request.PageSize);
         var json = await SendAsync($"databases/{ValidateId(databaseId)}/query", HttpMethod.Post, request, cancellationToken);
         return new QueryDatabaseResult
         {
@@ -93,12 +95,14 @@ public sealed class BuildinClient : IBuildinClient
 
     public async Task<SearchResults> SearchAsync(SearchRequest request, CancellationToken cancellationToken = default)
     {
+        ValidatePageSize(request.PageSize);
         var json = await SendAsync("search", HttpMethod.Post, request, cancellationToken);
         return new SearchResults { Results = json.RootElement.TryGetProperty("results", out var results) ? results.EnumerateArray().Select(x => x.Clone()).Cast<object>().ToArray() : [] };
     }
 
     public async Task<PageSearchResults> SearchPagesAsync(PageSearchRequest request, CancellationToken cancellationToken = default)
     {
+        ValidatePageSize(request.PageSize);
         var json = await SendAsync("search", HttpMethod.Post, request, cancellationToken);
         var pages = json.RootElement.TryGetProperty("results", out var results)
             ? results.EnumerateArray().Where(x => !x.TryGetProperty("object", out var type) || type.GetString() == "page").Select(x => MapPage(x)).ToArray()
@@ -126,10 +130,82 @@ public sealed class BuildinClient : IBuildinClient
             var response = await _httpClient.SendAsync(request, cancellationToken);
             if (response.IsSuccessStatusCode) return response;
             var raw = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new BuildinApiException(new ApiError((int)response.StatusCode, null, raw, response.Headers.TryGetValues("X-Request-Id", out var ids) ? ids.FirstOrDefault() : null));
+            throw new BuildinApiException(ParseApiError(response.StatusCode, raw, response.Headers));
         }
         catch (BuildinApiException) { throw; }
         catch (HttpRequestException ex) { throw new BuildinApiException(new TransportError(ex), ex); }
+    }
+
+    private async Task<HttpResponseMessage> SendCreatePageAsync(string idempotencyKey, string body, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "pages");
+            request.Headers.Add("Idempotency-Key", idempotencyKey);
+            request.Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+
+            try
+            {
+                return await SendAsync(request, cancellationToken);
+            }
+            catch (BuildinApiException ex) when (attempt == 0 && IsRetryableCreateFailure(ex.Error))
+            {
+                if (ex.Error is ApiError { RetryAfter: { } retryAfter })
+                    await Task.Delay(retryAfter, cancellationToken);
+                else
+                    await Task.Yield();
+            }
+        }
+    }
+
+    private static bool IsRetryableCreateFailure(BuildinError error)
+        => error is TransportError || error is ApiError { StatusCode: (int)HttpStatusCode.TooManyRequests };
+
+    private static ApiError ParseApiError(HttpStatusCode statusCode, string rawBody, System.Net.Http.Headers.HttpResponseHeaders headers)
+    {
+        string? code = null;
+        var message = rawBody;
+        IReadOnlyDictionary<string, string>? details = null;
+        try
+        {
+            using var json = JsonDocument.Parse(rawBody);
+            var root = json.RootElement;
+            code = String(root, "code", "error");
+            message = String(root, "message", "error_description") ?? rawBody;
+            if (root.TryGetProperty("details", out var detailObject) && detailObject.ValueKind == JsonValueKind.Object)
+                details = detailObject.EnumerateObject().ToDictionary(x => x.Name, x => x.Value.ToString(), StringComparer.Ordinal);
+        }
+        catch (JsonException)
+        {
+            // Preserve non-JSON response bodies as opaque diagnostics.
+        }
+
+        TimeSpan? retryAfter = null;
+        if (headers.RetryAfter?.Delta is { } delta)
+            retryAfter = delta;
+        else if (headers.RetryAfter?.Date is { } date)
+            retryAfter = date - DateTimeOffset.UtcNow;
+
+        return new ApiError((int)statusCode, code, message, rawBody)
+        {
+            RequestId = headers.TryGetValues("X-Request-Id", out var ids) ? ids.FirstOrDefault() : null,
+            Details = details,
+            RetryAfter = retryAfter is { } value && value > TimeSpan.Zero ? value : null
+        };
+    }
+
+    private static string BuildCursorSuffix(int? pageSize, string? cursor)
+    {
+        var values = new List<string>();
+        if (pageSize is not null) values.Add($"page_size={pageSize.Value}");
+        if (cursor is not null) values.Add($"start_cursor={Uri.EscapeDataString(cursor)}");
+        return values.Count == 0 ? string.Empty : "?" + string.Join("&", values);
+    }
+
+    private static void ValidatePageSize(int? pageSize)
+    {
+        if (pageSize is not null && (pageSize < 1 || pageSize > 100))
+            throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be between 1 and 100.");
     }
 
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response, CancellationToken cancellationToken)

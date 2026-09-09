@@ -85,7 +85,7 @@ internal static class BlockMapper
                 Language = request.Language,
                 Url = request.Url
             },
-            Archived = request.Archived
+            Archived = request.InTrash
         };
     }
 

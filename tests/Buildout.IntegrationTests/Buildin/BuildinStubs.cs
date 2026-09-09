@@ -28,7 +28,7 @@ public static class BuildinStubs
     }
 
     public static IReadOnlyList<string> RequestJournal(WireMockServer server)
-        => server.LogEntries.Select(entry => entry.RequestMessage.Path ?? string.Empty).ToArray();
+        => server.LogEntries.Select(entry => entry.RequestMessage?.Path ?? string.Empty).ToArray();
 
     public static void RegisterAll(WireMockServer server)
     {

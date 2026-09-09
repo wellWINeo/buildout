@@ -34,7 +34,7 @@ public sealed class SearchServiceLoggingTests
     {
         Id = id,
         ObjectType = "page",
-        Archived = archived,
+        InTrash = archived,
         Parent = parent,
         Title = title
     };

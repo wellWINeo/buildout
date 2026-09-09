@@ -211,8 +211,8 @@ public sealed class UpdatePageAppendCommitTests
             .Select(e => e.RequestMessage?.Path ?? "")
             .ToList();
 
-        Assert.Contains($"/v1/blocks/{ContainerId}/children", appendPaths);
-        Assert.Contains($"/v1/blocks/{NewBlockId}/children", appendPaths);
+        Assert.Contains($"/v2/blocks/{ContainerId}/children", appendPaths);
+        Assert.Contains($"/v2/blocks/{NewBlockId}/children", appendPaths);
     }
 
     [Fact]

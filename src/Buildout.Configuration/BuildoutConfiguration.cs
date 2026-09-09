@@ -55,7 +55,7 @@ public static class BuildoutConfiguration
         {
             var filePathStr = !string.IsNullOrEmpty(configPath) ? configPath
                 : (!string.IsNullOrEmpty(options.DefaultFilePath) ? options.DefaultFilePath : "no configuration file");
-            var message = $"AccessToken is required. Set the {options.Prefix}AccessToken environment variable, or provide it in {filePathStr}";
+            var message = $"AccessToken is required. Set the {options.Prefix}AccessToken environment variable, or provide it in {filePathStr}. BotToken remains available only as a deprecated fallback via {options.Prefix}BotToken.";
             throw new BuildoutConfigurationException(message, !string.IsNullOrEmpty(configPath) ? configPath : null);
         }
 

@@ -61,7 +61,8 @@ public sealed class PageEditor : IPageEditor
             var roots = content.Blocks;
 
             var (markdown, unknownBlockIds) = _anchoredRenderer.Render(roots);
-            var revision = (await _client.GetVersionedPageAsync(pageId, cancellationToken).ConfigureAwait(false)).ETag
+            var versionedPage = await _client.GetVersionedPageAsync(pageId, cancellationToken).ConfigureAwait(false);
+            var revision = versionedPage?.ETag
                 ?? RevisionTokenComputer.Compute(markdown);
 
             recorder.SetTag("page_id", pageId);
@@ -107,7 +108,8 @@ public sealed class PageEditor : IPageEditor
             var roots = content.Blocks;
 
             var (currentMarkdown, _) = _anchoredRenderer.Render(roots);
-            var currentRevision = (await _client.GetVersionedPageAsync(input.PageId, cancellationToken).ConfigureAwait(false)).ETag
+            var versionedPage = await _client.GetVersionedPageAsync(input.PageId, cancellationToken).ConfigureAwait(false);
+            var currentRevision = versionedPage?.ETag
                 ?? RevisionTokenComputer.Compute(currentMarkdown);
 
             if (input.Revision != currentRevision)

@@ -8,7 +8,7 @@ public sealed class BuildinClientOptionsValidator : IValidateOptions<BuildinClie
     public ValidateOptionsResult Validate(string? name, BuildinClientOptions options)
     {
         if (string.IsNullOrWhiteSpace(options.AccessToken) && string.IsNullOrWhiteSpace(options.BotToken))
-            return ValidateOptionsResult.Fail("AccessToken is required (BotToken is accepted only as a deprecated fallback).");
+            return ValidateOptionsResult.Fail("AccessToken is required. Set the Buildout__AccessToken environment variable (BotToken is accepted only as a deprecated fallback via Buildout__BotToken).");
 
         if (options.BaseUrl is null || !options.BaseUrl.IsAbsoluteUri)
             return ValidateOptionsResult.Fail("BaseUrl must be an absolute URI.");
