@@ -356,7 +356,8 @@ public sealed class BuildinClientV2Tests
                 "title": "{{type}}",
                 "synced_from": { "block_id": "22222222-2222-2222-2222-222222222222" }
               }
-            }""");
+            }
+            """);
         var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK, $"{{\"results\":[{string.Join(',', blocks)}]}}"));
         var client = CreateClient(handler);
 
