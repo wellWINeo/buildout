@@ -219,14 +219,14 @@ internal static class BlockMapper
         return new AppendBlockChildrenResult { Results = blocks };
     }
 
-    private static IReadOnlyList<RichText>? RichTextList(JsonElement content, string name)
+    private static RichText[]? RichTextList(JsonElement content, string name)
     {
         if (content.ValueKind != JsonValueKind.Object || !content.TryGetProperty(name, out var values) || values.ValueKind != JsonValueKind.Array)
             return null;
         return values.EnumerateArray().Select(Buildout.Core.Buildin.Mapping.RichTextMapper.Map).ToArray();
     }
 
-    private static IReadOnlyList<IReadOnlyList<RichText>>? Cells(JsonElement content)
+    private static IReadOnlyList<RichText>[]? Cells(JsonElement content)
     {
         if (content.ValueKind != JsonValueKind.Object || !content.TryGetProperty("cells", out var values) || values.ValueKind != JsonValueKind.Array)
             return null;

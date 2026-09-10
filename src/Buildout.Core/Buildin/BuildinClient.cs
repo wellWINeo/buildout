@@ -106,7 +106,14 @@ public sealed class BuildinClient : IBuildinClient
     public async Task<PageSearchResults> SearchPagesAsync(PageSearchRequest request, CancellationToken cancellationToken = default)
     {
         ValidatePageSize(request.PageSize);
-        var json = await SendAsync("search", HttpMethod.Post, V2RequestMapper.Search(request), cancellationToken);
+        var json = await SendAsync("search", HttpMethod.Post, V2RequestMapper.Search(new SearchRequest
+        {
+            Query = request.Query,
+            Filter = request.Filter,
+            Sort = request.Sort,
+            StartCursor = request.StartCursor,
+            PageSize = request.PageSize
+        }), cancellationToken);
         var pages = json.RootElement.TryGetProperty("results", out var results)
             ? results.EnumerateArray().Select(x => String(x, "object") == "database" ? PageMapper.MapDatabaseAsPage(x) : PageMapper.Map(x)).ToArray()
             : [];
