@@ -8,6 +8,44 @@ namespace Buildout.Core.Buildin.Mapping;
 
 internal static class RichTextMapper
 {
+    public static RichText Map(JsonElement element)
+    {
+        var type = String(element, "type") ?? "text";
+        var content = String(element, "plain_text")
+            ?? (element.TryGetProperty("text", out var text) ? String(text, "content") : null)
+            ?? (element.TryGetProperty("equation", out var equation) ? String(equation, "expression") : null)
+            ?? string.Empty;
+
+        var href = String(element, "href");
+        if (href is null && element.TryGetProperty("text", out var textValue) &&
+            textValue.TryGetProperty("link", out var link) && link.ValueKind == JsonValueKind.Object)
+            href = String(link, "url");
+
+        Annotations? annotations = null;
+        if (element.TryGetProperty("annotations", out var annotationValue) && annotationValue.ValueKind == JsonValueKind.Object)
+        {
+            annotations = new Annotations
+            {
+                Bold = Bool(annotationValue, "bold"),
+                Italic = Bool(annotationValue, "italic"),
+                Strikethrough = Bool(annotationValue, "strikethrough"),
+                Underline = Bool(annotationValue, "underline"),
+                Code = Bool(annotationValue, "code"),
+                Color = String(annotationValue, "color") ?? "default",
+                BackgroundColor = String(annotationValue, "background_color") ?? "default"
+            };
+        }
+
+        return new RichText
+        {
+            Type = type,
+            Content = content,
+            Href = href,
+            Annotations = annotations,
+            Mention = type == "mention" ? MapMention(element) : null
+        };
+    }
+
     public static RichText Map(Gen.RichTextItem gen)
     {
         return new RichText
@@ -71,12 +109,51 @@ internal static class RichTextMapper
             return items;
 
         foreach (var item in arr.EnumerateArray())
-        {
-            var node = new JsonParseNode(item);
-            var genItem = node.GetObjectValue(Gen.RichTextItem.CreateFromDiscriminatorValue);
-            if (genItem is not null)
-                items.Add(Map(genItem));
-        }
+            items.Add(Map(item));
         return items;
     }
+
+    public static List<RichText> ParseArray(JsonElement array)
+        => array.ValueKind == JsonValueKind.Array
+            ? array.EnumerateArray().Select(Map).ToList()
+            : [];
+
+    private static Mention? MapMention(JsonElement element)
+    {
+        if (!element.TryGetProperty("mention", out var mention) || mention.ValueKind != JsonValueKind.Object)
+            return null;
+
+        return String(mention, "type") switch
+        {
+            "page" when mention.TryGetProperty("page", out var page) => new PageMention
+            {
+                PageId = String(page, "id") ?? string.Empty
+            },
+            "database" when mention.TryGetProperty("database", out var database) => new DatabaseMention
+            {
+                DatabaseId = String(database, "id") ?? string.Empty
+            },
+            "user" when mention.TryGetProperty("user", out var user) => new UserMention
+            {
+                UserId = String(user, "id") ?? string.Empty,
+                DisplayName = String(user, "name")
+            },
+            "date" when mention.TryGetProperty("date", out var date) => new DateMention
+            {
+                Start = String(date, "start") ?? string.Empty,
+                End = String(date, "end")
+            },
+            _ => null
+        };
+    }
+
+    private static string? String(JsonElement element, string name)
+        => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static bool Bool(JsonElement element, string name)
+        => element.TryGetProperty(name, out var value) &&
+           value.ValueKind is (JsonValueKind.True or JsonValueKind.False) &&
+           value.GetBoolean();
 }

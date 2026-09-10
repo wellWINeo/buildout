@@ -37,7 +37,7 @@ public sealed class WireMockContractTests
 
         Assert.Equal("00000000-0000-0000-0000-000000000000", page.Id);
         Assert.Equal(new DateTimeOffset(2025, 1, 15, 10, 30, 0, TimeSpan.Zero), page.CreatedAt);
-        Assert.False(page.Archived);
+        Assert.False(page.InTrash);
         Assert.Equal("https://api.buildin.ai/pages/00000000", page.Url);
     }
 

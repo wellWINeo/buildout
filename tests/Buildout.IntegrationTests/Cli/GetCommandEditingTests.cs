@@ -160,8 +160,7 @@ public sealed class GetCommandEditingTests
             Assert.Equal(JsonValueKind.Array, unknownIds.ValueKind);
 
             var revisionStr = revision.GetString();
-            Assert.NotNull(revisionStr);
-            Assert.Equal(8, revisionStr.Length);
+            Assert.Equal("\"fixture-etag\"", revisionStr);
         }
         finally
         {
@@ -208,7 +207,7 @@ public sealed class GetCommandEditingTests
             var exitCode = await app.RunAsync(["get", PageId, "--editing"]);
             Assert.Equal(0, exitCode);
 
-            Assert.Matches(@"revision:\s+[0-9a-f]{8}", errWriter.ToString());
+            Assert.Contains("revision: \"fixture-etag\"", errWriter.ToString());
         }
         finally
         {

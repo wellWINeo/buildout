@@ -57,14 +57,14 @@ internal sealed class SearchService : ISearchService
             } while (cursor is not null);
 
             var matches = allPages
-                .Where(p => !p.Archived)
+                .Where(p => !p.InTrash)
                 .Select(p => new SearchMatch
                 {
                     PageId = p.Id,
                     ObjectType = MapObjectType(p.ObjectType),
                     DisplayTitle = _titleRenderer.RenderPlain(p.Title),
                     Parent = p.Parent,
-                    Archived = p.Archived
+                    InTrash = p.InTrash
                 })
                 .ToList();
 

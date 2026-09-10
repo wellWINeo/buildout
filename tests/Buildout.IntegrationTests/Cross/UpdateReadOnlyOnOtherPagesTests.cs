@@ -64,7 +64,7 @@ public sealed class UpdateReadOnlyOnOtherPagesTests
             has_more = false
         });
 
-        // Allowed: update the paragraph block (PATCH /v1/blocks/{id})
+        // Allowed: update the paragraph block (PATCH /v2/blocks/{id})
         BuildinStubs.RegisterUpdateBlock(_fixture.Server, BlockId, new
         {
             id = BlockId,
@@ -113,19 +113,19 @@ public sealed class UpdateReadOnlyOnOtherPagesTests
             bool isForbidden = false;
 
             // Must not POST to create a new page
-            if (method == "POST" && path == "/v1/pages")
+            if (method == "POST" && path == "/v2/pages")
                 isForbidden = true;
 
             // Must not PATCH an existing page
-            if (method == "PATCH" && path.StartsWith("/v1/pages/", StringComparison.Ordinal))
+            if (method == "PATCH" && path.StartsWith("/v2/pages/", StringComparison.Ordinal))
                 isForbidden = true;
 
             // Must not POST to create a database
-            if (method == "POST" && path == "/v1/databases")
+            if (method == "POST" && path == "/v2/databases")
                 isForbidden = true;
 
             // Must not PATCH a database
-            if (method == "PATCH" && path.StartsWith("/v1/databases/", StringComparison.Ordinal))
+            if (method == "PATCH" && path.StartsWith("/v2/databases/", StringComparison.Ordinal))
                 isForbidden = true;
 
             Assert.False(isForbidden, $"Forbidden request during update_page: {method} {path}");

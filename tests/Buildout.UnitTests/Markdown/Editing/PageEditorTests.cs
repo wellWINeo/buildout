@@ -86,9 +86,57 @@ public sealed class PageEditorTests
                 Page = new Page { Id = pageId },
                 Blocks = [new BlockSubtree { Block = block, Children = [] }]
             });
+        _client.GetVersionedPageAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new VersionedPage { Page = new Page { Id = pageId }, ETag = $"etag-{pageId}" });
 
         var snapshot = await _sut.FetchForEditAsync(pageId);
         return (snapshot, pageId);
+    }
+
+    [Fact]
+    public async Task FetchForEditAsync_UsesServiceEtagWithoutLocalFallback()
+    {
+        var (snapshot, _) = await SetupSingleParagraphPageAsync();
+
+        Assert.Equal("etag-page-p1", snapshot.Revision);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DryRun_ReturnsValidatedServiceEtag()
+    {
+        var (snapshot, pageId) = await SetupSingleParagraphPageAsync();
+        var input = new UpdatePageInput
+        {
+            PageId = pageId,
+            Revision = snapshot.Revision,
+            DryRun = true,
+            Operations = [new SearchReplaceOperation { OldStr = "Hello", NewStr = "World" }]
+        };
+
+        var result = await _sut.UpdateAsync(input);
+
+        Assert.Equal("etag-page-p1", result.NewRevision);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Commit_ReturnsFreshPostWriteServiceEtag()
+    {
+        var (_, pageId) = await SetupSingleParagraphPageAsync();
+        _client.GetVersionedPageAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(
+                new VersionedPage { Page = new Page { Id = pageId }, ETag = "etag-before" },
+                new VersionedPage { Page = new Page { Id = pageId }, ETag = "etag-after" });
+        _client.UpdateBlockAsync("p1", Arg.Any<UpdateBlockRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ParagraphBlock { Id = "p1" });
+
+        var result = await _sut.UpdateAsync(new UpdatePageInput
+        {
+            PageId = pageId,
+            Revision = "etag-before",
+            Operations = [new SearchReplaceOperation { OldStr = "Hello", NewStr = "World" }]
+        });
+
+        Assert.Equal("etag-after", result.NewRevision);
     }
 
     [Fact]
@@ -198,7 +246,7 @@ public sealed class PageEditorTests
     {
         var (_, pageId) = await SetupSingleParagraphPageAsync("p1", "Hello");
 
-        var wrongRevision = RevisionTokenComputer.Compute("different content entirely");
+        var wrongRevision = "different-service-etag";
         var input = new UpdatePageInput
         {
             PageId = pageId,
@@ -287,6 +335,8 @@ public sealed class PageEditorTests
         _contentProvider
             .FetchAsync(pageId, Arg.Any<CancellationToken>())
             .Returns(new PageContent { Page = new Page { Id = pageId }, Blocks = subtrees });
+        _client.GetVersionedPageAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new VersionedPage { Page = new Page { Id = pageId }, ETag = $"etag-{pageId}" });
 
         return (await _sut.FetchForEditAsync(pageId), pageId);
     }
@@ -507,6 +557,8 @@ public sealed class PageEditorTests
                 Page = new Page { Id = pageId },
                 Blocks = [new BlockSubtree { Block = block, Children = [] }]
             });
+        _client.GetVersionedPageAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new VersionedPage { Page = new Page { Id = pageId }, ETag = $"etag-{pageId}" });
 
         return (await _sut.FetchForEditAsync(pageId), pageId);
     }

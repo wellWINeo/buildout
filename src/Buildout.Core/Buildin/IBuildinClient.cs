@@ -6,8 +6,8 @@ public interface IBuildinClient
 {
     Task<UserMe> GetMeAsync(CancellationToken cancellationToken = default);
     Task<Page> GetPageAsync(string pageId, CancellationToken cancellationToken = default);
+    Task<VersionedPage> GetVersionedPageAsync(string pageId, CancellationToken cancellationToken = default);
     Task<Page> CreatePageAsync(CreatePageRequest request, CancellationToken cancellationToken = default);
-    Task<Page> UpdatePageAsync(string pageId, UpdatePageRequest request, CancellationToken cancellationToken = default);
     Task<Block> GetBlockAsync(string blockId, CancellationToken cancellationToken = default);
     Task<Block> UpdateBlockAsync(string blockId, UpdateBlockRequest request, CancellationToken cancellationToken = default);
     Task DeleteBlockAsync(string blockId, CancellationToken cancellationToken = default);

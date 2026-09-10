@@ -74,6 +74,8 @@ public sealed class PageEditorLoggingTests : IDisposable
         _contentProvider
             .FetchAsync(pageId, Arg.Any<CancellationToken>())
             .Returns(new PageContent { Page = new Page { Id = pageId }, Blocks = subtrees });
+        _client.GetVersionedPageAsync(pageId, Arg.Any<CancellationToken>())
+            .Returns(new VersionedPage { Page = new Page { Id = pageId }, ETag = $"etag-{pageId}" });
     }
 
     [Fact]

@@ -5,7 +5,7 @@ description: CLI for buildin.ai workspace. Use when creating, reading, updating,
 
 # buildout-cli
 
-CLI for buildin.ai — a Notion-like workspace. Manages pages (read, create, update, delete, restore), searches content, and renders database views.
+CLI for buildin.ai — a Notion-like workspace. Manages pages (read, create, update), searches content, renders trees, and renders database views through Buildin API V2.
 
 ## Quick Reference
 
@@ -14,8 +14,6 @@ CLI for buildin.ai — a Notion-like workspace. Manages pages (read, create, upd
 | `get <page_id>` | Read a page as Markdown |
 | `create <markdown_source>` | Create a page from Markdown |
 | `update` | Patch-edit page blocks |
-| `delete <page_id>` | Archive a page (soft delete) |
-| `restore <page_id>` | Un-archive a page |
 | `search <query>` | Search pages by keyword |
 | `db view <database_id>` | Render a database view |
 | `tree <page_id>` | Map a page or database hierarchy as ASCII tree or JSON |
@@ -29,7 +27,6 @@ CLI for buildin.ai — a Notion-like workspace. Manages pages (read, create, upd
 1. **Find** a page: `buildout-cli search "keyword"`
 2. **Read** it: `buildout-cli get <page_id>`
 3. **Edit** it: `buildout-cli get <page_id> --editing` → `buildout-cli update --page <id> --revision <token> --ops ops.json`
-4. **Delete/Restore**: `buildout-cli delete <page_id>` / `buildout-cli restore <page_id>`
 
 ## Reference Files
 
@@ -38,8 +35,6 @@ CLI for buildin.ai — a Notion-like workspace. Manages pages (read, create, upd
 | [create.md](create.md) | Create new pages from Markdown |
 | [read.md](read.md) | Read pages, get editing snapshots |
 | [update.md](update.md) | Non-destructive patch editing (most complex) |
-| [delete.md](delete.md) | Archive pages |
-| [restore.md](restore.md) | Un-archive pages |
 | [search.md](search.md) | Search pages by keyword |
 | [database-views.md](database-views.md) | Render database views in terminal |
 | [tree.md](tree.md) | Map a page or database hierarchy as ASCII tree or JSON |
