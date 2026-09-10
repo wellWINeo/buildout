@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using WireMock.Matchers;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -55,7 +57,7 @@ public static class BuildinStubs
                 }));
     }
 
-    public static void RegisterGetPage(WireMockServer server, object? responseBody = null, int statusCode = 200)
+    public static void RegisterGetPage(WireMockServer server, object? responseBody = null, int statusCode = 200, string etag = "\"fixture-etag\"")
     {
         server
             .Given(Request.Create()
@@ -64,6 +66,7 @@ public static class BuildinStubs
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
                 .WithHeader("Content-Type", "application/json")
+                .WithHeader("ETag", etag)
                 .WithBodyAsJson(responseBody ?? new
                 {
                     id = "00000000-0000-0000-0000-000000000000",
@@ -91,13 +94,13 @@ public static class BuildinStubs
             .RespondWith(Response.Create()
                 .WithStatusCode(statusCode)
                 .WithHeader("Content-Type", "application/json")
-                .WithBodyAsJson(responseBody ?? new
+                .WithBodyAsJson(NormalizeBlockResponse(responseBody ?? new
                 {
                     @object = "list",
                     results = Array.Empty<object>(),
                     has_more = false,
                     next_cursor = (string?)null
-                }));
+                })));
     }
 
     public static void RegisterSearchPages(WireMockServer server, object? responseBody = null, int statusCode = 200)
@@ -214,7 +217,7 @@ public static class BuildinStubs
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
-                .WithBodyAsJson(responseBody));
+                .WithBodyAsJson(NormalizeBlockResponse(responseBody)));
     }
 
     public static void RegisterAppendBlockChildrenFailure(WireMockServer server, string parentBlockId, int statusCode)
@@ -236,7 +239,7 @@ public static class BuildinStubs
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
-                .WithBodyAsJson(updatedBlock));
+                .WithBodyAsJson(NormalizeBlockResponse(updatedBlock)));
     }
 
     public static void RegisterDeleteBlock(WireMockServer server, string blockId)
@@ -381,5 +384,31 @@ public static class BuildinStubs
                 .WithStatusCode(statusCode)
                 .WithHeader("Content-Type", "application/json")
                 .WithBodyAsJson(new { message = "Internal server error" }));
+    }
+
+    private static JsonElement NormalizeBlockResponse(object responseBody)
+    {
+        var node = JsonSerializer.SerializeToNode(responseBody)!;
+        if (node is JsonObject response && response["results"] is JsonArray results)
+        {
+            foreach (var result in results)
+                AddTypedBlockPayload(result);
+        }
+        else
+        {
+            AddTypedBlockPayload(node);
+        }
+
+        return JsonSerializer.Deserialize<JsonElement>(node.ToJsonString());
+    }
+
+    private static void AddTypedBlockPayload(JsonNode? node)
+    {
+        if (node is not JsonObject block || block["type"] is not JsonValue typeValue || block["data"] is not JsonObject data)
+            return;
+
+        var type = typeValue.GetValue<string>();
+        if (!block.ContainsKey(type))
+            block[type] = JsonNode.Parse(data.ToJsonString());
     }
 }

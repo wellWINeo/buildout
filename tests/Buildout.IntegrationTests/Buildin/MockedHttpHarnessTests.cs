@@ -62,6 +62,18 @@ public sealed class MockedHttpHarnessTests
     }
 
     [Fact]
+    public async Task GetVersionedPageAsync_PropagatesServiceEtag()
+    {
+        const string pageId = "33333333-3333-3333-3333-333333333333";
+        BuildinStubs.RegisterV2PageWithEtag(_fixture.Server, pageId, "\"fixture-etag\"");
+
+        var client = _fixture.CreateClient();
+        var result = await client.GetVersionedPageAsync(pageId);
+
+        Assert.Equal("\"fixture-etag\"", result.ETag);
+    }
+
+    [Fact]
     public async Task SearchPagesAsync_DeserializesJsonResponse()
     {
         BuildinStubs.RegisterSearchPages(_fixture.Server, new

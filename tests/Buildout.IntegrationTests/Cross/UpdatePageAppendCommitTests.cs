@@ -18,7 +18,7 @@ using Xunit;
 namespace Buildout.IntegrationTests.Cross;
 
 // Exercises a real (non-dry-run) update_page commit through the actual
-// PageEditor -> BotBuildinClient -> WireMock stack for an append-style patch,
+// PageEditor -> BuildinClient -> WireMock stack for an append-style patch,
 // i.e. the AppendBlockChildrenAsync write path.
 //
 // NOTE: these tests append into an existing top-level container block
