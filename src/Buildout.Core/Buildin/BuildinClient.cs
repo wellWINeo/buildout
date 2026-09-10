@@ -255,7 +255,14 @@ public sealed class BuildinClient : IBuildinClient
     private static Database MapDatabase(JsonDocument json) => new()
     {
         Id = String(json, "id") ?? string.Empty, CreatedAt = Date(json, "created_at", "created_time"), LastEditedAt = Date(json, "last_edited_at", "last_edited_time"),
-        InTrash = Bool(json, "in_trash") ?? Bool(json, "archived") ?? false, Url = String(json, "url")
+        InTrash = Bool(json, "in_trash") ?? Bool(json, "archived") ?? false,
+        Url = String(json, "url"),
+        Title = json.RootElement.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.Array
+            ? RichTextMapper.ParseRichTextArray(json.RootElement, "title")
+            : null,
+        Properties = json.RootElement.TryGetProperty("properties", out var properties)
+            ? DatabaseMapper.MapProperties(properties)
+            : null
     };
 
     private static PaginatedList<Block> MapBlocks(JsonDocument json)

@@ -98,7 +98,13 @@ internal static class DatabaseMapper
     {
         if (gen is null) return null;
 
-        var element = MappingHelpers.SerializeToElement(gen);
+        return MapProperties(MappingHelpers.SerializeToElement(gen));
+    }
+
+    public static Dictionary<string, PropertySchema>? MapProperties(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object) return null;
+
         var dict = new Dictionary<string, PropertySchema>();
         foreach (var prop in element.EnumerateObject())
         {

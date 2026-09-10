@@ -104,6 +104,34 @@ public sealed class BuildinClientV2Tests
         Assert.Equal("/v2/databases/11111111-1111-1111-1111-111111111111/query", handler.Requests.Single().RequestUri!.AbsolutePath);
     }
 
+    [Fact]
+    public async Task GetDatabase_MapsTitleAndPropertySchemasFromV2Response()
+    {
+        var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK, """
+            {
+              "id": "11111111-1111-1111-1111-111111111111",
+              "title": [{ "type": "text", "plain_text": "Employee Directory" }],
+              "properties": {
+                "Name": { "type": "title", "title": {} },
+                "Department": {
+                  "type": "select",
+                  "select": { "options": [{ "name": "Engineering" }] }
+                }
+              }
+            }
+            """));
+        var client = CreateClient(handler);
+
+        var database = await client.GetDatabaseAsync("11111111-1111-1111-1111-111111111111");
+
+        Assert.Equal("Employee Directory", Assert.Single(database.Title!).Content);
+        Assert.IsType<TitlePropertySchema>(database.Properties!["Name"]);
+        var department = Assert.IsType<SelectPropertySchema>(database.Properties["Department"]);
+        Assert.Equal("Engineering", Assert.Single(department.Options!).Name);
+        Assert.Equal(HttpMethod.Get, handler.Requests.Single().Method);
+        Assert.Equal("/v2/databases/11111111-1111-1111-1111-111111111111", handler.Requests.Single().RequestUri!.AbsolutePath);
+    }
+
     private static BuildinClient CreateClient(RecordingHandler handler)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = BaseUri };
