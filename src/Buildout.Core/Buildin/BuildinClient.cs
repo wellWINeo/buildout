@@ -1,6 +1,6 @@
-using System.Net.Http.Json;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Buildout.Core.Buildin.Errors;
 using Buildout.Core.Buildin.Mapping;
 using Buildout.Core.Buildin.Models;
@@ -31,29 +31,29 @@ public sealed class BuildinClient : IBuildinClient
         => MapUser(await SendAsync("users/me", HttpMethod.Get, null, cancellationToken));
 
     public async Task<Page> GetPageAsync(string pageId, CancellationToken cancellationToken = default)
-        => MapPage(await SendAsync($"pages/{ValidateId(pageId)}", HttpMethod.Get, null, cancellationToken));
+        => PageMapper.Map((await SendAsync($"pages/{ValidateId(pageId)}", HttpMethod.Get, null, cancellationToken)).RootElement);
 
     public async Task<VersionedPage> GetVersionedPageAsync(string pageId, CancellationToken cancellationToken = default)
     {
         using var response = await SendAsync(new HttpRequestMessage(HttpMethod.Get, $"pages/{ValidateId(pageId)}"), cancellationToken);
         var etag = response.Headers.ETag?.Tag;
-        var page = MapPage(await ReadJsonAsync(response, cancellationToken));
+        var page = PageMapper.Map((await ReadJsonAsync(response, cancellationToken)).RootElement);
         return new VersionedPage { Page = page, ETag = etag };
     }
 
     public async Task<Page> CreatePageAsync(CreatePageRequest request, CancellationToken cancellationToken = default)
     {
         var key = Guid.NewGuid().ToString("N");
-        var body = JsonSerializer.Serialize(new { parent = MapParent(request.Parent), properties = request.Properties }, JsonOptions);
+        var body = V2RequestMapper.CreatePage(request).ToJsonString(JsonOptions);
         using var response = await SendCreatePageAsync(key, body, cancellationToken);
-        return MapPage(await ReadJsonAsync(response, cancellationToken));
+        return PageMapper.Map((await ReadJsonAsync(response, cancellationToken)).RootElement);
     }
 
     public async Task<Block> GetBlockAsync(string blockId, CancellationToken cancellationToken = default)
-        => MapBlock((await SendAsync($"blocks/{ValidateId(blockId)}", HttpMethod.Get, null, cancellationToken)).RootElement);
+        => BlockMapper.Map((await SendAsync($"blocks/{ValidateId(blockId)}", HttpMethod.Get, null, cancellationToken)).RootElement);
 
     public async Task<Block> UpdateBlockAsync(string blockId, UpdateBlockRequest request, CancellationToken cancellationToken = default)
-        => MapBlock((await SendAsync($"blocks/{ValidateId(blockId)}", HttpMethod.Patch, request, cancellationToken)).RootElement);
+        => BlockMapper.Map((await SendAsync($"blocks/{ValidateId(blockId)}", HttpMethod.Patch, V2RequestMapper.UpdateBlock(request), cancellationToken)).RootElement);
 
     public async Task DeleteBlockAsync(string blockId, CancellationToken cancellationToken = default)
     {
@@ -70,39 +70,45 @@ public sealed class BuildinClient : IBuildinClient
 
     public async Task<AppendBlockChildrenResult> AppendBlockChildrenAsync(string blockId, AppendBlockChildrenRequest request, CancellationToken cancellationToken = default)
     {
-        var json = await SendAsync($"blocks/{ValidateId(blockId)}/children", HttpMethod.Patch, request, cancellationToken);
+        var json = await SendAsync($"blocks/{ValidateId(blockId)}/children", HttpMethod.Patch, V2RequestMapper.AppendBlockChildren(request), cancellationToken);
         return new AppendBlockChildrenResult { Results = MapBlocks(json).Results };
     }
 
     public async Task<Database> CreateDatabaseAsync(CreateDatabaseRequest request, CancellationToken cancellationToken = default)
-        => MapDatabase(await SendAsync("databases", HttpMethod.Post, request, cancellationToken));
+        => DatabaseMapper.Map((await SendAsync("databases", HttpMethod.Post, V2RequestMapper.CreateDatabase(request), cancellationToken)).RootElement);
 
     public async Task<Database> GetDatabaseAsync(string databaseId, CancellationToken cancellationToken = default)
-        => MapDatabase(await SendAsync($"databases/{ValidateId(databaseId)}", HttpMethod.Get, null, cancellationToken));
+        => DatabaseMapper.Map((await SendAsync($"databases/{ValidateId(databaseId)}", HttpMethod.Get, null, cancellationToken)).RootElement);
 
     public async Task<Database> UpdateDatabaseAsync(string databaseId, UpdateDatabaseRequest request, CancellationToken cancellationToken = default)
-        => MapDatabase(await SendAsync($"databases/{ValidateId(databaseId)}", HttpMethod.Patch, request, cancellationToken));
+        => DatabaseMapper.Map((await SendAsync($"databases/{ValidateId(databaseId)}", HttpMethod.Patch, V2RequestMapper.UpdateDatabase(request), cancellationToken)).RootElement);
 
     public async Task<QueryDatabaseResult> QueryDatabaseAsync(string databaseId, QueryDatabaseRequest request, CancellationToken cancellationToken = default)
     {
         ValidatePageSize(request.PageSize);
-        var json = await SendAsync($"databases/{ValidateId(databaseId)}/query", HttpMethod.Post, request, cancellationToken);
+        var json = await SendAsync($"databases/{ValidateId(databaseId)}/query", HttpMethod.Post, V2RequestMapper.QueryDatabase(request), cancellationToken);
         return DatabaseMapper.MapQueryResponse(json.RootElement);
     }
 
     public async Task<SearchResults> SearchAsync(SearchRequest request, CancellationToken cancellationToken = default)
     {
         ValidatePageSize(request.PageSize);
-        var json = await SendAsync("search", HttpMethod.Post, request, cancellationToken);
-        return new SearchResults { Results = json.RootElement.TryGetProperty("results", out var results) ? results.EnumerateArray().Select(x => x.Clone()).Cast<object>().ToArray() : [] };
+        var json = await SendAsync("search", HttpMethod.Post, V2RequestMapper.Search(request), cancellationToken);
+        var results = MapSearchResults(json.RootElement);
+        return new SearchResults
+        {
+            Results = results,
+            HasMore = Bool(json, "has_more") ?? false,
+            NextCursor = String(json, "next_cursor")
+        };
     }
 
     public async Task<PageSearchResults> SearchPagesAsync(PageSearchRequest request, CancellationToken cancellationToken = default)
     {
         ValidatePageSize(request.PageSize);
-        var json = await SendAsync("search", HttpMethod.Post, request, cancellationToken);
+        var json = await SendAsync("search", HttpMethod.Post, V2RequestMapper.Search(request), cancellationToken);
         var pages = json.RootElement.TryGetProperty("results", out var results)
-            ? results.EnumerateArray().Where(x => !x.TryGetProperty("object", out var type) || type.GetString() == "page").Select(x => MapPage(x)).ToArray()
+            ? results.EnumerateArray().Select(x => String(x, "object") == "database" ? PageMapper.MapDatabaseAsPage(x) : PageMapper.Map(x)).ToArray()
             : [];
         return new PageSearchResults
         {
@@ -112,10 +118,10 @@ public sealed class BuildinClient : IBuildinClient
         };
     }
 
-    private async Task<JsonDocument> SendAsync(string path, HttpMethod method, object? body, CancellationToken cancellationToken)
+    private async Task<JsonDocument> SendAsync(string path, HttpMethod method, JsonNode? body, CancellationToken cancellationToken)
     {
         using var message = new HttpRequestMessage(method, path);
-        if (body is not null) message.Content = JsonContent.Create(body, options: JsonOptions);
+        if (body is not null) message.Content = new StringContent(body.ToJsonString(JsonOptions), System.Text.Encoding.UTF8, "application/json");
         using var response = await SendAsync(message, cancellationToken);
         return await ReadJsonAsync(response, cancellationToken);
     }
@@ -162,15 +168,22 @@ public sealed class BuildinClient : IBuildinClient
     {
         string? code = null;
         var message = rawBody;
-        IReadOnlyDictionary<string, string>? details = null;
+        string? requestId = null;
+        IReadOnlyList<ApiErrorDetail>? details = null;
         try
         {
             using var json = JsonDocument.Parse(rawBody);
             var root = json.RootElement;
             code = String(root, "code", "error");
             message = String(root, "message", "error_description") ?? rawBody;
-            if (root.TryGetProperty("details", out var detailObject) && detailObject.ValueKind == JsonValueKind.Object)
-                details = detailObject.EnumerateObject().ToDictionary(x => x.Name, x => x.Value.ToString(), StringComparer.Ordinal);
+            requestId = String(root, "request_id");
+            if (root.TryGetProperty("details", out var detailArray))
+            {
+                if (detailArray.ValueKind == JsonValueKind.Array)
+                    details = detailArray.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object).Select(MapErrorDetail).ToArray();
+                else if (detailArray.ValueKind == JsonValueKind.Object)
+                    details = [MapErrorDetail(detailArray)];
+            }
         }
         catch (JsonException)
         {
@@ -185,11 +198,32 @@ public sealed class BuildinClient : IBuildinClient
 
         return new ApiError((int)statusCode, code, message, rawBody)
         {
-            RequestId = headers.TryGetValues("X-Request-Id", out var ids) ? ids.FirstOrDefault() : null,
+            RequestId = string.IsNullOrWhiteSpace(requestId)
+                ? (headers.TryGetValues("X-Request-Id", out var ids) ? ids.FirstOrDefault() : null)
+                : requestId,
             Details = details,
             RetryAfter = retryAfter is { } value && value > TimeSpan.Zero ? value : null
         };
     }
+
+    private static ApiErrorDetail MapErrorDetail(JsonElement element)
+    {
+        var additional = element.EnumerateObject()
+            .Where(property => property.Name is not ("path" or "reason" or "limit" or "actual") && !SensitiveField(property.Name))
+            .ToDictionary(property => property.Name, property => property.Value.ToString(), StringComparer.Ordinal);
+        return new ApiErrorDetail(
+            String(element, "path"),
+            String(element, "reason"),
+            Int(element, "limit"),
+            Int(element, "actual"),
+            additional.Count == 0 ? null : additional);
+    }
+
+    private static bool SensitiveField(string name)
+        => name.Contains("token", StringComparison.OrdinalIgnoreCase) ||
+           name.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
+           name.Contains("password", StringComparison.OrdinalIgnoreCase) ||
+           name.Contains("authorization", StringComparison.OrdinalIgnoreCase);
 
     private static string BuildCursorSuffix(int? pageSize, string? cursor)
     {
@@ -225,83 +259,36 @@ public sealed class BuildinClient : IBuildinClient
             : new Uri(configuredBaseAddress, "v2/");
     }
 
-    private static object MapParent(Parent parent) => parent switch
-    {
-        ParentDatabase x => new { type = "database_id", database_id = x.Id },
-        ParentPage x => new { type = "page_id", page_id = x.Id },
-        ParentBlock x => new { type = "block_id", block_id = x.Id },
-        ParentWorkspace => new { type = "workspace" },
-        _ => throw new ArgumentException("Unsupported parent type.", nameof(parent))
-    };
-
     private static UserMe MapUser(JsonDocument json) => new()
     {
         Id = String(json, "id") ?? string.Empty, Name = String(json, "name"), AvatarUrl = String(json, "avatar_url"),
         Type = String(json, "type") ?? "user", Email = json.RootElement.TryGetProperty("person", out var person) && person.TryGetProperty("email", out var email) ? email.GetString() : null
     };
 
-    private static Page MapPage(JsonDocument json) => new()
-    {
-        Id = String(json, "id") ?? string.Empty, CreatedAt = Date(json, "created_at", "created_time"), LastEditedAt = Date(json, "last_edited_at", "last_edited_time"),
-        InTrash = Bool(json, "in_trash") ?? Bool(json, "archived") ?? false, Url = String(json, "url"), ObjectType = String(json, "object")
-    };
-
-    private static Page MapPage(JsonElement json) => new()
-    {
-        Id = String(json, "id") ?? string.Empty, CreatedAt = Date(json, "created_at", "created_time"), LastEditedAt = Date(json, "last_edited_at", "last_edited_time"),
-        InTrash = Bool(json, "in_trash") ?? Bool(json, "archived") ?? false, Url = String(json, "url"), ObjectType = String(json, "object")
-    };
-
-    private static Database MapDatabase(JsonDocument json) => new()
-    {
-        Id = String(json, "id") ?? string.Empty, CreatedAt = Date(json, "created_at", "created_time"), LastEditedAt = Date(json, "last_edited_at", "last_edited_time"),
-        InTrash = Bool(json, "in_trash") ?? Bool(json, "archived") ?? false,
-        Url = String(json, "url"),
-        Title = json.RootElement.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.Array
-            ? RichTextMapper.ParseRichTextArray(json.RootElement, "title")
-            : null,
-        Properties = json.RootElement.TryGetProperty("properties", out var properties)
-            ? DatabaseMapper.MapProperties(properties)
-            : null
-    };
-
     private static PaginatedList<Block> MapBlocks(JsonDocument json)
     {
-        var values = json.RootElement.TryGetProperty("results", out var results) ? results.EnumerateArray().Select(MapBlock).ToArray() : [];
+        var values = json.RootElement.TryGetProperty("results", out var results) ? results.EnumerateArray().Select(BlockMapper.Map).ToArray() : [];
         return new PaginatedList<Block> { Results = values, HasMore = Bool(json, "has_more") ?? false, NextCursor = String(json, "next_cursor") };
     }
 
-    private static Block MapBlock(JsonElement value)
+    private static object[] MapSearchResults(JsonElement root)
     {
-        var type = String(value, "type") ?? "unsupported";
-        Block block = type switch
+        if (!root.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array)
+            return [];
+        return results.EnumerateArray().Select(result => String(result, "object") switch
         {
-            "paragraph" => new ParagraphBlock { RichTextContent = MapRichText(value, "paragraph") },
-            "heading_1" => new Heading1Block { RichTextContent = MapRichText(value, "heading_1") },
-            "heading_2" => new Heading2Block { RichTextContent = MapRichText(value, "heading_2") },
-            "heading_3" => new Heading3Block { RichTextContent = MapRichText(value, "heading_3") },
-            "to_do" => new ToDoBlock { RichTextContent = MapRichText(value, "to_do"), Checked = value.TryGetProperty(type, out var todo) && todo.TryGetProperty("checked", out var checkedValue) ? checkedValue.GetBoolean() : null },
-            "divider" => new DividerBlock(),
-            _ => new UnsupportedBlock()
-        };
-        return block with { Id = String(value, "id") ?? string.Empty, HasChildren = Bool(value, "has_children") ?? false, InTrash = Bool(value, "in_trash") ?? false };
-    }
-
-    private static RichText[] MapRichText(JsonElement value, string type)
-    {
-        var content = value.TryGetProperty(type, out var typedContent)
-            ? typedContent
-            : value.TryGetProperty("data", out var dataContent) ? dataContent : default;
-        return content.ValueKind != JsonValueKind.Undefined && content.TryGetProperty("rich_text", out var texts)
-            ? texts.EnumerateArray().Select(x => new RichText { Type = String(x, "type") ?? "text", Content = x.TryGetProperty("plain_text", out var plain) ? plain.GetString() ?? string.Empty : string.Empty }).ToArray()
-            : [];
+            "database" => (object)DatabaseMapper.Map(result),
+            "page" => PageMapper.Map(result),
+            _ => result.Clone()
+        }).ToArray();
     }
 
     private static string? String(JsonDocument value, string name, string? alternate = null) => String(value.RootElement, name, alternate);
     private static string? String(JsonElement value, string name, string? alternate = null)
         => value.TryGetProperty(name, out var result) && result.ValueKind == JsonValueKind.String ? result.GetString() : alternate is not null ? String(value, alternate) : null;
     private static bool? Bool(JsonDocument value, string name) => Bool(value.RootElement, name);
-    private static bool? Bool(JsonElement value, string name) => value.TryGetProperty(name, out var result) && result.ValueKind is JsonValueKind.True or JsonValueKind.False ? result.GetBoolean() : null;
+    private static bool? Bool(JsonElement value, string name) => value.TryGetProperty(name, out var result) && result.ValueKind is (JsonValueKind.True or JsonValueKind.False) ? result.GetBoolean() : null;
+    private static int? Int(JsonElement value, string name) => value.TryGetProperty(name, out var result) && result.ValueKind == JsonValueKind.Number && result.TryGetInt32(out var number) ? number : null;
     private static DateTimeOffset? Date(JsonDocument value, string name, string alternate) => Date(value.RootElement, name, alternate);
     private static DateTimeOffset? Date(JsonElement value, string name, string alternate) => DateTimeOffset.TryParse(String(value, name, alternate), out var result) ? result : null;
 }

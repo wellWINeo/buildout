@@ -62,8 +62,7 @@ public sealed class PageEditor : IPageEditor
 
             var (markdown, unknownBlockIds) = _anchoredRenderer.Render(roots);
             var versionedPage = await _client.GetVersionedPageAsync(pageId, cancellationToken).ConfigureAwait(false);
-            var revision = versionedPage?.ETag
-                ?? RevisionTokenComputer.Compute(markdown);
+            var revision = RequireServiceEtag(versionedPage, pageId);
 
             recorder.SetTag("page_id", pageId);
             recorder.SetTag("block_count", CountBlocks(roots));
@@ -109,8 +108,7 @@ public sealed class PageEditor : IPageEditor
 
             var (currentMarkdown, _) = _anchoredRenderer.Render(roots);
             var versionedPage = await _client.GetVersionedPageAsync(input.PageId, cancellationToken).ConfigureAwait(false);
-            var currentRevision = versionedPage?.ETag
-                ?? RevisionTokenComputer.Compute(currentMarkdown);
+            var currentRevision = RequireServiceEtag(versionedPage, input.PageId);
 
             if (input.Revision != currentRevision)
                 throw new StaleRevisionException(currentRevision);
@@ -146,8 +144,6 @@ public sealed class PageEditor : IPageEditor
 
             CheckLargeDelete(originalTree, patchedTree, input);
 
-            var newRevision = RevisionTokenComputer.Compute(patchedMarkdown);
-
             if (input.DryRun)
             {
                 var dryWriteOps = Reconciler.Reconcile(originalTree, patchedTree);
@@ -171,7 +167,7 @@ public sealed class PageEditor : IPageEditor
                     NewBlocks = dryNew,
                     DeletedBlocks = dryDeleted,
                     AmbiguousMatches = 0,
-                    NewRevision = newRevision,
+                    NewRevision = currentRevision,
                     PostEditMarkdown = patchedMarkdown
                 };
             }
@@ -181,6 +177,8 @@ public sealed class PageEditor : IPageEditor
             var summary = await ExecuteWriteOpsAsync(writeOps, input.PageId, cancellationToken).ConfigureAwait(false);
 
             _cache.Invalidate(input.PageId);
+            var postWritePage = await _client.GetVersionedPageAsync(input.PageId, cancellationToken).ConfigureAwait(false);
+            var newRevision = RequireServiceEtag(postWritePage, input.PageId);
 
             var preservedBlocks = CollectBlockAnchorIds(originalTree).Count - summary.UpdatedBlocks - summary.DeletedBlocks;
 
@@ -214,6 +212,13 @@ public sealed class PageEditor : IPageEditor
         ArgumentException.ThrowIfNullOrEmpty(input.Revision);
         if (input.Operations is null or { Count: 0 })
             throw new ArgumentException("Operations must not be empty.", nameof(input));
+    }
+
+    private static string RequireServiceEtag(VersionedPage? page, string pageId)
+    {
+        if (page?.ETag is not { Length: > 0 } etag)
+            throw new InvalidOperationException($"Buildin did not return a service ETag for page '{pageId}'.");
+        return etag;
     }
 
     private void CheckLargeDelete(

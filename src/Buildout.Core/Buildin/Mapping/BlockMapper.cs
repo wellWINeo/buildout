@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Buildout.Core.Buildin.Models;
 using Gen = Buildout.Core.Buildin.Generated.Models;
 using Microsoft.Kiota.Abstractions.Serialization;
@@ -7,6 +8,54 @@ namespace Buildout.Core.Buildin.Mapping;
 
 internal static class BlockMapper
 {
+    public static Block Map(JsonElement value)
+    {
+        var type = String(value, "type") ?? "unsupported";
+        var content = value.TryGetProperty(type, out var typed) && typed.ValueKind == JsonValueKind.Object ? typed : default;
+        var richText = RichTextList(content, "rich_text");
+
+        Block block = type switch
+        {
+            "paragraph" => new ParagraphBlock { RichTextContent = richText },
+            "heading_1" => new Heading1Block { RichTextContent = richText },
+            "heading_2" => new Heading2Block { RichTextContent = richText },
+            "heading_3" => new Heading3Block { RichTextContent = richText },
+            "bulleted_list_item" => new BulletedListItemBlock { RichTextContent = richText },
+            "numbered_list_item" => new NumberedListItemBlock { RichTextContent = richText },
+            "to_do" => new ToDoBlock { RichTextContent = richText, Checked = Bool(content, "checked") },
+            "toggle" => new ToggleBlock { RichTextContent = richText },
+            "code" => new CodeBlock { RichTextContent = richText, Language = String(content, "language") },
+            "quote" => new QuoteBlock { RichTextContent = richText },
+            "divider" => new DividerBlock(),
+            "image" => new ImageBlock { Url = FileUrl(content), Caption = RichTextList(content, "caption") },
+            "embed" => new EmbedBlock { Url = String(content, "url") },
+            "table" => new TableBlock
+            {
+                TableWidth = Int(content, "table_width"),
+                HasColumnHeader = Bool(content, "has_column_header"),
+                HasRowHeader = Bool(content, "has_row_header")
+            },
+            "table_row" => new TableRowBlock { Cells = Cells(content) },
+            "column_list" => new ColumnListBlock(),
+            "column" => new ColumnBlock(),
+            "child_page" => new ChildPageBlock { Title = String(content, "title") },
+            "child_database" => new ChildDatabaseBlock { Title = String(content, "title") },
+            "synced_block" => new SyncedBlock { SyncedFromId = content.ValueKind == JsonValueKind.Object && content.TryGetProperty("synced_from", out var synced) ? String(synced, "block_id") : null },
+            "link_preview" => new LinkPreviewBlock { Url = String(content, "url") },
+            _ => new UnsupportedBlock()
+        };
+
+        return block with
+        {
+            Id = String(value, "id") ?? string.Empty,
+            CreatedAt = Date(value, "created_time", "created_at"),
+            LastEditedAt = Date(value, "last_edited_time", "last_edited_at"),
+            HasChildren = Bool(value, "has_children") ?? false,
+            InTrash = Bool(value, "in_trash") ?? Bool(value, "archived") ?? false,
+            Parent = value.TryGetProperty("parent", out var parent) ? ParentIconMapper.MapParent(parent) : null
+        };
+    }
+
     public static Block Map(Gen.Block gen)
     {
         var data = gen.Data;
@@ -169,4 +218,42 @@ internal static class BlockMapper
 
         return new AppendBlockChildrenResult { Results = blocks };
     }
+
+    private static IReadOnlyList<RichText>? RichTextList(JsonElement content, string name)
+    {
+        if (content.ValueKind != JsonValueKind.Object || !content.TryGetProperty(name, out var values) || values.ValueKind != JsonValueKind.Array)
+            return null;
+        return values.EnumerateArray().Select(Buildout.Core.Buildin.Mapping.RichTextMapper.Map).ToArray();
+    }
+
+    private static IReadOnlyList<IReadOnlyList<RichText>>? Cells(JsonElement content)
+    {
+        if (content.ValueKind != JsonValueKind.Object || !content.TryGetProperty("cells", out var values) || values.ValueKind != JsonValueKind.Array)
+            return null;
+        return values.EnumerateArray()
+            .Where(cell => cell.ValueKind == JsonValueKind.Array)
+            .Select(cell => (IReadOnlyList<RichText>)cell.EnumerateArray().Select(RichTextMapper.Map).ToArray())
+            .ToArray();
+    }
+
+    private static string? FileUrl(JsonElement content)
+    {
+        if (content.ValueKind != JsonValueKind.Object)
+            return null;
+        return String(content, "url") ??
+            (content.TryGetProperty("external", out var external) ? String(external, "url") : null) ??
+            (content.TryGetProperty("file", out var file) ? String(file, "url") : null);
+    }
+
+    private static string? String(JsonElement element, string name)
+        => element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    private static bool? Bool(JsonElement element, string name)
+        => element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind is (JsonValueKind.True or JsonValueKind.False) ? value.GetBoolean() : null;
+
+    private static int? Int(JsonElement element, string name)
+        => element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var result) ? result : null;
+
+    private static DateTimeOffset? Date(JsonElement element, string name, string alternate)
+        => DateTimeOffset.TryParse(String(element, name) ?? String(element, alternate), out var value) ? value : null;
 }
