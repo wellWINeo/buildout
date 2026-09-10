@@ -14,6 +14,13 @@ namespace Buildout.UnitTests.Buildin;
 public sealed class BuildinClientV2Tests
 {
     private static readonly Uri BaseUri = new("https://api.buildin.ai/v2/");
+    private static readonly string[] QueryDatabaseFields = ["filter", "sorts", "start_cursor", "page_size"];
+    private static readonly string[] SearchFields = ["query", "filter", "sort", "start_cursor", "page_size"];
+    private static readonly string[] CreateDatabaseFields = ["title", "properties", "parent"];
+    private static readonly string[] CreatePageFields = ["parent", "properties"];
+    private static readonly string[] PageParentFields = ["page_id"];
+    private static readonly string[] TitlePropertyFields = ["title"];
+    private static readonly string[] WorkspacePageFields = ["properties"];
 
     [Fact]
     public async Task GetVersionedPage_UsesV2RouteAndCapturesEtag()
@@ -122,7 +129,7 @@ public sealed class BuildinClientV2Tests
         });
 
         using var body = JsonDocument.Parse(handler.Bodies.Single());
-        Assert.Equal(new[] { "filter", "sorts", "start_cursor", "page_size" }, body.RootElement.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(QueryDatabaseFields, body.RootElement.EnumerateObject().Select(p => p.Name));
         Assert.Equal("Status", body.RootElement.GetProperty("filter").GetProperty("property").GetString());
         Assert.Equal("Name", body.RootElement.GetProperty("sorts")[0].GetProperty("property").GetString());
         Assert.DoesNotContain("Filter", handler.Bodies.Single(), StringComparison.Ordinal);
@@ -144,7 +151,7 @@ public sealed class BuildinClientV2Tests
         });
 
         using var body = JsonDocument.Parse(handler.Bodies.Single());
-        Assert.Equal(new[] { "query", "filter", "sort", "start_cursor", "page_size" }, body.RootElement.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(SearchFields, body.RootElement.EnumerateObject().Select(p => p.Name));
         Assert.Equal("page", body.RootElement.GetProperty("filter").GetProperty("value").GetString());
         Assert.Equal("last_edited_time", body.RootElement.GetProperty("sort").GetProperty("timestamp").GetString());
         Assert.DoesNotContain("PageSearchRequest", handler.Bodies.Single(), StringComparison.Ordinal);
@@ -199,7 +206,7 @@ public sealed class BuildinClientV2Tests
         });
 
         using var body = JsonDocument.Parse(handler.Bodies.Single());
-        Assert.Equal(new[] { "title", "properties", "parent" }, body.RootElement.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(CreateDatabaseFields, body.RootElement.EnumerateObject().Select(p => p.Name));
         Assert.Equal("22222222-2222-2222-2222-222222222222", body.RootElement.GetProperty("parent").GetProperty("page_id").GetString());
         Assert.True(body.RootElement.GetProperty("properties").GetProperty("Name").TryGetProperty("title", out _));
         Assert.Equal("Engineering", body.RootElement.GetProperty("properties").GetProperty("Department").GetProperty("select").GetProperty("options")[0].GetProperty("name").GetString());
@@ -270,11 +277,11 @@ public sealed class BuildinClientV2Tests
 
         using var body = JsonDocument.Parse(handler.Bodies.Single());
         var root = body.RootElement;
-        Assert.Equal(new[] { "parent", "properties" }, root.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(CreatePageFields, root.EnumerateObject().Select(p => p.Name));
         var parent = root.GetProperty("parent");
-        Assert.Equal(new[] { "page_id" }, parent.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(PageParentFields, parent.EnumerateObject().Select(p => p.Name));
         Assert.Equal("11111111-1111-1111-1111-111111111111", parent.GetProperty("page_id").GetString());
-        Assert.Equal(new[] { "title" }, root.GetProperty("properties").GetProperty("Title").EnumerateObject().Select(p => p.Name));
+        Assert.Equal(TitlePropertyFields, root.GetProperty("properties").GetProperty("Title").EnumerateObject().Select(p => p.Name));
         var text = root.GetProperty("properties").GetProperty("Title").GetProperty("title")[0];
         Assert.Equal("text", text.GetProperty("type").GetString());
         Assert.Equal("Hello", text.GetProperty("text").GetProperty("content").GetString());
@@ -299,7 +306,7 @@ public sealed class BuildinClientV2Tests
         });
 
         using var body = JsonDocument.Parse(handler.Bodies.Single());
-        Assert.Equal(new[] { "properties" }, body.RootElement.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(WorkspacePageFields, body.RootElement.EnumerateObject().Select(p => p.Name));
     }
 
     [Fact]
