@@ -343,20 +343,20 @@ public sealed class BuildinClientV2Tests
             "embed", "table", "table_row", "column_list", "column", "child_page", "child_database",
             "synced_block", "link_preview"
         };
-        var blocks = types.Select((type, index) => $"""
-            {{
-              "id": "{index + 1:D8}-0000-0000-0000-000000000000",
-              "type": "{type}",
+        var blocks = types.Select((type, index) => $$"""
+            {
+              "id": "{{index + 1:D8}}-0000-0000-0000-000000000000",
+              "type": "{{type}}",
               "has_children": false,
-              "{type}": {{
-                "rich_text": [{{ "type": "text", "plain_text": "{type}", "href": "https://example.com/{type}", "annotations": {{ "code": true }} }}],
+              "{{type}}": {
+                "rich_text": [{ "type": "text", "plain_text": "{{type}}", "href": "https://example.com/{{type}}", "annotations": { "code": true } }],
                 "checked": true,
                 "language": "csharp",
-                "url": "https://example.com/{type}",
-                "title": "{type}",
-                "synced_from": {{ "block_id": "22222222-2222-2222-2222-222222222222" }}
-              }}
-            }}""");
+                "url": "https://example.com/{{type}}",
+                "title": "{{type}}",
+                "synced_from": { "block_id": "22222222-2222-2222-2222-222222222222" }
+              }
+            }""");
         var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK, $"{{\"results\":[{string.Join(',', blocks)}]}}"));
         var client = CreateClient(handler);
 
