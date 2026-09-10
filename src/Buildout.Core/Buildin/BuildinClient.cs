@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Net;
 using System.Text.Json;
 using Buildout.Core.Buildin.Errors;
+using Buildout.Core.Buildin.Mapping;
 using Buildout.Core.Buildin.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -86,11 +87,7 @@ public sealed class BuildinClient : IBuildinClient
     {
         ValidatePageSize(request.PageSize);
         var json = await SendAsync($"databases/{ValidateId(databaseId)}/query", HttpMethod.Post, request, cancellationToken);
-        return new QueryDatabaseResult
-        {
-            HasMore = Bool(json, "has_more") ?? false,
-            NextCursor = String(json, "next_cursor")
-        };
+        return DatabaseMapper.MapQueryResponse(json.RootElement);
     }
 
     public async Task<SearchResults> SearchAsync(SearchRequest request, CancellationToken cancellationToken = default)

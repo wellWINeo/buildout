@@ -37,25 +37,8 @@ internal static class DatabaseMapper
         {
             foreach (var item in array.GetValue())
             {
-                if (item is null) continue;
-
-                var element = MappingHelpers.SerializeToElement(item);
-                if (!element.TryGetProperty("properties", out var propsEl))
-                    continue;
-
-                rows.Add(MapPropertyValues(propsEl));
-
-                var pageId = element.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? string.Empty : string.Empty;
-                var pageUrl = element.TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
-                string? pageTitle = null;
-                if (propsEl.TryGetProperty("title", out var titlePropEl) &&
-                    titlePropEl.TryGetProperty("title", out var titleArrayEl) &&
-                    titleArrayEl.ValueKind == JsonValueKind.Array)
-                {
-                    pageTitle = string.Concat(titleArrayEl.EnumerateArray()
-                        .Select(rt => rt.TryGetProperty("plain_text", out var ptEl) ? ptEl.GetString() ?? string.Empty : string.Empty));
-                }
-                pages.Add(new QueryDatabasePage { Id = pageId, Url = pageUrl, Title = pageTitle });
+                if (item is not null)
+                    MapQueryItem(MappingHelpers.SerializeToElement(item), rows, pages);
             }
         }
 
@@ -66,6 +49,49 @@ internal static class DatabaseMapper
             HasMore = gen.HasMore ?? false,
             NextCursor = gen.NextCursor
         };
+    }
+
+    public static QueryDatabaseResult MapQueryResponse(JsonElement response)
+    {
+        var rows = new List<Dictionary<string, PropertyValue>>();
+        var pages = new List<QueryDatabasePage>();
+        if (response.TryGetProperty("results", out var results) && results.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in results.EnumerateArray())
+            {
+                MapQueryItem(item, rows, pages);
+            }
+        }
+
+        return new QueryDatabaseResult
+        {
+            Results = rows,
+            Pages = pages,
+            HasMore = response.TryGetProperty("has_more", out var hasMore) && hasMore.ValueKind is JsonValueKind.True,
+            NextCursor = response.TryGetProperty("next_cursor", out var nextCursor) && nextCursor.ValueKind == JsonValueKind.String
+                ? nextCursor.GetString()
+                : null
+        };
+    }
+
+    private static void MapQueryItem(JsonElement element, List<Dictionary<string, PropertyValue>> rows, List<QueryDatabasePage> pages)
+    {
+        if (!element.TryGetProperty("properties", out var propsEl))
+            return;
+
+        rows.Add(MapPropertyValues(propsEl));
+
+        var pageId = element.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? string.Empty : string.Empty;
+        var pageUrl = element.TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
+        string? pageTitle = null;
+        if (propsEl.TryGetProperty("title", out var titlePropEl) &&
+            titlePropEl.TryGetProperty("title", out var titleArrayEl) &&
+            titleArrayEl.ValueKind == JsonValueKind.Array)
+        {
+            pageTitle = string.Concat(titleArrayEl.EnumerateArray()
+                .Select(rt => rt.TryGetProperty("plain_text", out var ptEl) ? ptEl.GetString() ?? string.Empty : string.Empty));
+        }
+        pages.Add(new QueryDatabasePage { Id = pageId, Url = pageUrl, Title = pageTitle });
     }
 
     public static Dictionary<string, PropertySchema>? MapProperties(Gen.Database_properties? gen)

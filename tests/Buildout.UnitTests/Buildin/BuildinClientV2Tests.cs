@@ -60,6 +60,50 @@ public sealed class BuildinClientV2Tests
         Assert.Empty(handler.Requests);
     }
 
+    [Fact]
+    public async Task QueryDatabase_MapsRowsAndPaginationFromV2Response()
+    {
+        var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK, """
+            {
+              "results": [
+                {
+                  "id": "22222222-2222-2222-2222-222222222222",
+                  "url": "https://app.buildin.ai/page/22222222-2222-2222-2222-222222222222",
+                  "properties": {
+                    "Name": {
+                      "type": "title",
+                      "title": [{ "type": "text", "plain_text": "Alice Chen" }]
+                    },
+                    "Department": {
+                      "type": "select",
+                      "select": { "name": "Engineering" }
+                    }
+                  }
+                }
+              ],
+              "has_more": true,
+              "next_cursor": "next-page"
+            }
+            """));
+        var client = CreateClient(handler);
+
+        var result = await client.QueryDatabaseAsync(
+            "11111111-1111-1111-1111-111111111111", new QueryDatabaseRequest());
+
+        var row = Assert.Single(result.Results);
+        var name = Assert.IsType<TitlePropertyValue>(row["Name"]);
+        var department = Assert.IsType<SelectPropertyValue>(row["Department"]);
+        var page = Assert.Single(result.Pages);
+        Assert.Equal("Alice Chen", Assert.Single(name.Title!).Content);
+        Assert.Equal("Engineering", department.Select!.Name);
+        Assert.Equal("22222222-2222-2222-2222-222222222222", page.Id);
+        Assert.Equal("https://app.buildin.ai/page/22222222-2222-2222-2222-222222222222", page.Url);
+        Assert.True(result.HasMore);
+        Assert.Equal("next-page", result.NextCursor);
+        Assert.Equal(HttpMethod.Post, handler.Requests.Single().Method);
+        Assert.Equal("/v2/databases/11111111-1111-1111-1111-111111111111/query", handler.Requests.Single().RequestUri!.AbsolutePath);
+    }
+
     private static BuildinClient CreateClient(RecordingHandler handler)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = BaseUri };
