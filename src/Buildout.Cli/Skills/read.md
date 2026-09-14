@@ -2,7 +2,7 @@
 
 ## Overview
 
-Retrieves a page by ID and outputs its content as Markdown (styled in a capable terminal, plain otherwise). With `--editing`, returns a snapshot that includes a revision token and unknown block IDs needed for subsequent updates.
+Retrieves a page by ID and outputs its content as Markdown (styled in a capable terminal, plain otherwise). With `--editing`, returns a snapshot that includes the service-issued opaque ETag revision and unknown block IDs needed for subsequent updates.
 
 ## Syntax
 
@@ -38,7 +38,7 @@ buildout-cli get abc123 > page.md
 **Fetch an editing snapshot for later update:**
 ```
 buildout-cli get abc123 --editing
-# revision token is printed on stderr; capture it for `buildout-cli update`
+# opaque ETag revision is printed on stderr; capture it for `buildout-cli update`
 ```
 
 **Fetch an editing snapshot as JSON:**
@@ -59,7 +59,7 @@ buildout-cli get abc123 --editing --print json
 
 ## Notes
 
-- In default mode (no `--editing`), the revision token is **not** returned. You must use `--editing` if you plan to modify and restore the page.
-- When `--editing` is used with `--print markdown` (the default), the page Markdown goes to **stdout** while the revision token and unknown block IDs go to **stderr**. Use `2>` to capture the revision separately.
+- In default mode (no `--editing`), the ETag revision is **not** returned. You must use `--editing` if you plan to modify the page.
+- When `--editing` is used with `--print markdown` (the default), the page Markdown goes to **stdout** while the ETag revision and unknown block IDs go to **stderr**. Use `2>` to capture the revision separately.
 - `--print json` writes a single JSON object to stdout with keys `markdown`, `revision`, and `unknown_block_ids`.
 - Styled output is automatic when stdout is a terminal that supports ANSI sequences; otherwise plain text is emitted.

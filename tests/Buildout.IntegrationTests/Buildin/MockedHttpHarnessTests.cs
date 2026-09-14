@@ -56,9 +56,21 @@ public sealed class MockedHttpHarnessTests
 
         Assert.Equal("22222222-2222-2222-2222-222222222222", result.Id);
         Assert.Equal(new DateTimeOffset(2025, 1, 15, 10, 30, 0, TimeSpan.Zero), result.CreatedAt);
-        Assert.False(result.Archived);
+        Assert.False(result.InTrash);
         Assert.Equal("https://api.buildin.ai/pages/22222222", result.Url);
         Assert.Equal("https://example.com/cover.png", result.Cover);
+    }
+
+    [Fact]
+    public async Task GetVersionedPageAsync_PropagatesServiceEtag()
+    {
+        const string pageId = "33333333-3333-3333-3333-333333333333";
+        BuildinStubs.RegisterV2PageWithEtag(_fixture.Server, pageId, "\"fixture-etag\"");
+
+        var client = _fixture.CreateClient();
+        var result = await client.GetVersionedPageAsync(pageId);
+
+        Assert.Equal("\"fixture-etag\"", result.ETag);
     }
 
     [Fact]

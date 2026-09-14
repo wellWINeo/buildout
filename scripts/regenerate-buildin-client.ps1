@@ -2,7 +2,8 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $OpenApi = Join-Path $RepoRoot 'openapi.json'
-$OutputDir = Join-Path $RepoRoot 'src\Buildout.Core\Buildin\Generated'
+$OutputDir = Join-Path $RepoRoot 'src\Buildout.Core\Buildin\Generated\V2'
+$Effective = Join-Path $RepoRoot 'obj\Buildin\OpenApi\openapi.effective.json'
 $ReadmeMarker = Join-Path $OutputDir '_README.md'
 
 if (-not (Test-Path $OpenApi)) {
@@ -10,13 +11,14 @@ if (-not (Test-Path $OpenApi)) {
     exit 1
 }
 
+dotnet run --file (Join-Path $RepoRoot 'scripts\normalize-buildin-openapi.cs') -- $OpenApi (Join-Path $RepoRoot 'scripts\openapi.buildout-overlay.json') $Effective
 dotnet tool restore --tool-manifest (Join-Path $RepoRoot '.config\dotnet-tools.json')
 
 dotnet kiota generate `
   --language CSharp `
-  --openapi $OpenApi `
-  --class-name BuildinApiClient `
-  --namespace-name Buildout.Core.Buildin.Generated `
+  --openapi $Effective `
+  --class-name BuildinV2ApiClient `
+  --namespace-name Buildout.Core.Buildin.Generated.V2 `
   --output $OutputDir `
   --clean-output `
   --exclude-backward-compatible `

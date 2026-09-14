@@ -77,7 +77,6 @@ public sealed class McpServerMetadataTests
 
         var result = await harness.Client.ReadResourceAsync($"buildin://{pageId}");
         var text = result.Contents.OfType<TextResourceContents>().First().Text;
-
         Assert.Contains("4.2", text);
     }
 }

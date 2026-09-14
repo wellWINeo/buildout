@@ -32,7 +32,7 @@ public sealed class DatabaseViewReadOnlyTests
 
         _fixture.Server
             .Given(Request.Create()
-                .WithPath($"/v1/databases/{DatabaseId}")
+                .WithPath($"/v2/databases/{DatabaseId}")
                 .UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
@@ -54,7 +54,7 @@ public sealed class DatabaseViewReadOnlyTests
 
         _fixture.Server
             .Given(Request.Create()
-                .WithPath($"/v1/databases/{DatabaseId}/query")
+                .WithPath($"/v2/databases/{DatabaseId}/query")
                 .UsingPost())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
@@ -81,7 +81,7 @@ public sealed class DatabaseViewReadOnlyTests
 
         _fixture.Server
             .Given(Request.Create()
-                .WithPath(new RegexMatcher("^/v1/.*"))
+                .WithPath(new RegexMatcher("^/v2/.*"))
                 .UsingAnyMethod())
             .RespondWith(Response.Create()
                 .WithStatusCode(500)
@@ -105,8 +105,8 @@ public sealed class DatabaseViewReadOnlyTests
         {
             var method = entry.RequestMessage?.Method ?? "";
             var path = entry.RequestMessage?.Path ?? "";
-            var unexpected = path != $"/v1/databases/{DatabaseId}" &&
-                             path != $"/v1/databases/{DatabaseId}/query";
+            var unexpected = path != $"/v2/databases/{DatabaseId}" &&
+                             path != $"/v2/databases/{DatabaseId}/query";
             Assert.False(unexpected,
                 $"Unexpected {method} request to {path} — only GET database and POST query are allowed");
         });
@@ -126,8 +126,8 @@ public sealed class DatabaseViewReadOnlyTests
         Assert.All(logEntries, entry =>
         {
             var path = entry.RequestMessage?.Path ?? "";
-            var unexpected = path != $"/v1/databases/{DatabaseId}" &&
-                             path != $"/v1/databases/{DatabaseId}/query";
+            var unexpected = path != $"/v2/databases/{DatabaseId}" &&
+                             path != $"/v2/databases/{DatabaseId}/query";
             Assert.False(unexpected,
                 $"Unexpected request to {path} — only GET database and POST query are allowed");
         });
@@ -149,7 +149,7 @@ public sealed class DatabaseViewReadOnlyTests
         {
             var method = entry.RequestMessage?.Method ?? "";
             var path = entry.RequestMessage?.Path ?? "";
-            Assert.False(method == "POST" && path != $"/v1/databases/{DatabaseId}/query",
+            Assert.False(method == "POST" && path != $"/v2/databases/{DatabaseId}/query",
                 $"Unexpected POST to {path}");
             Assert.False(method is "PUT" or "PATCH" or "DELETE",
                 $"Unexpected write method {method} to {path}");

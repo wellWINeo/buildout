@@ -14,8 +14,6 @@ using Buildout.Core.Markdown.Conversion.Blocks;
 using Buildout.Core.Markdown.Conversion.Mentions;
 using Buildout.Core.Markdown.Editing;
 using Buildout.Core.Markdown.Internal;
-using Buildout.Core.PageLifecycle;
-using PageLifecycleService = Buildout.Core.PageLifecycle.PageLifecycle;
 using Buildout.Core.PageTree;
 using Buildout.Core.PageTree.Rendering;
 using Buildout.Core.Search;
@@ -40,7 +38,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAuthenticationProvider>(sp =>
         {
             var opts = sp.GetRequiredService<IOptions<BuildinClientOptions>>().Value;
-            return new BotTokenAuthenticationProvider(opts.BotToken);
+            var resolver = sp.GetRequiredService<AccessTokenResolver>();
+            return new AccessTokenAuthenticationProvider(resolver.Resolve(), new[] { opts.BaseUrl.Host });
         });
         services.AddSingleton(sp =>
         {
@@ -52,7 +51,8 @@ public static class ServiceCollectionExtensions
             };
         });
 
-        services.AddSingleton<IBuildinClient, BotBuildinClient>();
+        services.AddSingleton<AccessTokenResolver>();
+        services.AddSingleton<IBuildinClient, BuildinClient>();
 
         return services;
     }
@@ -152,7 +152,6 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<IPageEditor, PageEditor>();
-        services.AddSingleton<IPageLifecycle, PageLifecycleService>();
 
         services.AddSingleton<ITreeRenderer, AsciiTreeRenderer>();
         services.AddSingleton<ITreeRenderer, JsonTreeRenderer>();

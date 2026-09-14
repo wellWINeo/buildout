@@ -1,0 +1,33 @@
+{
+  "overlay": "1.0.0",
+  "info": {
+    "title": "Buildout V2 generation overlay",
+    "version": "1.0.0",
+    "description": "Adds only the documented V2 block DELETE operation while the published snapshot omits it.",
+    "upstreamSha256": "413c8a8aa356a942b9f46e829b92e1cd047d470fbdf9d91edfbcbd6094cca49d",
+    "evidence": [
+      "https://buildin.ai/developer-api/v2/write/delete-block"
+    ]
+  },
+  "actions": [
+    {
+      "target": "$.paths['/v2/blocks/{block_id}']",
+      "update": {
+        "delete": {
+          "operationId": "deleteBlock",
+          "summary": "Delete a block",
+          "responses": {
+            "200": {
+              "description": "Deleted block",
+              "content": {
+                "application/json": {
+                  "schema": { "$ref": "#/components/schemas/Block" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

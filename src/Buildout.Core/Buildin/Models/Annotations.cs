@@ -8,4 +8,5 @@ public sealed record Annotations
     public bool Underline { get; init; }
     public bool Code { get; init; }
     public string Color { get; init; } = "default";
+    public string BackgroundColor { get; init; } = "default";
 }

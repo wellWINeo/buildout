@@ -36,7 +36,7 @@ public sealed class SearchServiceTests
     {
         Id = id,
         ObjectType = objectType,
-        Archived = archived,
+        InTrash = archived,
         Parent = parent,
         Title = title
     };

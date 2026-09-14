@@ -20,8 +20,6 @@ public class EmbeddedResourceTests
             "Buildout.Cli.Skills.create.md",
             "Buildout.Cli.Skills.read.md",
             "Buildout.Cli.Skills.update.md",
-            "Buildout.Cli.Skills.delete.md",
-            "Buildout.Cli.Skills.restore.md",
             "Buildout.Cli.Skills.search.md",
             "Buildout.Cli.Skills.database-views.md"
         };
@@ -37,8 +35,6 @@ public class EmbeddedResourceTests
     [InlineData("Buildout.Cli.Skills.create.md")]
     [InlineData("Buildout.Cli.Skills.read.md")]
     [InlineData("Buildout.Cli.Skills.update.md")]
-    [InlineData("Buildout.Cli.Skills.delete.md")]
-    [InlineData("Buildout.Cli.Skills.restore.md")]
     [InlineData("Buildout.Cli.Skills.search.md")]
     [InlineData("Buildout.Cli.Skills.database-views.md")]
     public void SkillResourcesHaveNonEmptyContent(string resourceName)

@@ -7,6 +7,26 @@ namespace Buildout.Core.Buildin.Mapping;
 
 internal static class DatabaseMapper
 {
+    public static Database Map(JsonElement element)
+    {
+        return new Database
+        {
+            Id = String(element, "id") ?? string.Empty,
+            CreatedAt = Date(element, "created_time", "created_at"),
+            LastEditedAt = Date(element, "last_edited_time", "last_edited_at"),
+            CreatedBy = MapUser(element, "created_by"),
+            LastEditedBy = MapUser(element, "last_edited_by"),
+            Cover = MapUrl(element, "cover"),
+            Icon = MapIcon(element),
+            Parent = element.TryGetProperty("parent", out var parent) ? ParentIconMapper.MapParent(parent) : null,
+            Title = element.TryGetProperty("title", out var title) ? RichTextMapper.ParseArray(title) : null,
+            Properties = element.TryGetProperty("properties", out var properties) ? MapProperties(properties) : null,
+            IsInline = Bool(element, "is_inline"),
+            InTrash = Bool(element, "in_trash") ?? Bool(element, "archived") ?? false,
+            Url = String(element, "url")
+        };
+    }
+
     public static Database Map(Gen.Database gen)
     {
         return new Database
@@ -22,7 +42,7 @@ internal static class DatabaseMapper
             Title = gen.Title?.Select(RichTextMapper.Map).ToList(),
             Properties = MapProperties(gen.Properties),
             IsInline = gen.IsInline,
-            Archived = gen.Archived ?? false,
+            InTrash = gen.InTrash ?? gen.Archived ?? false,
             Url = gen.Url
         };
     }
@@ -37,25 +57,8 @@ internal static class DatabaseMapper
         {
             foreach (var item in array.GetValue())
             {
-                if (item is null) continue;
-
-                var element = MappingHelpers.SerializeToElement(item);
-                if (!element.TryGetProperty("properties", out var propsEl))
-                    continue;
-
-                rows.Add(MapPropertyValues(propsEl));
-
-                var pageId = element.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? string.Empty : string.Empty;
-                var pageUrl = element.TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
-                string? pageTitle = null;
-                if (propsEl.TryGetProperty("title", out var titlePropEl) &&
-                    titlePropEl.TryGetProperty("title", out var titleArrayEl) &&
-                    titleArrayEl.ValueKind == JsonValueKind.Array)
-                {
-                    pageTitle = string.Concat(titleArrayEl.EnumerateArray()
-                        .Select(rt => rt.TryGetProperty("plain_text", out var ptEl) ? ptEl.GetString() ?? string.Empty : string.Empty));
-                }
-                pages.Add(new QueryDatabasePage { Id = pageId, Url = pageUrl, Title = pageTitle });
+                if (item is not null)
+                    MapQueryItem(MappingHelpers.SerializeToElement(item), rows, pages);
             }
         }
 
@@ -68,11 +71,61 @@ internal static class DatabaseMapper
         };
     }
 
+    public static QueryDatabaseResult MapQueryResponse(JsonElement response)
+    {
+        var rows = new List<Dictionary<string, PropertyValue>>();
+        var pages = new List<QueryDatabasePage>();
+        if (response.TryGetProperty("results", out var results) && results.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in results.EnumerateArray())
+            {
+                MapQueryItem(item, rows, pages);
+            }
+        }
+
+        return new QueryDatabaseResult
+        {
+            Results = rows,
+            Pages = pages,
+            HasMore = response.TryGetProperty("has_more", out var hasMore) && hasMore.ValueKind is JsonValueKind.True,
+            NextCursor = response.TryGetProperty("next_cursor", out var nextCursor) && nextCursor.ValueKind == JsonValueKind.String
+                ? nextCursor.GetString()
+                : null
+        };
+    }
+
+    private static void MapQueryItem(JsonElement element, List<Dictionary<string, PropertyValue>> rows, List<QueryDatabasePage> pages)
+    {
+        var properties = element.TryGetProperty("properties", out var propsEl)
+            ? MapPropertyValues(propsEl)
+            : new Dictionary<string, PropertyValue>();
+        rows.Add(properties);
+
+        var pageId = element.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? string.Empty : string.Empty;
+        var pageUrl = element.TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
+        string? pageTitle = null;
+        foreach (var property in properties.Values)
+        {
+            if (property is TitlePropertyValue { Title: not null } title)
+            {
+                pageTitle = string.Concat(title.Title!.Select(rt => rt.Content));
+                break;
+            }
+        }
+        pages.Add(new QueryDatabasePage { Id = pageId, Url = pageUrl, Title = pageTitle });
+    }
+
     public static Dictionary<string, PropertySchema>? MapProperties(Gen.Database_properties? gen)
     {
         if (gen is null) return null;
 
-        var element = MappingHelpers.SerializeToElement(gen);
+        return MapProperties(MappingHelpers.SerializeToElement(gen));
+    }
+
+    public static Dictionary<string, PropertySchema>? MapProperties(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object) return null;
+
         var dict = new Dictionary<string, PropertySchema>();
         foreach (var prop in element.EnumerateObject())
         {
@@ -141,7 +194,7 @@ internal static class DatabaseMapper
         return new MultiSelectPropertySchema { Name = name, Options = options };
     }
 
-    private static Dictionary<string, PropertyValue> MapPropertyValues(JsonElement propsEl)
+    public static Dictionary<string, PropertyValue> MapPropertyValues(JsonElement propsEl)
     {
         var dict = new Dictionary<string, PropertyValue>();
         foreach (var prop in propsEl.EnumerateObject())
@@ -166,9 +219,12 @@ internal static class DatabaseMapper
             "select" => MapSelectValue(el),
             "multi_select" => MapMultiSelectValue(el),
             "date" => MapDateValue(el),
+            "formula" => MapFormulaValue(el),
+            "rollup" => MapRollupValue(el),
             "checkbox" => MapCheckboxValue(el),
             "url" => MapUrlValue(el),
             "people" => MapPeopleValue(el),
+            "files" => MapFilesValue(el),
             "relation" => MapRelationValue(el),
             _ => null
         };
@@ -245,6 +301,36 @@ internal static class DatabaseMapper
         return new CheckboxPropertyValue { Checkbox = val };
     }
 
+    private static FormulaPropertyValue MapFormulaValue(JsonElement el)
+    {
+        if (!el.TryGetProperty("formula", out var formula) || formula.ValueKind != JsonValueKind.Object)
+            return new FormulaPropertyValue();
+        return new FormulaPropertyValue
+        {
+            StringResult = String(formula, "string"),
+            NumberResult = formula.TryGetProperty("number", out var number) && number.ValueKind == JsonValueKind.Number ? number.GetDouble() : null,
+            BooleanResult = formula.TryGetProperty("boolean", out var boolean) && boolean.ValueKind is (JsonValueKind.True or JsonValueKind.False) ? boolean.GetBoolean() : null,
+            DateResult = formula.TryGetProperty("date", out var date) && date.ValueKind == JsonValueKind.Object
+                ? new DateRange { Start = String(date, "start"), End = String(date, "end") }
+                : null
+        };
+    }
+
+    private static RollupPropertyValue MapRollupValue(JsonElement el)
+    {
+        var values = new List<PropertyValue>();
+        if (el.TryGetProperty("rollup", out var rollup) && rollup.ValueKind == JsonValueKind.Object &&
+            rollup.TryGetProperty("array", out var array) && array.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in array.EnumerateArray())
+            {
+                var value = TryMapPropertyValue(item);
+                if (value is not null) values.Add(value);
+            }
+        }
+        return new RollupPropertyValue { RollupResults = values };
+    }
+
     private static UrlPropertyValue MapUrlValue(JsonElement el)
     {
         string? url = null;
@@ -269,6 +355,27 @@ internal static class DatabaseMapper
         return new PeoplePropertyValue { People = people };
     }
 
+    private static FilesPropertyValue MapFilesValue(JsonElement el)
+    {
+        var files = new List<FileObject>();
+        if (el.TryGetProperty("files", out var array) && array.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in array.EnumerateArray())
+            {
+                var url = String(item, "url") ??
+                    (item.TryGetProperty("external", out var external) ? String(external, "url") : null) ??
+                    (item.TryGetProperty("file", out var file) ? String(file, "url") : null);
+                files.Add(new FileObject
+                {
+                    Id = String(item, "file") ?? String(item, "id") ?? string.Empty,
+                    Name = String(item, "name"),
+                    Url = url
+                });
+            }
+        }
+        return new FilesPropertyValue { Files = files };
+    }
+
     private static RelationPropertyValue MapRelationValue(JsonElement el)
     {
         var ids = new List<string>();
@@ -281,5 +388,50 @@ internal static class DatabaseMapper
             }
         }
         return new RelationPropertyValue { RelationIds = ids };
+    }
+
+    private static string? String(JsonElement element, string name)
+        => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    private static bool? Bool(JsonElement element, string name)
+        => element.TryGetProperty(name, out var value) && value.ValueKind is (JsonValueKind.True or JsonValueKind.False) ? value.GetBoolean() : null;
+
+    private static DateTimeOffset? Date(JsonElement element, string name, string alternate)
+        => DateTimeOffset.TryParse(String(element, name) ?? String(element, alternate), out var value) ? value : null;
+
+    private static UserMe? MapUser(JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Object)
+            return null;
+        return new UserMe
+        {
+            Id = String(value, "id") ?? string.Empty,
+            Name = String(value, "name"),
+            AvatarUrl = String(value, "avatar_url"),
+            Type = String(value, "type") ?? "user",
+            Email = value.TryGetProperty("person", out var person) ? String(person, "email") : null
+        };
+    }
+
+    private static Icon? MapIcon(JsonElement element)
+    {
+        if (!element.TryGetProperty("icon", out var icon) || icon.ValueKind != JsonValueKind.Object)
+            return null;
+        return String(icon, "type") switch
+        {
+            "emoji" => new IconEmoji(String(icon, "emoji") ?? string.Empty),
+            "external" when icon.TryGetProperty("external", out var external) => new IconExternal(String(external, "url") ?? string.Empty),
+            "file" when icon.TryGetProperty("file", out var file) => new IconFile(String(file, "url") ?? string.Empty),
+            _ => null
+        };
+    }
+
+    private static string? MapUrl(JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Object)
+            return null;
+        return String(value, "url") ??
+            (value.TryGetProperty("external", out var external) ? String(external, "url") : null) ??
+            (value.TryGetProperty("file", out var file) ? String(file, "url") : null);
     }
 }

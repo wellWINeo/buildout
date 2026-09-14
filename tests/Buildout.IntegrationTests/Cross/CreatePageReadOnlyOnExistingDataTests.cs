@@ -70,7 +70,7 @@ public sealed class CreatePageReadOnlyOnExistingDataTests
         // Fallback: any other request returns 500 (registered last so specific routes win)
         _fixture.Server
             .Given(Request.Create()
-                .WithPath(new RegexMatcher("^/v1/.*"))
+                .WithPath(new RegexMatcher("^/v2/.*"))
                 .UsingAnyMethod())
             .RespondWith(Response.Create()
                 .WithStatusCode(500)
@@ -139,37 +139,37 @@ public sealed class CreatePageReadOnlyOnExistingDataTests
             bool isForbidden = false;
 
             // PATCH to existing pages
-            if (method == "PATCH" && path.StartsWith("/v1/pages/", StringComparison.Ordinal))
+            if (method == "PATCH" && path.StartsWith("/v2/pages/", StringComparison.Ordinal))
                 isForbidden = true;
 
             // DELETE to any block
-            if (method == "DELETE" && path.StartsWith("/v1/blocks/", StringComparison.Ordinal))
+            if (method == "DELETE" && path.StartsWith("/v2/blocks/", StringComparison.Ordinal))
                 isForbidden = true;
 
             // PATCH or DELETE to databases
-            if (method is "PATCH" or "DELETE" && path.StartsWith("/v1/databases/", StringComparison.Ordinal))
+            if (method is "PATCH" or "DELETE" && path.StartsWith("/v2/databases/", StringComparison.Ordinal))
                 isForbidden = true;
 
             // POST to create a database (exact path)
-            if (method == "POST" && path == "/v1/databases")
+            if (method == "POST" && path == "/v2/databases")
                 isForbidden = true;
 
             // POST to database query
-            if (method == "POST" && path.StartsWith("/v1/databases/", StringComparison.Ordinal) && path.EndsWith("/query", StringComparison.Ordinal))
+            if (method == "POST" && path.StartsWith("/v2/databases/", StringComparison.Ordinal) && path.EndsWith("/query", StringComparison.Ordinal))
                 isForbidden = true;
 
             // POST to search
-            if (method == "POST" && path == "/v1/search")
+            if (method == "POST" && path == "/v2/search")
                 isForbidden = true;
 
             // POST to page search
-            if (method == "POST" && path == "/v1/pages/search")
+            if (method == "POST" && path == "/v2/pages/search")
                 isForbidden = true;
 
-            // PATCH to /v1/blocks/{id}/children is allowed only for the new page
-            if (method == "PATCH" && path.StartsWith("/v1/blocks/", StringComparison.Ordinal) && path.EndsWith("/children", StringComparison.Ordinal))
+            // PATCH to /v2/blocks/{id}/children is allowed only for the new page
+            if (method == "PATCH" && path.StartsWith("/v2/blocks/", StringComparison.Ordinal) && path.EndsWith("/children", StringComparison.Ordinal))
             {
-                var blockId = path.Replace("/v1/blocks/", "").Replace("/children", "");
+                var blockId = path.Replace("/v2/blocks/", "").Replace("/children", "");
                 if (blockId != NewPageId)
                     isForbidden = true;
             }

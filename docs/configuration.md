@@ -10,7 +10,7 @@ Configuration values are loaded from multiple sources, with later sources overri
 2. **Default JSON file** at `~/.config/buildout/config.json` (if it exists and no `--config` flag is provided)
 3. **Override JSON file** specified via `--config` or `-c` flag (hard error if missing)
 4. **Legacy OTel endpoint** from `OTEL_EXPORTER_OTLP_ENDPOINT` env var (fallback only)
-5. **Environment variables** with `Buildout__` prefix (e.g., `Buildout__BotToken`)
+5. **Environment variables** with `Buildout__` prefix (e.g., `Buildout__AccessToken`)
 6. **Http section remapping** (projects `Http:Timeout` to `HttpTimeout` property)
 
 Higher-numbered sources override lower-numbered sources for the same key. Environment variables use double underscore (`__`) as the section separator.
@@ -30,7 +30,8 @@ Higher-numbered sources override lower-numbered sources for the same key. Enviro
 
 | Key | Type | Default | Required | Validation | Env Var Form |
 |-----|------|---------|----------|------------|--------------|
-| `BotToken` | `string` | — | **yes** | non-empty / non-whitespace | `Buildout__BotToken` |
+| `AccessToken` | `string` | — | **yes** | non-empty / non-whitespace | `Buildout__AccessToken` |
+| `BotToken` | `string` | — | deprecated fallback | non-empty / non-whitespace | `Buildout__BotToken` |
 | `BaseUrl` | URI string | `https://api.buildin.ai/` | no | absolute URI; HTTPS unless `Http:UnsafeAllowInsecure=true` | `Buildout__BaseUrl` |
 | `Http:Timeout` | `TimeSpan` (`HH:MM:SS`) | `00:00:30` | no | > `00:00:00` | `Buildout__Http__Timeout` |
 | `Http:UnsafeAllowInsecure` | `bool` | `false` | no | — | `Buildout__Http__UnsafeAllowInsecure` |
@@ -44,7 +45,7 @@ Higher-numbered sources override lower-numbered sources for the same key. Enviro
 **JSON file (`~/.config/buildout/config.json`):**
 ```json
 {
-  "BotToken": "ntn_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "AccessToken": "<opaque-bearer-token>",
   "BaseUrl": "https://api.buildin.ai/",
   "Http": {
     "Timeout": "00:00:30",
@@ -65,7 +66,7 @@ Higher-numbered sources override lower-numbered sources for the same key. Enviro
 
 **Environment variables:**
 ```bash
-export Buildout__BotToken="ntn_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export Buildout__AccessToken="<opaque-bearer-token>"
 export Buildout__BaseUrl="https://api.buildin.ai/"
 export Buildout__Http__Timeout="00:01:00"
 export Buildout__Http__UnsafeAllowInsecure="false"
@@ -120,7 +121,8 @@ If you have configuration from earlier versions of Buildout, you may need to upd
 
 | Pre-010 Key (env / config) | Pre-010 Channel | New Key (config-key syntax) | New Env Var |
 |----------------------------|-----------------|------------------------------|-------------|
-| `Buildin:BotToken` | JSON only | `BotToken` | `Buildout__BotToken` |
+| `Buildin:AccessToken` | JSON or environment | `AccessToken` | `Buildout__AccessToken` |
+| `Buildin:BotToken` | Deprecated fallback | `BotToken` | `Buildout__BotToken` |
 | `Buildin:BaseUrl` | JSON only | `BaseUrl` | `Buildout__BaseUrl` |
 | `Buildin:HttpTimeout` | JSON only | `Http:Timeout` | `Buildout__Http__Timeout` |
 | `Buildin:UnsafeAllowInsecure` | JSON only | `Http:UnsafeAllowInsecure` | `Buildout__Http__UnsafeAllowInsecure` |
@@ -147,4 +149,4 @@ Environment variables use double underscore (`__`) as the section separator, not
 - ❌ `Buildout__Http:Timeout`
 
 ### Env Var Case Sensitivity
-Environment variables are case-sensitive on most systems. Ensure your variable names exactly match the documented format (e.g., `Buildout__BotToken`, not `buildout__BotToken`).
+Environment variables are case-sensitive on most systems. Ensure your variable names exactly match the documented format (e.g., `Buildout__AccessToken`, not `buildout__AccessToken`). `BotToken` remains a value-free-warning compatibility fallback; `AccessToken` wins when both are present.
