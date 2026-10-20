@@ -4,10 +4,11 @@ namespace Buildout.Core.Buildin;
 
 public sealed class BuildinClientOptionsValidator : IValidateOptions<BuildinClientOptions>
 {
+#pragma warning disable CS0618
     public ValidateOptionsResult Validate(string? name, BuildinClientOptions options)
     {
-        if (string.IsNullOrWhiteSpace(options.BotToken))
-            return ValidateOptionsResult.Fail("BotToken is required.");
+        if (string.IsNullOrWhiteSpace(options.AccessToken) && string.IsNullOrWhiteSpace(options.BotToken))
+            return ValidateOptionsResult.Fail("AccessToken is required. Set the Buildout__AccessToken environment variable (BotToken is accepted only as a deprecated fallback via Buildout__BotToken).");
 
         if (options.BaseUrl is null || !options.BaseUrl.IsAbsoluteUri)
             return ValidateOptionsResult.Fail("BaseUrl must be an absolute URI.");
@@ -20,4 +21,5 @@ public sealed class BuildinClientOptionsValidator : IValidateOptions<BuildinClie
 
         return ValidateOptionsResult.Success;
     }
+#pragma warning restore CS0618
 }

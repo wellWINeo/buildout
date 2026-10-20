@@ -35,7 +35,7 @@ namespace Buildout.Core.Buildin.Generated.V1.Databases
         /// </summary>
         /// <param name="pathParameters">Path parameters for the request</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public DatabasesRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/v1/databases", pathParameters)
+        public DatabasesRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/v2/databases", pathParameters)
         {
         }
         /// <summary>
@@ -43,7 +43,7 @@ namespace Buildout.Core.Buildin.Generated.V1.Databases
         /// </summary>
         /// <param name="rawUrl">The raw URL to use for the request builder.</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public DatabasesRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/v1/databases", rawUrl)
+        public DatabasesRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/v2/databases", rawUrl)
         {
         }
         /// <summary>

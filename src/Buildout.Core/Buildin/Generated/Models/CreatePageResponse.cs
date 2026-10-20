@@ -16,6 +16,7 @@ namespace Buildout.Core.Buildin.Generated.Models
         public IDictionary<string, object> AdditionalData { get; set; }
         /// <summary>是否已归档</summary>
         public bool? Archived { get; set; }
+        public bool? InTrash { get; set; }
         /// <summary>创建时间</summary>
         public DateTimeOffset? CreatedAt { get; set; }
         /// <summary>The createdBy property</summary>
@@ -96,6 +97,7 @@ namespace Buildout.Core.Buildin.Generated.Models
             return new Dictionary<string, Action<IParseNode>>
             {
                 { "archived", n => { Archived = n.GetBoolValue(); } },
+                { "in_trash", n => { InTrash = n.GetBoolValue(); } },
                 { "createdAt", n => { CreatedAt = n.GetDateTimeOffsetValue(); } },
                 { "createdBy", n => { CreatedBy = n.GetObjectValue<global::Buildout.Core.Buildin.Generated.Models.CreatePageResponse_createdBy>(global::Buildout.Core.Buildin.Generated.Models.CreatePageResponse_createdBy.CreateFromDiscriminatorValue); } },
                 { "id", n => { Id = n.GetGuidValue(); } },
@@ -115,6 +117,7 @@ namespace Buildout.Core.Buildin.Generated.Models
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
             writer.WriteBoolValue("archived", Archived);
+            writer.WriteBoolValue("in_trash", InTrash);
             writer.WriteDateTimeOffsetValue("createdAt", CreatedAt);
             writer.WriteObjectValue<global::Buildout.Core.Buildin.Generated.Models.CreatePageResponse_createdBy>("createdBy", CreatedBy);
             writer.WriteGuidValue("id", Id);

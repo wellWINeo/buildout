@@ -81,8 +81,6 @@ try
         .WithTools<CreatePageToolHandler>()
         .WithTools<GetPageMarkdownToolHandler>()
         .WithTools<UpdatePageToolHandler>()
-        .WithTools<DeletePageToolHandler>()
-        .WithTools<RestorePageToolHandler>()
         .WithTools<TreeToolHandler>();
 
     await builder.Build().RunAsync();

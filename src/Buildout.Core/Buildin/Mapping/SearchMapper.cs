@@ -26,7 +26,7 @@ internal static class SearchMapper
                     Id = r.Id?.ToString() ?? string.Empty,
                     CreatedAt = r.CreatedTime,
                     LastEditedAt = r.LastEditedTime,
-                    Archived = r.Archived ?? false,
+                    InTrash = r.InTrash ?? r.Archived ?? false,
                     Title = r.Properties?.Title?.Title?.Select(RichTextMapper.Map).ToList(),
                     Parent = ParentIconMapper.MapSearchResultParent(r.Parent),
                     ObjectType = r.Object

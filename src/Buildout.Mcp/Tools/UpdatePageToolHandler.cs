@@ -33,8 +33,8 @@ public sealed class UpdatePageToolHandler
 
     [McpServerTool(Name = "update_page")]
     [Description("DESTRUCTIVE. Apply patch operations to an existing buildin page. " +
-                 "Always call get_page_markdown first to obtain the revision token. " +
-                 "Supply the revision token from that call to prevent overwriting concurrent edits. " +
+                 "Always call get_page_markdown first to obtain the page ETag revision. " +
+                 "Supply the ETag revision from that call to prevent overwriting concurrent edits. " +
                  "Use dry_run=true to preview the reconciliation before committing. " +
                  "Failure modes: patch.stale_revision (re-fetch and retry), " +
                  "patch.ambiguous_match (make old_str unique), " +
@@ -48,7 +48,7 @@ public sealed class UpdatePageToolHandler
 #pragma warning disable CA1707
     public async Task<string> UpdatePageAsync(
         [Description("The buildin page ID")] string page_id,
-        [Description("Revision token from get_page_markdown")] string revision,
+        [Description("Opaque ETag revision from get_page_markdown")] string revision,
         [Description("JSON array of patch operations")] string operations,
         [Description("Preview without committing")] bool dry_run = false,
         [Description("Bypass large-delete guard")] bool allow_large_delete = false,

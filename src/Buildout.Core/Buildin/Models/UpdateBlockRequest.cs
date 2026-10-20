@@ -7,5 +7,5 @@ public sealed record UpdateBlockRequest
     public string? Language { get; init; }
     public string? Url { get; init; }
     public bool? Checked { get; init; }
-    public bool? Archived { get; init; }
+    public bool? InTrash { get; init; }
 }

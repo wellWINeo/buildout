@@ -16,6 +16,7 @@ namespace Buildout.Core.Buildin.Generated.Models
         public IDictionary<string, object> AdditionalData { get; set; }
         /// <summary>The archived property</summary>
         public bool? Archived { get; set; }
+        public bool? InTrash { get; set; }
         /// <summary>The created_by property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
@@ -92,6 +93,7 @@ namespace Buildout.Core.Buildin.Generated.Models
             return new Dictionary<string, Action<IParseNode>>
             {
                 { "archived", n => { Archived = n.GetBoolValue(); } },
+                { "in_trash", n => { InTrash = n.GetBoolValue(); } },
                 { "created_by", n => { CreatedBy = n.GetObjectValue<global::Buildout.Core.Buildin.Generated.Models.User>(global::Buildout.Core.Buildin.Generated.Models.User.CreateFromDiscriminatorValue); } },
                 { "created_time", n => { CreatedTime = n.GetDateTimeOffsetValue(); } },
                 { "data", n => { Data = n.GetObjectValue<global::Buildout.Core.Buildin.Generated.Models.BlockData>(global::Buildout.Core.Buildin.Generated.Models.BlockData.CreateFromDiscriminatorValue); } },
@@ -112,6 +114,7 @@ namespace Buildout.Core.Buildin.Generated.Models
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
             writer.WriteBoolValue("archived", Archived);
+            writer.WriteBoolValue("in_trash", InTrash);
             writer.WriteObjectValue<global::Buildout.Core.Buildin.Generated.Models.User>("created_by", CreatedBy);
             writer.WriteDateTimeOffsetValue("created_time", CreatedTime);
             writer.WriteObjectValue<global::Buildout.Core.Buildin.Generated.Models.BlockData>("data", Data);

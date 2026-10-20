@@ -1,5 +1,6 @@
 {
-  "BotToken": "<your-bot-token>",
+  "AccessToken": "<your-access-token>",
+  "BotToken": "<legacy-token-only>",
   "BaseUrl": "https://api.buildin.ai/",
   "Http": {
     "Timeout": "00:00:30",

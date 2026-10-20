@@ -43,8 +43,6 @@ try
         config.AddCommand<GetCommand>("get");
         config.AddCommand<SearchCommand>("search");
         config.AddCommand<UpdateCommand>("update");
-        config.AddCommand<DeleteCommand>("delete");
-        config.AddCommand<RestoreCommand>("restore");
         config.AddCommand<TreeCommand>("tree");
         config.AddBranch<DbSettings>("db", db =>
         {
