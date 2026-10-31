@@ -1,6 +1,5 @@
 using Buildout.Core.Buildin;
-using Buildout.Core.Buildin.Authentication;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using WireMock.Server;
 using Xunit;
@@ -21,17 +20,27 @@ public sealed class BuildinWireMockFixture : IDisposable
 
     public IBuildinClient CreateClient()
     {
-        var httpClient = new HttpClient { BaseAddress = new Uri(BaseUrl) };
-        var authProvider = new BotTokenAuthenticationProvider("test-token");
-        var options = Options.Create(new BuildinClientOptions());
-        var logger = LoggerFactory.Create(_ => { }).CreateLogger<BotBuildinClient>();
-        return new BotBuildinClient(httpClient, authProvider, options, logger);
+        var options = Options.Create(new BuildinClientOptions
+        {
+            BaseUrl = new Uri($"{BaseUrl}/"),
+            AccessToken = "test-token"
+        });
+        var httpClient = new HttpClient { BaseAddress = options.Value.BaseUrl };
+        var tokenResolver = new AccessTokenResolver(options, NullLogger<AccessTokenResolver>.Instance);
+        return new BuildinClient(httpClient, tokenResolver, options, NullLogger<BuildinClient>.Instance);
     }
 
     public void Reset()
     {
         Server.Reset();
         BuildinStubs.RegisterAll(Server);
+    }
+
+    public IReadOnlyList<string> RequestPaths() => BuildinStubs.RequestJournal(Server);
+
+    public void AssertV2Only()
+    {
+        Assert.DoesNotContain(RequestPaths(), path => path.StartsWith("/v1", StringComparison.Ordinal));
     }
 
     public void Dispose()

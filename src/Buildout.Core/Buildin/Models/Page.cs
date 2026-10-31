@@ -12,7 +12,7 @@ public sealed record Page
     public Parent? Parent { get; init; }
     public Dictionary<string, PropertyValue>? Properties { get; init; }
     public IReadOnlyList<RichText>? Title { get; init; }
-    public bool Archived { get; init; }
+    public bool InTrash { get; init; }
     public string? ObjectType { get; init; }
     public string? Url { get; init; }
 }

@@ -14,7 +14,7 @@ returns:
 
 - **Anchored Markdown** — each block is preceded by a comment like
   `<!-- buildin:block:abc123 -->` that identifies its anchor.
-- **Revision token** — required for the subsequent `update_page` call. Stale
+- **Opaque ETag revision** — required for the subsequent `update_page` call. Stale
   tokens cause conflict errors (exit code 7).
 
 ## Step 2: Prepare the Update
@@ -34,7 +34,7 @@ Use `dry_run: true` to preview changes before committing.
 
 ## Step 3: Execute the Update
 
-Call `update_page` with the page ID, revision token, and ops array. The tool
+Call `update_page` with the page ID, opaque ETag revision, and ops array. The tool
 returns the updated page state on success.
 
 ## Step 4: Verify the Update
@@ -59,12 +59,12 @@ Markdown for the new blocks.
 
 If `update_page` returns exit code 7 (revision conflict), the page was
 modified after you fetched it. Re-run `get_page_markdown` to get a fresh
-revision token and rebuild your ops array before retrying.
+ETag revision and rebuild your ops array before retrying.
 
 ## Critical Rules
 
 - Never fabricate anchors — always extract them from `get_page_markdown` output.
-- Always get a fresh revision token before every update call.
+- Always get a fresh ETag revision before every update call.
 - For large deletions, set `allow_large_delete: true`.
 - Ops JSON uses `snake_case` names (`old_str`, `new_str`, not `oldStr`).
 - Stdin mode (`--ops -`) reads up to 16 MB.

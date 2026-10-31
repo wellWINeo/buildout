@@ -22,7 +22,7 @@ namespace Buildout.Core.Buildin.Generated.V1.Blocks.Item.Children
         /// </summary>
         /// <param name="pathParameters">Path parameters for the request</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public ChildrenRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/v1/blocks/{block_id}/children{?page_size*,start_cursor*}", pathParameters)
+        public ChildrenRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/v2/blocks/{block_id}/children{?page_size*,start_cursor*}", pathParameters)
         {
         }
         /// <summary>
@@ -30,7 +30,7 @@ namespace Buildout.Core.Buildin.Generated.V1.Blocks.Item.Children
         /// </summary>
         /// <param name="rawUrl">The raw URL to use for the request builder.</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public ChildrenRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/v1/blocks/{block_id}/children{?page_size*,start_cursor*}", rawUrl)
+        public ChildrenRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/v2/blocks/{block_id}/children{?page_size*,start_cursor*}", rawUrl)
         {
         }
         /// <summary>

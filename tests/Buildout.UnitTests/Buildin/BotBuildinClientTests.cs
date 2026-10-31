@@ -68,7 +68,7 @@ public sealed class BotBuildinClientTests
         {
             Id = pageId,
             CreatedTime = createdTime,
-            Archived = false,
+            InTrash = false,
             Url = "https://api.buildin.ai/pages/22222222",
             Parent = new Gen.Parent
             {
@@ -97,7 +97,7 @@ public sealed class BotBuildinClientTests
         Assert.NotNull(result);
         Assert.Equal("22222222-2222-2222-2222-222222222222", result.Id);
         Assert.Equal(createdTime, result.CreatedAt);
-        Assert.False(result.Archived);
+        Assert.False(result.InTrash);
         Assert.Equal("https://api.buildin.ai/pages/22222222", result.Url);
         Assert.NotNull(result.Parent);
         Assert.IsType<ParentPage>(result.Parent);
@@ -114,7 +114,7 @@ public sealed class BotBuildinClientTests
         var generatedResponse = new Gen.CreatePageResponse
         {
             Id = Guid.Parse("44444444-4444-4444-4444-444444444444"),
-            Archived = false,
+            InTrash = false,
             CreatedAt = new DateTimeOffset(2025, 3, 1, 12, 0, 0, TimeSpan.Zero),
             Url = "https://api.buildin.ai/pages/44444444"
         };
@@ -139,7 +139,7 @@ public sealed class BotBuildinClientTests
 
         Assert.NotNull(result);
         Assert.Equal("44444444-4444-4444-4444-444444444444", result.Id);
-        Assert.False(result.Archived);
+        Assert.False(result.InTrash);
         Assert.Equal("https://api.buildin.ai/pages/44444444", result.Url);
     }
 
@@ -383,7 +383,7 @@ public sealed class BotBuildinClientTests
         var generated = new Gen.Database
         {
             Id = Guid.Parse("88888888-8888-8888-8888-888888888888"),
-            Archived = false,
+            InTrash = false,
             IsInline = false,
             Url = "https://api.buildin.ai/databases/88888888",
             Title = [new Gen.RichTextItem { PlainText = "My Database", Type = Gen.RichTextItem_type.Text }]
@@ -400,7 +400,7 @@ public sealed class BotBuildinClientTests
 
         Assert.NotNull(result);
         Assert.Equal("88888888-8888-8888-8888-888888888888", result.Id);
-        Assert.False(result.Archived);
+        Assert.False(result.InTrash);
         Assert.Equal("https://api.buildin.ai/databases/88888888", result.Url);
         Assert.NotNull(result.Title);
     }
@@ -479,7 +479,7 @@ public sealed class BotBuildinClientTests
         var generated = new Gen.Page
         {
             Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-            Archived = false,
+            InTrash = false,
             Url = "https://api.buildin.ai/pages/22222222",
             Properties = properties
         };
@@ -592,7 +592,7 @@ public sealed class BotBuildinClientTests
                     Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                     CreatedTime = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
                     LastEditedTime = new DateTimeOffset(2025, 1, 2, 0, 0, 0, TimeSpan.Zero),
-                    Archived = false,
+                    InTrash = false,
                     Object = "page",
                     Properties = new Gen.V1SearchPageResult_properties
                     {
@@ -636,7 +636,7 @@ public sealed class BotBuildinClientTests
                 new Gen.V1SearchPageResult
                 {
                     Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                    Archived = false,
+                    InTrash = false,
                     Parent = parent
                 }
             ]
@@ -668,7 +668,7 @@ public sealed class BotBuildinClientTests
                 new Gen.V1SearchPageResult
                 {
                     Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                    Archived = false,
+                    InTrash = false,
                     Object = "page"
                 }
             ]
@@ -698,7 +698,7 @@ public sealed class BotBuildinClientTests
                 new Gen.V1SearchPageResult
                 {
                     Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                    Archived = false,
+                    InTrash = false,
                     Properties = new Gen.V1SearchPageResult_properties
                     {
                         Title = new Gen.V1SearchPageResult_properties_title { Title = [] }
@@ -707,7 +707,7 @@ public sealed class BotBuildinClientTests
                 new Gen.V1SearchPageResult
                 {
                     Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
-                    Archived = false,
+                    InTrash = false,
                     Properties = new Gen.V1SearchPageResult_properties()
                 }
             ]
@@ -744,7 +744,7 @@ public sealed class BotBuildinClientTests
                 new Gen.V1SearchPageResult
                 {
                     Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                    Archived = false,
+                    InTrash = false,
                     Parent = parent
                 }
             ]
@@ -783,7 +783,7 @@ public sealed class BotBuildinClientTests
                     Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
                     CreatedTime = created,
                     LastEditedTime = edited,
-                    Archived = true
+                    InTrash = true
                 }
             ]
         };
@@ -804,6 +804,6 @@ public sealed class BotBuildinClientTests
         Assert.Equal("dddddddd-dddd-dddd-dddd-dddddddddddd", page.Id);
         Assert.Equal(created, page.CreatedAt);
         Assert.Equal(edited, page.LastEditedAt);
-        Assert.True(page.Archived);
+        Assert.True(page.InTrash);
     }
 }

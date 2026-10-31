@@ -6,6 +6,11 @@ public sealed class FileSystemFixture
     /// Creates a temp directory on the real filesystem with automatic cleanup.
     /// </summary>
     public static TempDirectory CreateTempDirectory() => new();
+
+    public static IReadOnlyDictionary<string, string> Manifest(string root)
+        => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToDictionary(path => Path.GetRelativePath(root, path), path => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))), StringComparer.Ordinal);
 }
 
 public sealed class TempDirectory : IDisposable

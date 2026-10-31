@@ -3,7 +3,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OPENAPI="${REPO_ROOT}/openapi.json"
-OUTPUT_DIR="${REPO_ROOT}/src/Buildout.Core/Buildin/Generated"
+OUTPUT_DIR="${REPO_ROOT}/src/Buildout.Core/Buildin/Generated/V2"
+EFFECTIVE="${REPO_ROOT}/obj/Buildin/OpenApi/openapi.effective.json"
 README_MARKER="${OUTPUT_DIR}/_README.md"
 
 if [ ! -f "$OPENAPI" ]; then
@@ -11,13 +12,14 @@ if [ ! -f "$OPENAPI" ]; then
   exit 1
 fi
 
+dotnet run --file "${REPO_ROOT}/scripts/normalize-buildin-openapi.cs" -- "$OPENAPI" "${REPO_ROOT}/scripts/openapi.buildout-overlay.json" "$EFFECTIVE"
 dotnet tool restore --tool-manifest "${REPO_ROOT}/.config/dotnet-tools.json"
 
 dotnet kiota generate \
   --language CSharp \
-  --openapi "$OPENAPI" \
-  --class-name BuildinApiClient \
-  --namespace-name Buildout.Core.Buildin.Generated \
+  --openapi "$EFFECTIVE" \
+  --class-name BuildinV2ApiClient \
+  --namespace-name Buildout.Core.Buildin.Generated.V2 \
   --output "$OUTPUT_DIR" \
   --clean-output \
   --exclude-backward-compatible \

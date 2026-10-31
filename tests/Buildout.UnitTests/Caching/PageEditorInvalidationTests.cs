@@ -81,6 +81,8 @@ public sealed class PageEditorInvalidationTests
                 Page = new Page { Id = PageId },
                 Blocks = [subtree]
             });
+        _client.GetVersionedPageAsync(PageId, Arg.Any<CancellationToken>())
+            .Returns(new VersionedPage { Page = new Page { Id = PageId }, ETag = $"etag-{PageId}" });
     }
 
     [Fact]

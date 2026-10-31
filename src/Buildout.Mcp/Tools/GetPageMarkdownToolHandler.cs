@@ -22,8 +22,8 @@ public sealed class GetPageMarkdownToolHandler
     }
 
     [McpServerTool(Name = "get_page_markdown")]
-    [Description("Fetch a buildin page as anchored Markdown with a revision token. " +
-                 "Use this before update_page to obtain the current snapshot and revision. " +
+    [Description("Fetch a buildin page as anchored Markdown with an opaque ETag revision. " +
+                 "Use this before update_page to obtain the current snapshot and ETag. " +
                  "The returned markdown contains <!-- buildin:block:<id> --> comments that " +
                  "anchor each block — include these anchors in patch operations to target " +
                  "specific blocks precisely.")]
