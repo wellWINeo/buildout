@@ -230,7 +230,7 @@ public sealed class CreateCommandTests
 
             Assert.Equal(0, exitCode);
             var rawJson = console.Output.Trim().Replace("\n", "").Replace("\r", "");
-            var json = System.Text.Json.JsonDocument.Parse(rawJson).RootElement;
+            var json = System.Text.Json.JsonElement.Parse(rawJson);
             Assert.Equal(NewPageId, json.GetProperty("id").GetString());
             Assert.Equal($"buildin://{NewPageId}", json.GetProperty("uri").GetString());
         }
